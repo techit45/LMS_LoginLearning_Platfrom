@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import HomePage from '@/pages/HomePage';
