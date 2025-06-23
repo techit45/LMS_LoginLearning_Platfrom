@@ -1,0 +1,148 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --primary-blue: #1e40af; /* Blue-700 - Primary blue */
+  --secondary-blue: #3b82f6; /* Blue-500 - Secondary blue */
+  --light-blue: #93c5fd; /* Blue-300 - Light blue */
+  --accent-blue: #0ea5e9; /* Sky-500 - Accent blue */
+  
+  --background-start: #ffffff; /* Pure white background */
+  --background-end: #f8fafc; /* Slate-50 - Very light gray-blue */
+  
+  --text-primary: #000000; /* Pure black - Primary text */
+  --text-secondary: #000000; /* Pure black - Secondary text */
+  --text-accent: var(--primary-blue);
+
+  --border-color: rgba(30, 64, 175, 0.1); /* Light blue border */
+
+  --primary: 214 88% 27%; /* Primary blue */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 98%;
+  --secondary-foreground: 222 84% 4.9%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 13% 52%;
+  --accent: 210 40% 98%;
+  --accent-foreground: 222 84% 4.9%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: var(--primary-blue);
+  --background: var(--background-start);
+  --foreground: var(--text-primary);
+  --card: var(--background-end);
+  --card-foreground: var(--text-primary);
+  --popover: var(--background-start);
+  --popover-foreground: var(--text-primary);
+  --radius: 0.5rem;
+}
+
+* {
+  border-color: var(--border-color); /* Apply custom border color */
+}
+
+body {
+  background: linear-gradient(135deg, var(--background-start) 0%, var(--background-end) 100%);
+  font-family: 'Sarabun', 'Inter', sans-serif; /* Prioritize Sarabun for Thai */
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.8); /* Light glass effect with transparency */
+  backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 32px 0 rgba(30, 64, 175, 0.1);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.course-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.8));
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.course-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));
+  box-shadow: 0 20px 40px rgba(30, 64, 175, 0.15);
+}
+
+.floating-animation {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-glow {
+  from { box-shadow: 0 0 15px rgba(30, 64, 175, 0.3), 0 0 5px rgba(59, 130, 246, 0.2); }
+  to { box-shadow: 0 0 25px rgba(30, 64, 175, 0.6), 0 0 10px rgba(59, 130, 246, 0.4); }
+}
+
+/* Custom scrollbar for a more modern feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background-end);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--secondary-blue);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-blue);
+}
+
+/* Light theme styling for components */
+.bg-background { background-color: var(--background-start); }
+.text-foreground { color: var(--text-primary); }
+.border-input { border-color: var(--border-color); }
+.placeholder\:text-muted-foreground::placeholder { color: var(--text-secondary); }
+.ring-ring { --tw-ring-color: var(--ring); }
+
+/* Specific overrides for shadcn components */
+.bg-primary { background-color: var(--primary-blue); }
+.text-primary-foreground { color: #f8fafc; }
+.bg-destructive { background-color: #ef4444; }
+.text-destructive-foreground { color: #f8fafc; }
+
+/* Tailwind CSS classes for blue theme */
+.bg-primary-blue { background-color: var(--primary-blue); }
+.text-primary-blue { color: var(--primary-blue); }
+.border-primary-blue { border-color: var(--primary-blue); }
+
+.bg-secondary-blue { background-color: var(--secondary-blue); }
+.text-secondary-blue { color: var(--secondary-blue); }
+.border-secondary-blue { border-color: var(--secondary-blue); }
+
+.bg-light-blue { background-color: var(--light-blue); }
+.text-light-blue { color: var(--light-blue); }
+.border-light-blue { border-color: var(--light-blue); }
+
+.bg-accent-blue { background-color: var(--accent-blue); }
+.text-accent-blue { color: var(--accent-blue); }
+.border-accent-blue { border-color: var(--accent-blue); }
+
