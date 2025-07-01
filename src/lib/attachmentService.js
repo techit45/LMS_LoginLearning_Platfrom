@@ -84,7 +84,7 @@ export const uploadAttachmentFile = async (file, contentId, uploadOrder = 1) => 
       // If listing failed or bucket not found, try direct access
       if (!bucketAccessible) {
         console.log('Testing direct bucket access...');
-        const { data: testList, error: testError } = await supabase.storage
+        const { error: testError } = await supabase.storage
           .from('course-files')
           .list('', { limit: 1 });
         
@@ -129,7 +129,7 @@ export const uploadAttachmentFile = async (file, contentId, uploadOrder = 1) => 
     console.log('Generated public URL:', publicUrl);
 
     // Check if content_attachments table exists
-    const { data: tableCheck, error: tableError } = await supabase
+    const { error: tableError } = await supabase
       .from('content_attachments')
       .select('count')
       .limit(1);
@@ -600,6 +600,121 @@ export const deleteCourseImage = async (filePath) => {
     return { error: null };
   } catch (error) {
     console.error('Error deleting course image:', error);
+    return { error };
+  }
+};
+
+/**
+ * Upload profile image
+ */
+export const uploadProfileImage = async (imageFile) => {
+  try {
+    console.log('Starting profile image upload:', { fileName: imageFile.name, fileSize: imageFile.size });
+    
+    // Check if user is authenticated
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Validate file
+    if (!imageFile) {
+      throw new Error('No image file provided');
+    }
+
+    // Check file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(imageFile.type)) {
+      throw new Error('ไฟล์ต้องเป็นรูปภาพ (JPG, PNG, WebP เท่านั้น)');
+    }
+
+    // Check file size (max 2MB for profile images)
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (imageFile.size > maxSize) {
+      throw new Error('ขนาดไฟล์ต้องไม่เกิน 2MB');
+    }
+
+    // Generate unique filename
+    const fileExt = imageFile.name.split('.').pop()?.toLowerCase();
+    const fileName = `profile-${user.id}-${Date.now()}.${fileExt}`;
+    const filePath = `profile-images/${fileName}`;
+
+    console.log('Uploading profile image to path:', filePath);
+
+    // Delete old profile image if exists
+    try {
+      const { data: files } = await supabase.storage
+        .from('course-files')
+        .list('profile-images', {
+          search: `profile-${user.id}-`
+        });
+
+      if (files && files.length > 0) {
+        const oldFilePaths = files.map(file => `profile-images/${file.name}`);
+        await supabase.storage.from('course-files').remove(oldFilePaths);
+        console.log('Removed old profile images:', oldFilePaths);
+      }
+    } catch (cleanupError) {
+      console.warn('Could not cleanup old profile images:', cleanupError);
+    }
+
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('course-files')
+      .upload(filePath, imageFile, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError);
+      throw new Error(`ไม่สามารถอัปโหลดรูปโปรไฟล์ได้: ${uploadError.message}`);
+    }
+
+    console.log('Profile image upload successful:', uploadData);
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('course-files')
+      .getPublicUrl(filePath);
+
+    if (!urlData?.publicUrl) {
+      throw new Error('ไม่สามารถสร้าง URL สำหรับรูปโปรไฟล์ได้');
+    }
+
+    console.log('Profile image URL generated:', urlData.publicUrl);
+
+    return {
+      data: {
+        filePath: filePath,
+        publicUrl: urlData.publicUrl,
+        fileName: fileName
+      },
+      error: null
+    };
+  } catch (error) {
+    console.error('Error uploading profile image:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Delete profile image from storage
+ */
+export const deleteProfileImage = async (filePath) => {
+  try {
+    const { error } = await supabase.storage
+      .from('course-files')
+      .remove([filePath]);
+
+    if (error) {
+      console.warn('Warning: Could not delete profile image from storage:', error);
+    }
+
+    return { error: null };
+  } catch (error) {
+    console.error('Error deleting profile image:', error);
     return { error };
   }
 };

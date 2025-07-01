@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Upload, 
-  X, 
   FileText, 
   Image, 
   Video, 
@@ -11,14 +10,13 @@ import {
   Download,
   Eye,
   Trash2,
-  Plus,
   AlertCircle,
   CheckCircle,
   Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { uploadAttachmentFile, uploadMultipleAttachments } from '@/lib/attachmentService';
+import { uploadAttachmentFile } from '@/lib/attachmentService';
 import SystemCheck from '@/components/SystemCheck';
 
 const UniversalFileUpload = ({ 

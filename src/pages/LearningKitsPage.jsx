@@ -1,16 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { 
   ShoppingBag, 
-  Filter, 
   Search, 
   Grid, 
   List,
   SortAsc,
-  Heart,
   Package,
-  Star,
   Sliders
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,12 +40,7 @@ const LearningKitsPage = () => {
     sortOrder: 'desc'
   });
 
-  useEffect(() => {
-    loadKits();
-    loadCategories();
-  }, [filters]);
-
-  const loadKits = async () => {
+  const loadKits = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await getAllLearningKits(filters);
@@ -63,9 +55,9 @@ const LearningKitsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, toast]);
 
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     try {
       const { data, error } = await getKitCategories();
       if (error) throw error;
@@ -73,7 +65,12 @@ const LearningKitsPage = () => {
     } catch (error) {
       console.error('Error loading categories:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadKits();
+    loadCategories();
+  }, [loadKits, loadCategories]);
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {

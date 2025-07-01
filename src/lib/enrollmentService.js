@@ -150,7 +150,10 @@ export const isUserEnrolled = async (courseId) => {
 
     const result = { 
       isEnrolled: !!data,
-      status: data?.status || null,
+      status: data ? {
+        ...data,
+        enrollment_id: data.id // เพิ่ม enrollment_id
+      } : null,
       error: null 
     };
     

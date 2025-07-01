@@ -1,16 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   X,
   Save,
-  Award,
-  MessageSquare,
   User,
   Calendar,
   FileText,
   Download,
-  Star,
-  CheckCircle,
   AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

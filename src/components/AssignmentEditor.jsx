@@ -1,10 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
 import { 
   FileText, 
-  Clock, 
   Award, 
-  Upload, 
   Calendar,
   AlertCircle,
   Info

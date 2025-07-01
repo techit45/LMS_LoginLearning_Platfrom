@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, 
-  Clock, 
   AlertTriangle, 
   CheckCircle2, 
   Send,
@@ -16,7 +15,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import FileUpload from '@/components/FileUpload';
-import { useAuth } from '@/contexts/AuthContext';
 import { 
   getAssignmentByContentId, 
   getUserSubmissions, 
@@ -26,7 +24,6 @@ import {
 } from '@/lib/assignmentService';
 
 const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
-  const { user } = useAuth();
   const { toast } = useToast();
   
   // Assignment state
@@ -44,24 +41,22 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
   // UI state
   const [mode, setMode] = useState('submit'); // 'submit', 'view', 'edit'
 
-  useEffect(() => {
-    loadAssignmentData();
-  }, [contentId]);
-
-  const loadAssignmentData = async () => {
+  const loadAssignmentData = useCallback(async () => {
     setLoading(true);
     
     try {
+      let currentAssignmentData = assignmentData;
       // Load assignment if not provided
-      if (!assignmentData) {
+      if (!currentAssignmentData) {
         const { data: assignmentResult, error: assignmentError } = await getAssignmentByContentId(contentId);
         if (assignmentError) throw assignmentError;
         setAssignmentData(assignmentResult);
+        currentAssignmentData = assignmentResult;
       }
 
       // Load user submissions
-      if (assignmentData?.id) {
-        const { data: submissionsData, error: submissionsError } = await getUserSubmissions(assignmentData.id);
+      if (currentAssignmentData?.id) {
+        const { data: submissionsData, error: submissionsError } = await getUserSubmissions(currentAssignmentData.id);
         if (submissionsError) throw submissionsError;
         
         setSubmissions(submissionsData);
@@ -90,14 +85,18 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
     } catch (error) {
       console.error('Error loading assignment data:', error);
       toast({
-        title: "ไม่สามารถโหลดข้อมูลงานได้",
+        title: "ไ���่สามารถโหลดข้อมูลงานได้",
         description: error.message,
         variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [contentId, assignmentData, toast]);
+
+  useEffect(() => {
+    loadAssignmentData();
+  }, [loadAssignmentData]);
 
   const handleSaveDraft = async () => {
     if (!assignmentData) return;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,9 +12,11 @@ import {
   Users,
   BookOpen,
   Download,
-  MessageSquare,
   Trophy,
-  Lock
+  Lock,
+  AlertCircle,
+  ArrowRight,
+  CheckSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -27,6 +29,12 @@ import { getVideoProgress, getCourseProgress } from '@/lib/progressService';
 import { getQuizByContentId } from '@/lib/quizService';
 import { getAssignmentByContentId } from '@/lib/assignmentService';
 import { isUserEnrolled } from '@/lib/enrollmentService';
+import { 
+  getCourseContentWithProgress,
+  checkContentAccessibility,
+  markContentCompleted,
+  validateCompletionCriteria
+} from '@/lib/progressManagementService';
 import AttachmentViewer from '@/components/AttachmentViewer';
 
 const CourseLearningPage = () => {
@@ -39,6 +47,8 @@ const CourseLearningPage = () => {
   const [loading, setLoading] = useState(true);
   const [enrollmentStatus, setEnrollmentStatus] = useState({ isEnrolled: false });
   const [courseProgress, setCourseProgress] = useState(null);
+  const [enrollmentId, setEnrollmentId] = useState(null);
+  const [contentAccessibility, setContentAccessibility] = useState({});
   
   // Current content state
   const [selectedContent, setSelectedContent] = useState(null);
@@ -48,53 +58,8 @@ const CourseLearningPage = () => {
   const [activeAssignment, setActiveAssignment] = useState(null);
   const [showAssignment, setShowAssignment] = useState(false);
 
-  useEffect(() => {
-    loadCourse();
-    if (user) {
-      checkEnrollmentAndProgress();
-    }
-  }, [courseId, user]);
-
-  const loadCourse = async () => {
-    setLoading(true);
-    console.log('Loading course with ID:', courseId);
-    
-    try {
-      const { data, error } = await getCourseById(courseId);
-      console.log('Course data received:', data, 'Error:', error);
-      
-      if (error) {
-        console.error('Course loading error:', error);
-        toast({
-          title: "ข้อผิดพลาดในการโหลดข้อมูล",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        setCourse(data);
-        console.log('Course set:', data);
-        
-        // Auto-select first content
-        if (data?.content && data.content.length > 0) {
-          console.log('Auto-selecting first content:', data.content[0]);
-          setSelectedContent(data.content[0]);
-        } else {
-          console.log('No content found in course');
-        }
-      }
-    } catch (error) {
-      console.error('Unexpected error loading course:', error);
-      toast({
-        title: "เกิดข้อผิดพลาดที่ไม่คาดคิด",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const checkEnrollmentAndProgress = async () => {
+  const checkEnrollmentAndProgress = useCallback(async () => {
+    if (!user) return;
     try {
       console.log('Checking enrollment for user:', user?.id, 'course:', courseId);
       
@@ -114,6 +79,15 @@ const CourseLearningPage = () => {
       }
       
       setEnrollmentStatus({ isEnrolled, status });
+      
+      // Get enrollment ID from the response
+      if (status?.enrollment_id) {
+        setEnrollmentId(status.enrollment_id);
+        console.log('Enrollment ID set:', status.enrollment_id);
+      } else if (status?.id) {
+        setEnrollmentId(status.id);
+        console.log('Enrollment ID set from status.id:', status.id);
+      }
 
       if (isEnrolled) {
         console.log('User is enrolled, loading progress...');
@@ -123,18 +97,31 @@ const CourseLearningPage = () => {
         console.log('Course progress data:', progressData);
         setCourseProgress(progressData);
 
-        // Load individual content progress
-        if (course?.content) {
-          console.log('Loading content progress for', course.content.length, 'items');
+        // Load individual content progress from course data
+        const { data: courseContentData } = await getCourseContentWithProgress(courseId);
+        if (courseContentData && courseContentData.length > 0) {
+          console.log('Loading content progress for', courseContentData.length, 'items');
           const progressMap = {};
-          for (const content of course.content) {
+          const accessibilityMap = {};
+          
+          for (const content of courseContentData) {
             if (content.content_type === 'video') {
               const { data: videoProgress } = await getVideoProgress(content.id);
               progressMap[content.id] = videoProgress;
             }
+            
+            // Check content accessibility
+            const currentEnrollmentId = status?.enrollment_id || status?.id;
+            if (currentEnrollmentId) {
+              const { data: isAccessible } = await checkContentAccessibility(currentEnrollmentId, content.id);
+              accessibilityMap[content.id] = isAccessible;
+            }
           }
+          
           console.log('Content progress map:', progressMap);
+          console.log('Content accessibility map:', accessibilityMap);
           setContentProgress(progressMap);
+          setContentAccessibility(accessibilityMap);
         }
       } else {
         console.log('User is not enrolled');
@@ -147,9 +134,93 @@ const CourseLearningPage = () => {
         variant: "destructive"
       });
     }
-  };
+  }, [user, courseId, toast]);
+
+  const loadCourse = useCallback(async () => {
+    setLoading(true);
+    console.log('CourseLearningPage: Loading course with ID:', courseId);
+    
+    // Add timeout for loading
+    const timeoutId = setTimeout(() => {
+      console.error('CourseLearningPage: Course loading timeout after 10 seconds');
+      setLoading(false);
+      toast({
+        title: "การโหลดใช้เวลานานเกินไป",
+        description: "กรุณาลองรีเฟรชหน้าใหม่หรือตรวจสอบการเชื่อมต่ออินเทอร์เน็ต",
+        variant: "destructive"
+      });
+    }, 10000);
+    
+    try {
+      const { data, error } = await getCourseById(courseId);
+      clearTimeout(timeoutId);
+      console.log('CourseLearningPage: Course data received:', data, 'Error:', error);
+      
+      if (error) {
+        console.error('CourseLearningPage: Course loading error:', error);
+        toast({
+          title: "ข้อผิดพลาดในการโหลดข้อมูล",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else if (!data) {
+        console.log('CourseLearningPage: No course data returned');
+        toast({
+          title: "ไม่พบข้อมูลคอร์ส",
+          description: "คอร์สนี้อาจไม่มีอยู่ในระบบ",
+          variant: "destructive"
+        });
+      } else {
+        setCourse(data);
+        console.log('CourseLearningPage: Course set successfully:', data);
+        
+        // Auto-select first content
+        if (data?.content && data.content.length > 0) {
+          console.log('CourseLearningPage: Auto-selecting first content:', data.content[0]);
+          setSelectedContent(data.content[0]);
+        } else {
+          console.log('CourseLearningPage: No content found in course');
+        }
+      }
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error('CourseLearningPage: Unexpected error loading course:', error);
+      toast({
+        title: "เกิดข้อผิดพลาดที่ไม่คาดคิด",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [courseId, toast]);
+
+  useEffect(() => {
+    loadCourse();
+  }, [courseId]);
+
+  useEffect(() => {
+    if (user && course) {
+      console.log('useEffect: Checking enrollment and progress', { user: user?.id, courseId: course?.id });
+      checkEnrollmentAndProgress();
+    }
+  }, [user, course?.id]);
 
   const handleContentSelect = async (content) => {
+    // Check if content is accessible
+    const contentIndex = course.content.findIndex(c => c.id === content.id);
+    if (isContentLocked(content, contentIndex)) {
+      const previousContent = course.content[contentIndex - 1];
+      toast({
+        title: "เนื้อหายังไม่เปิดให้เรียน",
+        description: previousContent 
+          ? `กรุณาผ่าน "${previousContent.title}" ก่อน`
+          : "กรุณาผ่านเนื้อหาก่อนหน้านี้ก่อน",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setSelectedContent(content);
     setShowQuiz(false);
     setActiveQuiz(null);
@@ -167,10 +238,14 @@ const CourseLearningPage = () => {
 
     // Load assignment if content type is assignment
     if (content.content_type === 'assignment') {
-      const { data: assignment } = await getAssignmentByContentId(content.id);
-      if (assignment) {
-        setActiveAssignment(assignment);
-        setShowAssignment(true);
+      try {
+        const { data: assignment, error } = await getAssignmentByContentId(content.id);
+        if (assignment && !error) {
+          setActiveAssignment(assignment);
+          setShowAssignment(true);
+        }
+      } catch (error) {
+        console.log(`ไม่พบงานมอบหมายสำหรับเนื้อหา: ${content.title}`);
       }
     }
   };
@@ -182,8 +257,28 @@ const CourseLearningPage = () => {
       variant: results.is_passed ? "default" : "destructive"
     });
     
-    // Refresh progress
-    checkEnrollmentAndProgress();
+    // Mark content as completed if passed
+    if (results.is_passed && selectedContent) {
+      handleContentComplete(selectedContent.id, {
+        quiz_score: results.score,
+        quiz_passed: results.is_passed,
+        quiz_attempts: results.attempt_number || 1
+      });
+    } else {
+      // Just refresh progress without marking as completed
+      if (user && course) {
+        const refreshProgress = async () => {
+          try {
+            const { data: progressData } = await getCourseProgress(courseId);
+            setCourseProgress(progressData);
+          } catch (error) {
+            console.error('Error refreshing progress:', error);
+          }
+        };
+        refreshProgress();
+      }
+    }
+    
     setShowQuiz(false);
   };
 
@@ -193,8 +288,14 @@ const CourseLearningPage = () => {
       description: "งานของคุณได้รับการส่งเรียบร้อยแล้ว"
     });
     
-    // Refresh progress
-    checkEnrollmentAndProgress();
+    // Mark content as completed for assignment submission
+    if (selectedContent) {
+      handleContentComplete(selectedContent.id, {
+        assignment_submitted: true,
+        submission_id: submission.id
+      });
+    }
+    
     setShowAssignment(false);
   };
 
@@ -204,6 +305,47 @@ const CourseLearningPage = () => {
       ...prev,
       [selectedContent.id]: progress
     }));
+    
+    // Check if video is completed (90% watched) and mark as completed
+    if (selectedContent && progress.total_duration > 0) {
+      const watchedPercentage = (progress.watched_duration / progress.total_duration) * 100;
+      
+      if (watchedPercentage >= 90) {
+        handleContentComplete(selectedContent.id, {
+          video_watched_percentage: watchedPercentage,
+          video_duration: progress.total_duration,
+          video_watched_duration: progress.watched_duration
+        });
+      }
+    }
+  };
+
+  const getCompletionRequirementText = (content) => {
+    if (!content.completion_type || content.completion_type === 'manual') {
+      return 'กดทำเครื่องหมายเสร็จเพื่อผ่าน';
+    }
+    
+    switch (content.completion_type) {
+      case 'quiz_required':
+        return `ต้องทำข้อสอบให้ได้คะแนน ${content.minimum_score || 0}% ขึ้นไป`;
+      case 'assignment_required':
+        return `ต้องส่งงานให้ได้คะแนน ${content.minimum_score || 0}% ขึ้นไป`;
+      case 'time_based':
+        return `ต้องใช้เวลาอย่างน้อย ${content.minimum_time_minutes || 0} นาที`;
+      case 'video_complete':
+        return 'ต้องดูวิดีโอให้จบ (90%)';
+      case 'sequential':
+        return 'ต้องผ่านเนื้อหาก่อนหน้าก่อน';
+      default:
+        return 'เสร็จสิ้นการเรียน';
+    }
+  };
+
+  const canMarkAsCompleted = (content) => {
+    if (!content || content.completion_type !== 'manual') return false;
+    
+    const completionStatus = getContentCompletionStatus(content);
+    return !completionStatus?.isCompleted;
   };
 
   const getContentIcon = (contentType, isCompleted = false) => {
@@ -278,12 +420,92 @@ const CourseLearningPage = () => {
   };
 
   const isContentLocked = (content, index) => {
-    if (index === 0) return false; // First content is always unlocked
+    // Use the accessibility data from progress management system
+    if (contentAccessibility.hasOwnProperty(content.id)) {
+      return !contentAccessibility[content.id];
+    }
     
-    // Check if previous content is completed
+    // Fallback to old sequential logic
+    if (index === 0) return false;
     const previousContent = course.content[index - 1];
     const previousProgress = getContentProgress(previousContent);
     return previousProgress < 100;
+  };
+
+  const handleContentComplete = async (contentId, completionData = {}) => {
+    console.log('handleContentComplete called with:', { contentId, completionData, enrollmentId, enrollmentStatus });
+    
+    // Try to get enrollment ID from different sources
+    let currentEnrollmentId = enrollmentId;
+    if (!currentEnrollmentId && enrollmentStatus?.status?.id) {
+      currentEnrollmentId = enrollmentStatus.status.id;
+      setEnrollmentId(currentEnrollmentId);
+      console.log('Using enrollment ID from status:', currentEnrollmentId);
+    }
+    
+    if (!currentEnrollmentId) {
+      console.error('No enrollment ID found:', { enrollmentId, enrollmentStatus });
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่พบข้อมูลการลงทะเบียน กรุณาโหลดหน้าใหม่",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await markContentCompleted(currentEnrollmentId, contentId, completionData);
+      
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "ผ่านเนื้อหาแล้ว! 🎉",
+        description: "ความคืบหน้าของคุณได้รับการอัปเดต"
+      });
+
+      // Refresh progress and accessibility without causing infinite loop
+      if (user && course) {
+        const refreshProgress = async () => {
+          try {
+            const { data: progressData } = await getCourseProgress(courseId);
+            setCourseProgress(progressData);
+
+            if (course?.content) {
+              const progressMap = {};
+              const accessibilityMap = {};
+              
+              for (const content of course.content) {
+                if (content.content_type === 'video') {
+                  const { data: videoProgress } = await getVideoProgress(content.id);
+                  progressMap[content.id] = videoProgress;
+                }
+                
+                const currentEnrollmentId = enrollmentStatus?.status?.enrollment_id || enrollmentStatus?.status?.id;
+                if (currentEnrollmentId) {
+                  const { data: isAccessible } = await checkContentAccessibility(currentEnrollmentId, content.id);
+                  accessibilityMap[content.id] = isAccessible;
+                }
+              }
+              
+              setContentProgress(progressMap);
+              setContentAccessibility(accessibilityMap);
+            }
+          } catch (error) {
+            console.error('Error refreshing progress:', error);
+          }
+        };
+        refreshProgress();
+      }
+    } catch (error) {
+      console.error('Error marking content completed:', error);
+      toast({
+        title: "ไม่สามารถบันทึกความคืบหน้าได้",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   if (loading) {
@@ -486,26 +708,42 @@ const CourseLearningPage = () => {
                               </div>
 
                               {/* Status Badge */}
-                              {completionStatus && (
-                                <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
-                                  completionStatus.isPassed 
-                                    ? 'bg-green-100 text-green-700' 
-                                    : 'bg-red-100 text-red-700'
-                                }`}>
-                                  {completionStatus.isPassed ? (
-                                    <CheckCircle className="w-3 h-3" />
-                                  ) : (
-                                    <XCircle className="w-3 h-3" />
-                                  )}
-                                  <span>
-                                    {completionStatus.type === 'quiz' || completionStatus.type === 'assignment' 
-                                      ? (completionStatus.isPassed ? 'ผ่าน' : 'ไม่ผ่าน')
-                                      : 'เสร็จแล้ว'
-                                    }
-                                    {completionStatus.score !== null && ` ${completionStatus.score}%`}
-                                  </span>
-                                </div>
-                              )}
+                              <div className="flex flex-col items-end space-y-1">
+                                {completionStatus && (
+                                  <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                    completionStatus.isPassed 
+                                      ? 'bg-green-100 text-green-700' 
+                                      : 'bg-red-100 text-red-700'
+                                  }`}>
+                                    {completionStatus.isPassed ? (
+                                      <CheckCircle className="w-3 h-3" />
+                                    ) : (
+                                      <XCircle className="w-3 h-3" />
+                                    )}
+                                    <span>
+                                      {completionStatus.type === 'quiz' || completionStatus.type === 'assignment' 
+                                        ? (completionStatus.isPassed ? 'ผ่าน' : 'ไม่ผ่าน')
+                                        : 'เสร็จแล้ว'
+                                      }
+                                      {completionStatus.score !== null && ` ${completionStatus.score}%`}
+                                    </span>
+                                  </div>
+                                )}
+                                
+                                {/* Progress hint for locked content */}
+                                {isLocked && (
+                                  <div className="text-xs text-gray-500 text-right">
+                                    ผ่านบทก่อนหน้าก่อน
+                                  </div>
+                                )}
+                                
+                                {/* Next available hint */}
+                                {!isLocked && !completionStatus && index > 0 && (
+                                  <div className="text-xs text-blue-600 text-right">
+                                    พร้อมเรียน
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             
                             {/* Duration and Progress */}
@@ -668,8 +906,121 @@ const CourseLearningPage = () => {
                       </div>
                     )}
 
+                    {/* Completion Actions */}
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <AlertCircle className="w-5 h-5 text-blue-600" />
+                              <h4 className="font-semibold text-gray-900">
+                                {getContentCompletionStatus(selectedContent)?.isCompleted 
+                                  ? 'เรียนจบแล้ว' 
+                                  : 'เงื่อนไขการผ่าน'
+                                }
+                              </h4>
+                            </div>
+                            
+                            {getContentCompletionStatus(selectedContent)?.isCompleted ? (
+                              <div className="text-green-700">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <CheckCircle className="w-4 h-4" />
+                                  <span className="font-medium">คุณผ่านเนื้อหานี้แล้ว!</span>
+                                </div>
+                                <p className="text-sm text-green-600">
+                                  คุณสามารถไปเนื้อหาถัดไปได้แล้ว
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="text-gray-700">
+                                <p className="mb-2">{getCompletionRequirementText(selectedContent)}</p>
+                                
+                                {/* Manual completion button */}
+                                {canMarkAsCompleted(selectedContent) && (
+                                  <Button
+                                    onClick={() => handleContentComplete(selectedContent.id, { manual_completion: true })}
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                    size="sm"
+                                  >
+                                    <CheckSquare className="w-4 h-4 mr-2" />
+                                    ทำเครื่องหมายเสร็จ
+                                  </Button>
+                                )}
+                                
+                                {/* Progress hints for other types */}
+                                {selectedContent.completion_type === 'quiz_required' && (
+                                  <div className="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                                    <p className="text-sm text-yellow-800">
+                                      📝 แบบทดสอบจะปรากฏขึ้นหลังจากดูเนื้อหาครบแล้ว
+                                    </p>
+                                  </div>
+                                )}
+                                
+                                {selectedContent.completion_type === 'assignment_required' && (
+                                  <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                    <p className="text-sm text-purple-800">
+                                      💼 งานมอบหมายจะปรากฏขึ้นหลังจากดูเนื้อหาครบแล้ว
+                                    </p>
+                                  </div>
+                                )}
+                                
+                                {selectedContent.completion_type === 'video_complete' && (
+                                  <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                    <p className="text-sm text-blue-800">
+                                      🎥 ดูวิดีโอให้ครบ 90% เพื่อผ่านไปบทถัดไป
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Next lesson preview */}
+                          {getContentCompletionStatus(selectedContent)?.isCompleted && (
+                            <div className="ml-6">
+                              {(() => {
+                                const currentIndex = course.content.findIndex(c => c.id === selectedContent.id);
+                                const nextContent = course.content[currentIndex + 1];
+                                
+                                if (nextContent) {
+                                  const isNextLocked = isContentLocked(nextContent, currentIndex + 1);
+                                  
+                                  return (
+                                    <div className="text-center">
+                                      <p className="text-sm text-gray-600 mb-2">ถัดไป:</p>
+                                      <Button
+                                        onClick={() => !isNextLocked && handleContentSelect(nextContent)}
+                                        disabled={isNextLocked}
+                                        variant={isNextLocked ? "outline" : "default"}
+                                        className={isNextLocked ? "opacity-50" : "bg-blue-600 hover:bg-blue-700"}
+                                        size="sm"
+                                      >
+                                        <ArrowRight className="w-4 h-4 mr-2" />
+                                        {nextContent.title}
+                                      </Button>
+                                    </div>
+                                  );
+                                }
+                                
+                                return (
+                                  <div className="text-center">
+                                    <div className="bg-green-100 rounded-full p-3 mb-2">
+                                      <Trophy className="w-6 h-6 text-green-600" />
+                                    </div>
+                                    <p className="text-sm font-medium text-green-700">
+                                      เรียนจบคอร์สแล้ว!
+                                    </p>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Attachments Section */}
-                    <div className="mt-6 pt-6 border-t border-white/10">
+                    <div className="mt-6 pt-6 border-t border-gray-200">
                       <AttachmentViewer 
                         contentId={selectedContent.id}
                         compact={false}

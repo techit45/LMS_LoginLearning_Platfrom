@@ -1,27 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { BookOpen, Users, Star, Clock, Filter, Search, BookOpenText } from 'lucide-react';
+import { BookOpen, Users, Clock, Search, BookOpenText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { Link } from 'react-router-dom';
 import { getAllCourses } from '@/lib/courseService';
-import { useAuth } from '@/contexts/AuthContext';
 
 const CoursesPage = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
 
-  useEffect(() => {
-    loadCourses();
-  }, []);
-
-  const loadCourses = async () => {
+  const loadCourses = useCallback(async () => {
     setLoading(true);
     const { data, error } = await getAllCourses();
     if (error) {
@@ -34,7 +28,11 @@ const CoursesPage = () => {
       setCourses(data || []);
     }
     setLoading(false);
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    loadCourses();
+  }, [loadCourses]);
 
   // Get unique categories
   const categories = ['ทั้งหมด', ...new Set(courses.map(course => course.category).filter(Boolean))];
@@ -46,13 +44,6 @@ const CoursesPage = () => {
     const matchesCategory = selectedCategory === 'ทั้งหมด' || course.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
-
-  const handleFeatureClick = (featureName = "ฟีเจอร์") => {
-    toast({
-      title: `🚧 ${featureName} นี้ยังไม่พร้อมใช้งาน`,
-      description: "แต่ไม่ต้องกังวล! คุณสามารถขอให้เพิ่มฟีเจอร์นี้ในข้อความถัดไปได้! 🚀",
-    });
-  };
 
   const pageVariants = {
     initial: { opacity: 0, y: 20 },

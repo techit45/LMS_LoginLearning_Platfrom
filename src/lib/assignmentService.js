@@ -16,7 +16,11 @@ export const getAssignmentByContentId = async (contentId) => {
       .eq('is_active', true)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
+      // PGRST116 means no rows found - this is expected when no assignment exists
+      if (error.code === 'PGRST116') {
+        return { data: null, error: null };
+      }
       throw error;
     }
 

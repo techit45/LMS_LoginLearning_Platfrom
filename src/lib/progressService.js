@@ -31,7 +31,7 @@ export const updateVideoProgress = async (contentId, progressData) => {
     };
 
     // Get existing progress
-    const { data: existingProgress, error: fetchError } = await supabase
+    const { data: existingProgress } = await supabase
       .from('video_progress')
       .select('*')
       .eq('user_id', user.id)

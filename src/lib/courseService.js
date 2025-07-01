@@ -35,6 +35,7 @@ export const getAllCourses = async () => {
  */
 export const getCourseById = async (courseId) => {
   try {
+    console.log('getCourseById: Fetching course with ID:', courseId);
     const { data, error } = await supabase
       .from('courses')
       .select(`
@@ -45,7 +46,12 @@ export const getCourseById = async (courseId) => {
       .eq('is_active', true)
       .single();
 
-    if (error) throw error;
+    console.log('getCourseById: Database result:', { data, error });
+
+    if (error) {
+      console.error('getCourseById: Database error:', error);
+      throw error;
+    }
 
     // Get enrollment count separately to avoid RLS issues
     let enrollmentCount = 0;
@@ -55,11 +61,12 @@ export const getCourseById = async (courseId) => {
         .select('*', { count: 'exact', head: true })
         .eq('course_id', courseId);
       enrollmentCount = count || 0;
+      console.log('getCourseById: Enrollment count:', enrollmentCount);
     } catch (countError) {
       console.warn('Could not fetch enrollment count:', countError);
     }
 
-    return { 
+    const result = { 
       data: {
         ...data,
         enrollment_count: enrollmentCount,
@@ -67,8 +74,11 @@ export const getCourseById = async (courseId) => {
       }, 
       error: null 
     };
+    
+    console.log('getCourseById: Final result:', result);
+    return result;
   } catch (error) {
-    console.error('Error fetching course:', error);
+    console.error('getCourseById: Error fetching course:', error);
     return { data: null, error };
   }
 };

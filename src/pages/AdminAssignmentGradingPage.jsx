@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,21 +6,14 @@ import {
   ArrowLeft,
   FileText,
   Users,
-  Download,
-  Eye,
-  MessageSquare,
   Award,
   Clock,
-  Filter,
   Search,
   CheckCircle,
-  XCircle,
   AlertCircle
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { 
   getAssignmentSubmissions, 
   updateSubmissionGrade,
@@ -32,7 +25,6 @@ import GradingModal from '@/components/GradingModal';
 const AdminAssignmentGradingPage = () => {
   const { assignmentId } = useParams();
   const { toast } = useToast();
-  const { user } = useAuth();
   
   const [assignment, setAssignment] = useState(null);
   const [submissions, setSubmissions] = useState([]);
@@ -42,11 +34,7 @@ const AdminAssignmentGradingPage = () => {
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [showGradingModal, setShowGradingModal] = useState(false);
 
-  useEffect(() => {
-    loadAssignmentData();
-  }, [assignmentId]);
-
-  const loadAssignmentData = async () => {
+  const loadAssignmentData = useCallback(async () => {
     setLoading(true);
     try {
       // Load assignment details
@@ -69,7 +57,11 @@ const AdminAssignmentGradingPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [assignmentId, toast]);
+
+  useEffect(() => {
+    loadAssignmentData();
+  }, [loadAssignmentData]);
 
   const handleGradeSubmission = (submission) => {
     setSelectedSubmission(submission);

@@ -10,7 +10,6 @@ import {
   Tag, 
   AlertCircle,
   FileText,
-  Upload,
   Image as ImageIcon,
   Trash2
 } from 'lucide-react';
@@ -18,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { createCourse } from '@/lib/courseService';
-import { uploadCourseImage, deleteCourseImage } from '@/lib/attachmentService';
+import { uploadCourseImage } from '@/lib/attachmentService';
 
 const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
   const { toast } = useToast();

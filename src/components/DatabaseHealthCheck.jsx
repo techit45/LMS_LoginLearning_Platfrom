@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Database, 
@@ -15,7 +15,7 @@ const DatabaseHealthCheck = ({ isOpen, onClose }) => {
   const [checks, setChecks] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const healthChecks = [
+  const healthChecks = useMemo(() => [
     {
       name: 'Supabase Connection',
       test: async () => {
@@ -67,7 +67,7 @@ const DatabaseHealthCheck = ({ isOpen, onClose }) => {
     {
       name: 'Enrollments Table Access',
       test: async () => {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('enrollments')
           .select('count')
           .limit(1);
@@ -79,16 +79,16 @@ const DatabaseHealthCheck = ({ isOpen, onClose }) => {
     {
       name: 'Storage Access',
       test: async () => {
-        const { data, error } = await supabase.storage.listBuckets();
+        const { data: _, error } = await supabase.storage.listBuckets();
         if (error) throw error;
         
-        const courseFilesBucket = data?.find(bucket => bucket.name === 'course-files');
+        const courseFilesBucket = _.find(bucket => bucket.name === 'course-files');
         return courseFilesBucket ? 'Storage buckets accessible' : 'course-files bucket not found';
       }
     }
-  ];
+  ], []);
 
-  const runHealthCheck = async () => {
+  const runHealthCheck = useCallback(async () => {
     setLoading(true);
     const results = [];
 
@@ -111,13 +111,13 @@ const DatabaseHealthCheck = ({ isOpen, onClose }) => {
 
     setChecks(results);
     setLoading(false);
-  };
+  }, [healthChecks]);
 
   useEffect(() => {
     if (isOpen) {
       runHealthCheck();
     }
-  }, [isOpen]);
+  }, [isOpen, runHealthCheck]);
 
   const getStatusIcon = (status) => {
     switch (status) {

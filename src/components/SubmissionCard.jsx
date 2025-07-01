@@ -9,8 +9,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  FileText,
-  ExternalLink
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabaseClient';

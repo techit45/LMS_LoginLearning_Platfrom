@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import HomePage from '@/pages/HomePage';
@@ -16,11 +16,14 @@ import LoginPage from '@/pages/LoginPage';
 import SignupPage from '@/pages/SignupPage';
 import DashboardPage from '@/pages/DashboardPage';
 import UserProfilePage from '@/pages/UserProfilePage';
+import SettingsPageDatabase from '@/pages/SettingsPageDatabase';
 import AdminPage from '@/pages/AdminPage';
 import AdminUsersPage from '@/pages/AdminUsersPage';
 import AdminCoursesPage from '@/pages/AdminCoursesPage';
 import AdminCourseContentPage from '@/pages/AdminCourseContentPage';
 import AdminAssignmentGradingPage from '@/pages/AdminAssignmentGradingPage';
+import AdminDashboard from '@/pages/AdminDashboard';
+import AdminLayout from '@/components/AdminLayout';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -73,47 +76,29 @@ function App() {
                     </ProtectedRoute>
                   } 
                 />
+                <Route 
+                  path="/settings" 
+                  element={
+                    <ProtectedRoute>
+                      <SettingsPageDatabase />
+                    </ProtectedRoute>
+                  } 
+                />
                 
                 <Route 
-                  path="/admin" 
+                  path="/admin/*" 
                   element={
                     <AdminRoute>
-                      <AdminPage />
+                      <AdminLayout />
                     </AdminRoute>
-                  } 
-                />
-                <Route 
-                  path="/admin/users" 
-                  element={
-                    <AdminRoute>
-                      <AdminUsersPage />
-                    </AdminRoute>
-                  } 
-                />
-                <Route 
-                  path="/admin/courses" 
-                  element={
-                    <AdminRoute>
-                      <AdminCoursesPage />
-                    </AdminRoute>
-                  } 
-                />
-                <Route 
-                  path="/admin/courses/:courseId/content" 
-                  element={
-                    <AdminRoute>
-                      <AdminCourseContentPage />
-                    </AdminRoute>
-                  } 
-                />
-                <Route 
-                  path="/admin/assignments/:assignmentId/grading" 
-                  element={
-                    <AdminRoute>
-                      <AdminAssignmentGradingPage />
-                    </AdminRoute>
-                  } 
-                />
+                  }
+                >
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="users" element={<AdminUsersPage />} />
+                  <Route path="courses" element={<AdminCoursesPage />} />
+                  <Route path="courses/:courseId/content" element={<AdminCourseContentPage />} />
+                  <Route path="assignments/:assignmentId/grading" element={<AdminAssignmentGradingPage />} />
+                </Route>
               </Routes>
             </main>
             <Footer />

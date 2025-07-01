@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Clock, 
@@ -26,24 +26,37 @@ const QuizPlayer = ({ quiz, onComplete, onClose }) => {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Initialize quiz attempt
-  useEffect(() => {
-    initializeQuiz();
-  }, [quiz.id]);
+  const handleSubmit = useCallback(async () => {
+    if (!currentAttempt) return;
 
-  // Timer effect
-  useEffect(() => {
-    if (timeLeft > 0 && !isSubmitted) {
-      const timer = setTimeout(() => {
-        setTimeLeft(timeLeft - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && quiz.time_limit > 0 && !isSubmitted) {
-      handleSubmit();
+    setLoading(true);
+    const { data, error } = await submitQuizAttempt(currentAttempt.id, answers);
+    
+    if (error) {
+      toast({
+        title: "ไม่สามารถส่งแบบทดสอบได��",
+        description: error.message,
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
     }
-  }, [timeLeft, isSubmitted]);
 
-  const initializeQuiz = async () => {
+    setResults(data);
+    setIsSubmitted(true);
+    setLoading(false);
+
+    // Show success message
+    toast({
+      title: data.is_passed ? "ผ่านแบบทดสอบ! 🎉" : "ไม่ผ่านแบบทดสอบ",
+      description: `คะแนนที่ได้: ${data.score}/${data.max_score} (${data.score}%)`,
+      variant: data.is_passed ? "default" : "destructive"
+    });
+
+    onComplete?.(data);
+  }, [currentAttempt, answers, toast, onComplete]);
+
+  const initializeQuiz = useCallback(async () => {
     setLoading(true);
     const { data, error } = await startQuizAttempt(quiz.id);
     
@@ -65,43 +78,30 @@ const QuizPlayer = ({ quiz, onComplete, onClose }) => {
     }
     
     setLoading(false);
-  };
+  }, [quiz.id, quiz.time_limit, toast, onClose]);
+
+  // Initialize quiz attempt
+  useEffect(() => {
+    initializeQuiz();
+  }, [initializeQuiz]);
+
+  // Timer effect
+  useEffect(() => {
+    if (timeLeft > 0 && !isSubmitted) {
+      const timer = setTimeout(() => {
+        setTimeLeft(timeLeft - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (timeLeft === 0 && quiz.time_limit > 0 && !isSubmitted) {
+      handleSubmit();
+    }
+  }, [timeLeft, isSubmitted, quiz.time_limit, handleSubmit]);
 
   const handleAnswerChange = (questionId, answer) => {
     setAnswers(prev => ({
       ...prev,
       [questionId]: answer
     }));
-  };
-
-  const handleSubmit = async () => {
-    if (!currentAttempt) return;
-
-    setLoading(true);
-    const { data, error } = await submitQuizAttempt(currentAttempt.id, answers);
-    
-    if (error) {
-      toast({
-        title: "ไม่สามารถส่งแบบทดสอบได้",
-        description: error.message,
-        variant: "destructive"
-      });
-      setLoading(false);
-      return;
-    }
-
-    setResults(data);
-    setIsSubmitted(true);
-    setLoading(false);
-
-    // Show success message
-    toast({
-      title: data.is_passed ? "ผ่านแบบทดสอบ! 🎉" : "ไม่ผ่านแบบทดสอบ",
-      description: `คะแนนที่ได้: ${data.score}/${data.max_score} (${data.score}%)`,
-      variant: data.is_passed ? "default" : "destructive"
-    });
-
-    onComplete?.(data);
   };
 
   const nextQuestion = () => {

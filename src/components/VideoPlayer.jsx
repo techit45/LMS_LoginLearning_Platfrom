@@ -6,7 +6,6 @@ import {
   Volume2, 
   VolumeX, 
   Maximize, 
-  Settings, 
   SkipBack, 
   SkipForward,
   Loader2 

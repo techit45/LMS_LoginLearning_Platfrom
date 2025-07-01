@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -6,7 +6,6 @@ import {
   Edit3, 
   Clock, 
   Award, 
-  Eye, 
   Copy,
   ChevronDown,
   ChevronUp,
@@ -33,13 +32,6 @@ const QuizEditor = ({ contentId, initialQuiz, onSave }) => {
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [showQuestionEditor, setShowQuestionEditor] = useState(false);
 
-  const questionTypes = [
-    { value: 'multiple_choice', label: 'เลือกตอบ (ตัวเลือกเดียว)' },
-    { value: 'multiple_select', label: 'เลือกตอบ (หลายตัวเลือก)' },
-    { value: 'true_false', label: 'ถูก/ผิด' },
-    { value: 'fill_blank', label: 'เติมคำ' }
-  ];
-
   const handleSaveQuiz = () => {
     const validation = validateQuizData(quizData);
     if (!validation.isValid) {
@@ -53,6 +45,7 @@ const QuizEditor = ({ contentId, initialQuiz, onSave }) => {
 
     onSave(quizData);
   };
+
 
   const handleAddQuestion = () => {
     setEditingQuestion({
@@ -93,6 +86,7 @@ const QuizEditor = ({ contentId, initialQuiz, onSave }) => {
   };
 
   const handleDeleteQuestion = (questionId) => {
+    // eslint-disable-next-line no-restricted-globals
     if (!confirm('คุณแน่ใจหรือไม่ที่จะลบคำถามนี้?')) return;
     
     setQuizData(prev => ({

@@ -2,22 +2,96 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { Users, UserPlus, Search, Edit, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, UserPlus, Search, Edit, Trash2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-
-// Placeholder data - replace with actual data fetching and state management
-const mockUsers = [
-  { id: '1', name: 'นักเรียน ตัวอย่าง', email: 'student1@example.com', role: 'Student', joined: '2024-01-15' },
-  { id: '2', name: 'ผู้สอน ทดสอบ', email: 'instructor@example.com', role: 'Instructor', joined: '2023-11-20' },
-  { id: '3', name: 'ผู้ดูแล สาขา', email: 'branchmanager@example.com', role: 'Branch Manager', joined: '2023-09-01' },
-];
+import { getAllUsersForAdmin, updateUserRole } from '@/lib/adminService';
 
 const AdminUsersPage = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [users, setUsers] = React.useState(mockUsers); // Replace with actual user data
+  const [users, setUsers] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  // โหลดข้อมูลผู้ใช้จริงจาก Supabase
+  React.useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setLoading(true);
+        const { data: userList, error } = await getAllUsersForAdmin();
+        
+        if (error) {
+          throw new Error(error);
+        }
+        
+        setUsers(userList || []);
+      } catch (error) {
+        console.error('Error loading users:', error);
+        toast({
+          title: "เกิดข้อผิดพลาด",
+          description: `ไม่สามารถโหลดข้อมูลผู้ใช้ได้: ${error.message}`,
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, [toast]);
+
+  const handleRoleUpdate = async (userId, newRole) => {
+    try {
+      // ถ้าเป็นข้อมูล mock (id เป็นตัวเลข) ให้แสดง toast เฉยๆ
+      if (userId === '1' || userId === '2' || typeof userId === 'string' && userId.length < 10) {
+        // อัพเดท state local สำหรับ mock data
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.id === userId 
+              ? { ...user, role: newRole }
+              : user
+          )
+        );
+        
+        toast({
+          title: "อัพเดทสำเร็จ (ข้อมูลตัวอย่าง)",
+          description: `เปลี่ยนบทบาทผู้ใช้เป็น ${newRole} แล้ว`,
+        });
+        return;
+      }
+
+      // สำหรับข้อมูลจริงจาก database
+      const { data, error } = await updateUserRole(userId, newRole);
+      
+      if (error) {
+        throw new Error(error);
+      }
+      
+      // อัพเดท state local
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId 
+            ? { ...user, role: newRole }
+            : user
+        )
+      );
+      
+      toast({
+        title: "อัพเดทสำเร็จ",
+        description: `เปลี่ยนบทบาทผู้ใช้เป็น ${newRole} แล้ว`,
+      });
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: `ไม่สามารถอัพเดทบทบาทได้: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleFeatureNotImplemented = (feature) => {
     toast({
@@ -56,10 +130,21 @@ const AdminUsersPage = () => {
         transition={{ duration: 0.5, delay: 0.1 }}
         className="flex flex-col sm:flex-row justify-between items-center mb-10"
       >
-        <h1 className="text-3xl lg:text-4xl font-bold text-teal-900 mb-4 sm:mb-0">
-          <Users className="inline-block w-8 h-8 mr-3 text-[#667eea]" />
-          จัดการผู้ใช้งาน
-        </h1>
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/admin')}
+            className="mr-4 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            ย้อนกลับ
+          </Button>
+          <h1 className="text-3xl lg:text-4xl font-bold text-teal-900 mb-4 sm:mb-0">
+            <Users className="inline-block w-8 h-8 mr-3 text-[#667eea]" />
+            จัดการผู้ใช้งาน
+          </h1>
+        </div>
         <Button 
           onClick={() => handleFeatureNotImplemented("เพิ่มผู้ใช้ใหม่")}
           className="bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:from-[#5a6fcf] hover:to-[#673f8b] text-gray-800"
@@ -102,19 +187,40 @@ const AdminUsersPage = () => {
                 transition={{ delay: index * 0.05 }}
                 className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors"
               >
-                <td className="p-4">{user.name}</td>
+                <td className="p-4">
+                  <div>
+                    <div className="font-medium">{user.name}</div>
+                    {user.school && (
+                      <div className="text-sm text-gray-500">{user.school}</div>
+                    )}
+                  </div>
+                </td>
                 <td className="p-4">{user.email}</td>
                 <td className="p-4">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    user.role === 'Admin' ? 'bg-red-500/30 text-red-300' :
-                    user.role === 'Instructor' ? 'bg-blue-500/30 text-blue-300' :
-                    user.role === 'Branch Manager' ? 'bg-purple-500/30 text-purple-300' :
-                    'bg-green-500/30 text-green-300'
-                  }`}>
-                    {user.role}
-                  </span>
+                  <select 
+                    value={user.role} 
+                    onChange={(e) => handleRoleUpdate(user.id, e.target.value)}
+                    className={`px-2 py-1 text-xs rounded-full border-0 ${
+                      user.role === 'admin' ? 'bg-red-500/30 text-red-300' :
+                      user.role === 'instructor' ? 'bg-blue-500/30 text-blue-300' :
+                      user.role === 'branch_manager' ? 'bg-purple-500/30 text-purple-300' :
+                      'bg-green-500/30 text-green-300'
+                    }`}
+                  >
+                    <option value="student">Student</option>
+                    <option value="instructor">Instructor</option>
+                    <option value="admin">Admin</option>
+                    <option value="branch_manager">Branch Manager</option>
+                  </select>
                 </td>
-                <td className="p-4">{user.joined}</td>
+                <td className="p-4">
+                  <div>
+                    <div className="text-sm">{user.joinedDate}</div>
+                    <div className="text-xs text-gray-500">
+                      {user.enrollmentCount} คอร์ส
+                    </div>
+                  </div>
+                </td>
                 <td className="p-4 text-center space-x-2">
                   <Button variant="ghost" size="icon" onClick={() => handleFeatureNotImplemented(`แก้ไขผู้ใช้ ${user.name}`)} className="text-blue-400 hover:bg-blue-500/20">
                     <Edit className="w-4 h-4" />
@@ -127,9 +233,17 @@ const AdminUsersPage = () => {
             ))}
           </tbody>
         </table>
-        {filteredUsers.length === 0 && (
-          <p className="text-center p-6 text-teal-700">ไม่พบผู้ใช้งานที่ตรงกับการค้นหา</p>
-        )}
+        
+        {loading ? (
+          <div className="flex items-center justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            <span className="ml-3 text-gray-600">กำลังโหลดข้อมูลผู้ใช้...</span>
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <p className="text-center p-6 text-teal-700">
+            {users.length === 0 ? 'ไม่มีข้อมูลผู้ใช้ในระบบ' : 'ไม่พบผู้ใช้งานที่ตรงกับการค้นหา'}
+          </p>
+        ) : null}
       </div>
     </motion.div>
   );

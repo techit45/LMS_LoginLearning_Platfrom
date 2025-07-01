@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Download,
@@ -9,10 +9,7 @@ import {
   FileArchive,
   File,
   ExternalLink,
-  Share2,
   X,
-  ChevronLeft,
-  ChevronRight,
   ZoomIn,
   ZoomOut,
   RotateCw,
@@ -46,16 +43,7 @@ const AttachmentViewer = ({
   const [showPreview, setShowPreview] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  useEffect(() => {
-    if (contentId) {
-      loadAttachments();
-    } else {
-      setAttachments([]);
-      setLoading(false);
-    }
-  }, [contentId]);
-
-  const loadAttachments = async () => {
+  const loadAttachments = useCallback(async () => {
     setLoading(true);
     try {
       if (!contentId) {
@@ -87,7 +75,16 @@ const AttachmentViewer = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [contentId, toast]);
+
+  useEffect(() => {
+    if (contentId) {
+      loadAttachments();
+    } else {
+      setAttachments([]);
+      setLoading(false);
+    }
+  }, [contentId, loadAttachments]);
 
   // Get file icon based on type
   const getFileIcon = (fileType, size = 'w-5 h-5') => {
@@ -178,7 +175,7 @@ const AttachmentViewer = ({
     }
 
     // Confirm deletion
-    if (!window.confirm(`คุณต้องการลบไฟล์ "${attachment.file_name}" หรือไม่?`)) {
+    if (!window.confirm(`คุณต้อง��ารลบไฟล์ "${attachment.file_name}" หรือไม่?`)) {
       return;
     }
 
@@ -397,7 +394,6 @@ const AttachmentViewer = ({
 
 // Individual attachment card component
 const AttachmentCard = ({ attachment, onDownload, onPreview, onExternalLink, onDelete, getFileIcon, isAdminView = false }) => {
-  const category = getFileCategory(attachment.file_type);
   
   return (
     <motion.div

@@ -1,30 +1,26 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { BookOpenText, PlusCircle, Search, Edit, Trash2, Users, Eye, BarChart3, AlertTriangle, FileText, Power, PowerOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BookOpenText, PlusCircle, Search, Edit, Trash2, Users, Eye, BarChart3, AlertTriangle, FileText, Power, PowerOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { getAllCoursesAdmin, deleteCourse, deleteCourseCompletely, toggleCourseStatus, getCourseStats } from '@/lib/courseService';
-import { getEnrollmentsByCourse } from '@/lib/enrollmentService';
+import { getAllCoursesAdmin, toggleCourseStatus, getCourseStats } from '@/lib/courseService';
 import { Link } from 'react-router-dom';
 import CreateCourseForm from '@/components/CreateCourseForm';
 
 const AdminCoursesPage = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  useEffect(() => {
-    loadCourses();
-    loadStats();
-  }, []);
-
-  const loadCourses = async () => {
+  const loadCourses = useCallback(async () => {
     setLoading(true);
     const { data, error } = await getAllCoursesAdmin();
     if (error) {
@@ -37,41 +33,25 @@ const AdminCoursesPage = () => {
       setCourses(data || []);
     }
     setLoading(false);
-  };
+  }, [toast]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     const { data, error } = await getCourseStats();
     if (!error && data) {
       setStats(data);
     }
-  };
+  }, []);
 
-  const handleDeleteCourse = async (courseId, courseTitle) => {
-    if (!confirm(`คุณแน่ใจหรือไม่ที่จะปิดใช้งานคอร์ส "${courseTitle}"?\n\nคอร์สจะยังแสดงในระบบแอดมินแต่ผู้ใช้ทั่วไปจะไม่เห็น`)) {
-      return;
-    }
-
-    const { error } = await deleteCourse(courseId);
-    if (error) {
-      toast({
-        title: "ไม่สามารถปิดใช้งานคอร์สได้",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "ปิดใช้งานคอร์สสำเร็จ",
-        description: `คอร์ส "${courseTitle}" ถูกปิดใช้งานแล้ว`
-      });
-      loadCourses();
-      loadStats();
-    }
-  };
+  useEffect(() => {
+    loadCourses();
+    loadStats();
+  }, [loadCourses, loadStats]);
 
   const handleToggleCourseStatus = async (courseId, courseTitle, currentStatus) => {
     const newStatus = !currentStatus;
     const action = newStatus ? 'เปิดใช้งาน' : 'ปิดใช้งาน';
     
+    // eslint-disable-next-line no-restricted-globals
     if (!confirm(`คุณแน่ใจหรือไม่ที่จะ${action}คอร์ส "${courseTitle}"?`)) {
       return;
     }
@@ -93,40 +73,19 @@ const AdminCoursesPage = () => {
     }
   };
 
-  const handleDeleteCourseCompletely = async (courseId, courseTitle) => {
-    if (!confirm(`⚠️ คุณแน่ใจหรือไม่ที่จะลบคอร์ส "${courseTitle}" อย่างถาวร?\n\n🚨 การดำเนินการนี้ไม่สามารถย้อนกลับได้!\n\n- คอร์สและเนื้อหาทั้งหมดจะถูกลบถาวร\n- ข้อมูลการลงทะเบียนจะยังคงอยู่\n\nพิมพ์ "DELETE" เพื่อยืนยัน`)) {
-      return;
-    }
-
-    const confirmation = prompt(`กรุณาพิมพ์ "DELETE" เพื่อยืนยันการลบคอร์ส "${courseTitle}" อย่างถาวร:`);
-    if (confirmation !== "DELETE") {
-      toast({
-        title: "ยกเลิกการลบ",
-        description: "การลบถาวรถูกยกเลิก"
-      });
-      return;
-    }
-
-    const { error } = await deleteCourseCompletely(courseId);
-    if (error) {
-      toast({
-        title: "ไม่สามารถลบคอร์สได้",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "ลบคอร์สถาวรสำเร็จ",
-        description: `คอร์ส "${courseTitle}" ถูกลบถาวรแล้ว`
-      });
-      loadCourses();
-      loadStats();
-    }
-  };
+  
 
   const handleCourseCreated = () => {
     loadCourses(); // Refresh the course list
     loadStats(); // Refresh statistics
+  };
+
+  const handleFeatureNotImplemented = (featureName) => {
+    toast({
+      title: "ฟีเจอร์ยังไม่พร้อมใช้งาน",
+      description: `${featureName} ยังอยู่ในระหว่างการพัฒนา`,
+      variant: "info"
+    });
   };
   
   const filteredCourses = courses.filter(course => 
@@ -159,10 +118,21 @@ const AdminCoursesPage = () => {
         transition={{ duration: 0.5, delay: 0.1 }}
         className="flex flex-col sm:flex-row justify-between items-center mb-10"
       >
-        <h1 className="text-3xl lg:text-4xl font-bold text-purple-900 mb-4 sm:mb-0">
-          <BookOpenText className="inline-block w-8 h-8 mr-3 text-[#667eea]" />
-          จัดการคอร์สเรียน
-        </h1>
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/admin')}
+            className="mr-4 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            ย้อนกลับ
+          </Button>
+          <h1 className="text-3xl lg:text-4xl font-bold text-purple-900 mb-4 sm:mb-0">
+            <BookOpenText className="inline-block w-8 h-8 mr-3 text-[#667eea]" />
+            จัดการคอร์สเรียน
+          </h1>
+        </div>
         <Button 
           onClick={() => setShowCreateForm(true)}
           className="bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:from-[#5a6fcf] hover:to-[#673f8b] text-white-800"
@@ -331,7 +301,7 @@ const AdminCoursesPage = () => {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={() => handleDeleteCourseCompletely(course.id, course.title)} 
+                        onClick={() => handleFeatureNotImplemented(`ลบถาวรคอร์ส ${course.title}`)}
                         className="text-red-400 hover:bg-red-500/20"
                         title="ลบถาวร"
                       >

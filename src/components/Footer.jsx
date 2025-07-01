@@ -82,9 +82,9 @@ const Footer = () => {
           <div>
             <h3 className="text-black font-semibold mb-4 text-lg">ติดตามเรา</h3>
             <ul className="space-y-2 text-black">
-              <li><a href="#" onClick={(e) => { e.preventDefault(); alert("🚧 ฟีเจอร์นี้ยังไม่พร้อมใช้งาน"); }} className="hover:text-blue-700 transition-colors">Facebook</a></li>
-              <li><a href="#" onClick={(e) => { e.preventDefault(); alert("🚧 ฟีเจอร์นี้ยังไม่พร้อมใช้งาน"); }} className="hover:text-blue-700 transition-colors">Instagram</a></li>
-              <li><a href="#" onClick={(e) => { e.preventDefault(); alert("🚧 ฟีเจอร์นี้ยังไม่พร้อมใช้งาน"); }} className="hover:text-blue-700 transition-colors">YouTube</a></li>
+              <li><button onClick={() => alert("🚧 ฟีเจอร์นี้ยังไม่พร้อมใช้งาน")} className="hover:text-blue-700 transition-colors">Facebook</button></li>
+              <li><button onClick={() => alert("🚧 ฟีเจอร์นี้ยังไม่พร้อมใช้งาน")} className="hover:text-blue-700 transition-colors">Instagram</button></li>
+              <li><button onClick={() => alert("🚧 ฟีเจอร์นี้ยังไม่พร้อมใช้งาน")} className="hover:text-blue-700 transition-colors">YouTube</button></li>
               <li><a href={companyInfo.lineGroup} target="_blank" rel="noopener noreferrer" className="hover:text-blue-700 transition-colors">Line Official</a></li>
             </ul>
           </div>

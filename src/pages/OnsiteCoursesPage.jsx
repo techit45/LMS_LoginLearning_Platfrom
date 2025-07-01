@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { 
@@ -12,11 +12,7 @@ import {
   UserPlus,
   Search,
   Filter,
-  ChevronDown,
-  Star,
-  Award,
-  ArrowRight,
-  CheckCircle
+  Award
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,11 +29,7 @@ const OnsiteCoursesPage = () => {
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
   const [filterDeliveryType, setFilterDeliveryType] = useState('all');
 
-  useEffect(() => {
-    loadOnsiteCourses();
-  }, []);
-
-  const loadOnsiteCourses = async () => {
+  const loadOnsiteCourses = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await getOnsiteCourses();
@@ -52,7 +44,11 @@ const OnsiteCoursesPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    loadOnsiteCourses();
+  }, [loadOnsiteCourses]);
 
   const handleRegistration = (course) => {
     setSelectedCourse(course);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,11 +10,10 @@ import {
   PlayCircle,
   FileText,
   Trophy,
-  Award,
   Eye,
-  Save,
   GripVertical,
-  CheckSquare
+  CheckSquare,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -27,11 +26,13 @@ import {
   deleteContent, 
   reorderContent 
 } from '@/lib/contentService';
+import { getCourseContentWithProgress } from '@/lib/progressManagementService';
 import ContentEditor from '@/components/ContentEditor';
+import ProgressRequirementEditor from '@/components/ProgressRequirementEditor';
 
 const AdminCourseContentPage = () => {
   const { courseId } = useParams();
-  const { user, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { toast } = useToast();
 
   // Course and content state
@@ -44,16 +45,11 @@ const AdminCourseContentPage = () => {
   const [editingContent, setEditingContent] = useState(null);
   const [editorMode, setEditorMode] = useState('create'); // 'create' or 'edit'
   
-  // Drag and drop state
-  const [draggedItem, setDraggedItem] = useState(null);
-
-  useEffect(() => {
-    if (isAdmin) {
-      loadCourseData();
-    }
-  }, [courseId, isAdmin]);
-
-  const loadCourseData = async () => {
+  // Progress requirement editor state
+  const [showProgressEditor, setShowProgressEditor] = useState(false);
+  const [progressEditingContent, setProgressEditingContent] = useState(null);
+  
+  const loadCourseData = useCallback(async () => {
     setLoading(true);
     try {
       // Load course info (Admin version - includes inactive courses)
@@ -61,8 +57,8 @@ const AdminCourseContentPage = () => {
       if (courseError) throw courseError;
       setCourse(courseData);
 
-      // Load course content
-      const { data: contentData, error: contentError } = await getCourseContent(courseId);
+      // Load course content with progress requirements
+      const { data: contentData, error: contentError } = await getCourseContentWithProgress(courseId);
       if (contentError) throw contentError;
       setContents(contentData || []);
     } catch (error) {
@@ -75,7 +71,13 @@ const AdminCourseContentPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [courseId, toast]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadCourseData();
+    }
+  }, [isAdmin, loadCourseData]);
 
   const handleCreateContent = () => {
     setEditingContent(null);
@@ -89,7 +91,19 @@ const AdminCourseContentPage = () => {
     setShowEditor(true);
   };
 
+  const handleEditProgress = (content) => {
+    setProgressEditingContent(content);
+    setShowProgressEditor(true);
+  };
+
+  const handleUpdateProgress = (updatedContent) => {
+    setContents(contents.map(c => 
+      c.id === updatedContent.id ? { ...c, ...updatedContent } : c
+    ));
+  };
+
   const handleDeleteContent = async (contentId) => {
+    // eslint-disable-next-line no-restricted-globals
     if (!confirm('คุณแน่ใจหรือไม่ที่จะลบเนื้อหานี้?')) return;
 
     try {
@@ -170,7 +184,7 @@ const AdminCourseContentPage = () => {
     } catch (error) {
       console.error('Error reordering content:', error);
       toast({
-        title: "ไม่สามารถเรียงลำดับได้",
+        title: "ไม่สามารถเรี���งลำดับได้",
         description: error.message,
         variant: "destructive"
       });
@@ -203,6 +217,18 @@ const AdminCourseContentPage = () => {
       text: 'ข้อความ'
     };
     return labels[contentType] || contentType;
+  };
+
+  const getCompletionTypeLabel = (completionType) => {
+    const labels = {
+      manual: 'กดผ่านเลย',
+      quiz_required: 'ต้องทำข้อสอบ',
+      assignment_required: 'ต้องส่งงาน',
+      time_based: 'ใช้เวลาครบ',
+      video_complete: 'ดูวิดีโอจบ',
+      sequential: 'ตามลำดับ'
+    };
+    return labels[completionType] || completionType;
   };
 
   if (!isAdmin) {
@@ -336,6 +362,16 @@ const AdminCourseContentPage = () => {
                     {content.is_free && (
                       <span className="text-green-400">ฟรี</span>
                     )}
+                    {content.completion_type && content.completion_type !== 'manual' && (
+                      <span className="px-2 py-1 rounded bg-blue-100 text-blue-700">
+                        {getCompletionTypeLabel(content.completion_type)}
+                      </span>
+                    )}
+                    {!content.is_required && (
+                      <span className="px-2 py-1 rounded bg-gray-100 text-gray-600">
+                        เสริม
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -360,6 +396,17 @@ const AdminCourseContentPage = () => {
                       </Button>
                     </Link>
                   )}
+                  
+                  {/* Progress Settings Button */}
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => handleEditProgress(content)}
+                    className="text-blue-600 hover:text-blue-700"
+                    title="ตั้งค่าความคืบหน้า"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </Button>
                   
                   <Button 
                     size="sm" 
@@ -394,6 +441,16 @@ const AdminCourseContentPage = () => {
             content={editingContent}
             onSave={handleSaveContent}
             onClose={() => setShowEditor(false)}
+          />
+        )}
+        
+        {/* Progress Requirement Editor Modal */}
+        {showProgressEditor && (
+          <ProgressRequirementEditor
+            content={progressEditingContent}
+            courseContent={contents}
+            onUpdate={handleUpdateProgress}
+            onClose={() => setShowProgressEditor(false)}
           />
         )}
       </AnimatePresence>

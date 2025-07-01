@@ -57,10 +57,25 @@ export const AuthProvider = ({ children }) => {
             setIsAdmin(true);
             setUserRole(ROLES.SUPER_ADMIN); // Admin domain users are super admin
           } else {
-            // In a real app, fetch role from user_metadata or a roles table
-            // For now, default logged-in users to STUDENT
-            setIsAdmin(false); // Explicitly set non-admin
-            setUserRole(currentUser.user_metadata?.role || ROLES.STUDENT); 
+            // ดึง role จากฐานข้อมูล user_profiles
+            try {
+              const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('user_role')
+                .eq('user_id', currentUser.id)
+                .single();
+              
+              const dbRole = profile?.user_role || 'student';
+              const mappedRole = dbRole === 'admin' ? ROLES.SUPER_ADMIN : 
+                               dbRole === 'instructor' ? ROLES.INSTRUCTOR : ROLES.STUDENT;
+              
+              setIsAdmin(dbRole === 'admin' || dbRole === 'instructor');
+              setUserRole(mappedRole);
+            } catch (error) {
+              console.log('Could not fetch user role from database, using default');
+              setIsAdmin(false);
+              setUserRole(ROLES.STUDENT);
+            }
           }
         } else {
           setIsAdmin(false);
@@ -86,8 +101,25 @@ export const AuthProvider = ({ children }) => {
           setIsAdmin(true);
           setUserRole(ROLES.SUPER_ADMIN);
         } else {
-          setIsAdmin(false);
-          setUserRole(currentUser.user_metadata?.role || ROLES.STUDENT);
+          // ดึง role จากฐานข้อมูล user_profiles
+          try {
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('user_role')
+              .eq('user_id', currentUser.id)
+              .single();
+            
+            const dbRole = profile?.user_role || 'student';
+            const mappedRole = dbRole === 'admin' ? ROLES.SUPER_ADMIN : 
+                             dbRole === 'instructor' ? ROLES.INSTRUCTOR : ROLES.STUDENT;
+            
+            setIsAdmin(dbRole === 'admin' || dbRole === 'instructor');
+            setUserRole(mappedRole);
+          } catch (error) {
+            console.log('Could not fetch user role from database, using default');
+            setIsAdmin(false);
+            setUserRole(ROLES.STUDENT);
+          }
         }
       } else {
         setIsAdmin(false);
@@ -107,7 +139,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [toast]); // Removed userRole from dependency array to avoid potential loops on role update
+  }, [toast, userRole]);
 
   const signInWithPassword = async (email, password) => {
     if (!supabase) {

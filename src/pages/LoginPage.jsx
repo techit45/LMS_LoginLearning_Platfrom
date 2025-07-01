@@ -171,9 +171,9 @@ const LoginPage = () => {
             className="flex items-center justify-between"
           >
             <div className="text-sm">
-              <a href="#" onClick={() => toast({title: "🚧 ฟีเจอร์นี้ยังไม่พร้อมใช้งาน"})} className="font-medium text-blue-400 hover:text-blue-300">
+              <button onClick={() => toast({title: "🚧 ฟีเจอร์นี้ยังไม่พร้อมใช้งาน"})} className="font-medium text-blue-400 hover:text-blue-300">
                 ลืมรหัสผ่าน?
-              </a>
+              </button>
             </div>
           </motion.div>
 

@@ -10,7 +10,12 @@ import {
   Clock,
   Link as LinkIcon,
   Eye,
-  EyeOff
+  EyeOff,
+  Settings,
+  CheckSquare,
+  Award,
+  Unlock,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -28,7 +33,14 @@ const ContentEditor = ({ mode, content, onSave, onClose }) => {
     content_type: content?.content_type || 'video',
     content_url: content?.content_url || '',
     duration_minutes: content?.duration_minutes || 0,
-    is_free: content?.is_free || false
+    is_free: content?.is_free || false,
+    // Progress requirements
+    completion_type: content?.completion_type || 'manual',
+    minimum_score: content?.minimum_score || 0,
+    minimum_time_minutes: content?.minimum_time_minutes || 0,
+    is_required: content?.is_required !== false,
+    unlock_after: content?.unlock_after || [],
+    completion_criteria: content?.completion_criteria || {}
   });
   
   const [activeTab, setActiveTab] = useState('basic');
@@ -278,6 +290,110 @@ const ContentEditor = ({ mode, content, onSave, onClose }) => {
           </div>
         </div>
       </div>
+
+      {/* Progress Requirements */}
+      <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-6 rounded-xl border border-amber-200">
+        <label className="block text-lg font-semibold text-gray-800 mb-4 flex items-center">
+          <div className="bg-amber-500 p-2 rounded-lg mr-3">
+            <Settings className="w-5 h-5 text-white" />
+          </div>
+          เงื่อนไขการผ่านเนื้อหา
+        </label>
+        
+        {/* Completion Type */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">ประเภทการผ่าน</label>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {[
+              { value: 'manual', label: 'กดผ่านเอง', icon: CheckSquare, color: 'blue' },
+              { value: 'quiz_required', label: 'ต้องทำแบบทดสอบ', icon: Award, color: 'yellow' },
+              { value: 'assignment_required', label: 'ต้องส่งงาน', icon: FileText, color: 'purple' },
+              { value: 'time_based', label: 'เวลาขั้นต่ำ', icon: Clock, color: 'green' },
+              { value: 'video_complete', label: 'ดูวิดีโอครบ', icon: PlayCircle, color: 'red' },
+              { value: 'sequential', label: 'เรียงลำดับ', icon: Lock, color: 'gray' }
+            ].map(type => {
+              const Icon = type.icon;
+              const isSelected = formData.completion_type === type.value;
+              return (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, completion_type: type.value }))}
+                  className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                    isSelected
+                      ? `border-${type.color}-500 bg-${type.color}-50 text-${type.color}-700`
+                      : 'border-gray-200 bg-white hover:border-gray-300 text-gray-600'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 mx-auto mb-1 ${
+                    isSelected ? `text-${type.color}-600` : 'text-gray-500'
+                  }`} />
+                  <div className="text-xs font-medium">{type.label}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Conditional Settings */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Minimum Score - for quiz/assignment */}
+          {(formData.completion_type === 'quiz_required' || formData.completion_type === 'assignment_required') && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">คะแนนขั้นต่ำ (%)</label>
+              <input
+                type="number"
+                value={formData.minimum_score}
+                onChange={(e) => setFormData(prev => ({ ...prev, minimum_score: parseInt(e.target.value) || 0 }))}
+                className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
+                min="0"
+                max="100"
+                placeholder="80"
+              />
+            </div>
+          )}
+
+          {/* Minimum Time - for time_based */}
+          {formData.completion_type === 'time_based' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">เวลาขั้นต่ำ (นาที)</label>
+              <input
+                type="number"
+                value={formData.minimum_time_minutes}
+                onChange={(e) => setFormData(prev => ({ ...prev, minimum_time_minutes: parseInt(e.target.value) || 0 }))}
+                className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
+                min="0"
+                placeholder="10"
+              />
+            </div>
+          )}
+
+          {/* Required Content */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">จำเป็นต้องผ่าน</label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="is_required"
+                checked={formData.is_required}
+                onChange={(e) => setFormData(prev => ({ ...prev, is_required: e.target.checked }))}
+                className="w-4 h-4 text-amber-500 border-2 border-gray-300 rounded focus:ring-amber-500"
+              />
+              <label htmlFor="is_required" className="text-sm text-gray-700 cursor-pointer">
+                {formData.is_required ? (
+                  <span className="flex items-center text-amber-600">
+                    <Lock className="w-4 h-4 mr-1" /> เนื้อหาบังคับ
+                  </span>
+                ) : (
+                  <span className="flex items-center text-gray-500">
+                    <Unlock className="w-4 h-4 mr-1" /> เนื้อหาเสริม
+                  </span>
+                )}
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 
@@ -366,6 +482,198 @@ const ContentEditor = ({ mode, content, onSave, onClose }) => {
       </div>
     );
   };
+
+  const renderProgressRequirements = () => (
+    <div className="space-y-6">
+      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-6 rounded-xl border border-purple-200">
+        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+          <Award className="w-6 h-6 mr-3 text-purple-600" />
+          การตั้งค่าเงื่อนไขการผ่านเนื้อหา
+        </h3>
+        <p className="text-gray-600 mb-6">
+          กำหนดเงื่อนไขที่นักเรียนต้องปฏิบัติเพื่อถือว่าผ่านเนื้อหานี้แล้ว
+        </p>
+
+        {/* Completion Type Selection */}
+        <div className="mb-6">
+          <label className="block text-lg font-semibold text-gray-800 mb-3">ประเภทการผ่าน</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              { 
+                value: 'manual', 
+                label: 'กดผ่านเอง', 
+                description: 'นักเรียนกดปุ่มเสร็จสิ้นเอง', 
+                icon: CheckSquare, 
+                color: 'blue' 
+              },
+              { 
+                value: 'quiz_required', 
+                label: 'ต้องทำแบบทดสอบ', 
+                description: 'ต้องทำแบบทดสอบและได้คะแนนตามที่กำหนด', 
+                icon: Award, 
+                color: 'yellow' 
+              },
+              { 
+                value: 'assignment_required', 
+                label: 'ต้องส่งงาน', 
+                description: 'ต้องส่งงานมอบหมายและได้คะแนนผ่าน', 
+                icon: FileText, 
+                color: 'purple' 
+              },
+              { 
+                value: 'time_based', 
+                label: 'เวลาขั้นต่ำ', 
+                description: 'ต้องใช้เวลาเรียนครบตามที่กำหนด', 
+                icon: Clock, 
+                color: 'green' 
+              },
+              { 
+                value: 'video_complete', 
+                label: 'ดูวิดีโอครบ', 
+                description: 'ต้องดูวิดีโอจนจบ', 
+                icon: PlayCircle, 
+                color: 'red' 
+              },
+              { 
+                value: 'sequential', 
+                label: 'เรียงลำดับ', 
+                description: 'ต้องผ่านเนื้อหาก่อนหน้าก่อน', 
+                icon: Lock, 
+                color: 'gray' 
+              }
+            ].map(type => {
+              const Icon = type.icon;
+              const isSelected = formData.completion_type === type.value;
+              return (
+                <div
+                  key={type.value}
+                  onClick={() => setFormData(prev => ({ ...prev, completion_type: type.value }))}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
+                    isSelected
+                      ? `border-${type.color}-500 bg-${type.color}-50 shadow-lg`
+                      : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
+                  }`}
+                >
+                  <div className="flex items-center mb-2">
+                    <Icon className={`w-5 h-5 mr-2 ${
+                      isSelected ? `text-${type.color}-600` : 'text-gray-500'
+                    }`} />
+                    <span className={`font-semibold ${
+                      isSelected ? `text-${type.color}-800` : 'text-gray-700'
+                    }`}>{type.label}</span>
+                  </div>
+                  <p className={`text-sm ${
+                    isSelected ? `text-${type.color}-600` : 'text-gray-500'
+                  }`}>{type.description}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Conditional Settings */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Minimum Score */}
+          {(formData.completion_type === 'quiz_required' || formData.completion_type === 'assignment_required') && (
+            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <label className="block text-sm font-semibold text-gray-800 mb-2 flex items-center">
+                <Award className="w-4 h-4 mr-2 text-yellow-600" />
+                คะแนนขั้นต่ำที่ต้องได้ (%)
+              </label>
+              <input
+                type="number"
+                value={formData.minimum_score}
+                onChange={(e) => setFormData(prev => ({ ...prev, minimum_score: parseInt(e.target.value) || 0 }))}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:outline-none text-center text-lg font-semibold"
+                min="0"
+                max="100"
+                placeholder="80"
+              />
+              <p className="text-xs text-gray-600 mt-1">นักเรียนต้องได้คะแนนอย่างน้อย {formData.minimum_score}% เพื่อผ่าน</p>
+            </div>
+          )}
+
+          {/* Minimum Time */}
+          {formData.completion_type === 'time_based' && (
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <label className="block text-sm font-semibold text-gray-800 mb-2 flex items-center">
+                <Clock className="w-4 h-4 mr-2 text-green-600" />
+                เวลาขั้นต่ำที่ต้องใช้ (นาที)
+              </label>
+              <input
+                type="number"
+                value={formData.minimum_time_minutes}
+                onChange={(e) => setFormData(prev => ({ ...prev, minimum_time_minutes: parseInt(e.target.value) || 0 }))}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none text-center text-lg font-semibold"
+                min="0"
+                placeholder="10"
+              />
+              <p className="text-xs text-gray-600 mt-1">นักเรียนต้องใช้เวลาอย่างน้อย {formData.minimum_time_minutes} นาที</p>
+            </div>
+          )}
+        </div>
+
+        {/* Required Content Toggle */}
+        <div className="mt-6 bg-amber-50 p-4 rounded-lg border border-amber-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-1 flex items-center">
+                {formData.is_required ? (
+                  <Lock className="w-4 h-4 mr-2 text-amber-600" />
+                ) : (
+                  <Unlock className="w-4 h-4 mr-2 text-gray-500" />
+                )}
+                สถานะการเรียน
+              </label>
+              <p className="text-sm text-gray-600">
+                {formData.is_required 
+                  ? 'เนื้อหาบังคับ - นักเรียนต้องผ่านเพื่อดำเนินการต่อ'
+                  : 'เนื้อหาเสริม - นักเรียนสามารถข้ามได้'
+                }
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className={`text-sm font-medium ${
+                formData.is_required ? 'text-amber-600' : 'text-gray-500'
+              }`}>
+                {formData.is_required ? 'บังคับ' : 'เสริม'}
+              </span>
+              <input
+                type="checkbox"
+                id="is_required_detailed"
+                checked={formData.is_required}
+                onChange={(e) => setFormData(prev => ({ ...prev, is_required: e.target.checked }))}
+                className="w-5 h-5 text-amber-500 border-2 border-gray-300 rounded focus:ring-amber-500"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Preview Section */}
+      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+        <h4 className="text-blue-800 font-semibold mb-2 flex items-center">
+          <Eye className="w-4 h-4 mr-2" />
+          ตัวอย่างสำหรับนักเรียน
+        </h4>
+        <div className="bg-white p-3 rounded border">
+          <p className="text-sm text-gray-700">
+            <strong>เงื่อนไขการผ่าน:</strong> {{
+              'manual': 'กดปุ่มเสร็จสิ้นเมื่อเรียนจบ',
+              'quiz_required': `ทำแบบทดสอบและได้คะแนนอย่างน้อย ${formData.minimum_score}%`,
+              'assignment_required': `ส่งงานมอบหมายและได้คะแนนอย่างน้อย ${formData.minimum_score}%`,
+              'time_based': `ใช้เวลาเรียนอย่างน้อย ${formData.minimum_time_minutes} นาที`,
+              'video_complete': 'ดูวิดีโอจนจบ',
+              'sequential': 'ผ่านเนื้อหาก่อนหน้าก่อน'
+            }[formData.completion_type]}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            สถานะ: {formData.is_required ? '🔒 เนื้อหาบังคับ' : '🔓 เนื้อหาเสริม'}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 
   const renderAdvancedSettings = () => {
     switch (formData.content_type) {
@@ -477,6 +785,17 @@ const ContentEditor = ({ mode, content, onSave, onClose }) => {
                 ⚙️ การตั้งค่าเพิ่มเติม
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setActiveTab('requirements')}
+              className={`flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeTab === 'requirements'
+                  ? 'bg-white text-indigo-600 shadow-lg'
+                  : 'text-white hover:bg-white/20'
+              }`}
+            >
+              🎯 เงื่อนไขการผ่าน
+            </button>
           </div>
         </div>
 
@@ -495,6 +814,7 @@ const ContentEditor = ({ mode, content, onSave, onClose }) => {
                 {activeTab === 'basic' && renderBasicFields()}
                 {activeTab === 'attachments' && renderAttachmentsTab()}
                 {activeTab === 'advanced' && renderAdvancedSettings()}
+                {activeTab === 'requirements' && renderProgressRequirements()}
               </motion.div>
             </AnimatePresence>
           </div>
@@ -533,7 +853,7 @@ const ContentEditor = ({ mode, content, onSave, onClose }) => {
               >
                 ยกเลิก
               </Button>
-              {activeTab === 'basic' && (
+              {(activeTab === 'basic' || activeTab === 'requirements') && (
                 <Button 
                   type="submit" 
                   className="px-12 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold text-lg h-14 min-w-[160px] shadow-lg hover:shadow-xl transition-all duration-200"
@@ -542,7 +862,7 @@ const ContentEditor = ({ mode, content, onSave, onClose }) => {
                   บันทึกเนื้อหา
                 </Button>
               )}
-              {activeTab !== 'basic' && (
+              {(activeTab !== 'basic' && activeTab !== 'requirements') && (
                 <Button 
                   type="button"
                   onClick={() => setActiveTab('basic')}

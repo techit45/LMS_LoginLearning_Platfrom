@@ -1,14 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, 
-  Mail, 
-  Phone, 
   MapPin, 
   GraduationCap, 
   Users, 
   FileText, 
-  Clock,
   CheckCircle,
   AlertCircle,
   Calendar,
@@ -80,19 +77,8 @@ const OnsiteRegistrationForm = ({ course, isOpen, onClose, onSuccess }) => {
 
   const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    if (isOpen && course) {
-      loadSchedules();
-    }
-  }, [isOpen, course]);
-
-  useEffect(() => {
-    if (formData.schedule_id && formData.preferred_project_type) {
-      loadProjectTemplates();
-    }
-  }, [formData.schedule_id, formData.preferred_project_type]);
-
-  const loadSchedules = async () => {
+  const loadSchedules = useCallback(async () => {
+    if (!course) return;
     try {
       const { data, error } = await getAvailableSchedules(course.id);
       if (error) throw error;
@@ -105,9 +91,10 @@ const OnsiteRegistrationForm = ({ course, isOpen, onClose, onSuccess }) => {
         variant: "destructive"
       });
     }
-  };
+  }, [course, toast]);
 
-  const loadProjectTemplates = async () => {
+  const loadProjectTemplates = useCallback(async () => {
+    if (!course) return;
     try {
       const { data, error } = await getProjectTemplates(
         course.id, 
@@ -118,7 +105,19 @@ const OnsiteRegistrationForm = ({ course, isOpen, onClose, onSuccess }) => {
     } catch (error) {
       console.error('Error loading project templates:', error);
     }
-  };
+  }, [course, formData.preferred_project_type]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadSchedules();
+    }
+  }, [isOpen, loadSchedules]);
+
+  useEffect(() => {
+    if (formData.schedule_id && formData.preferred_project_type) {
+      loadProjectTemplates();
+    }
+  }, [formData.schedule_id, formData.preferred_project_type, loadProjectTemplates]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => {
@@ -214,7 +213,7 @@ const OnsiteRegistrationForm = ({ course, isOpen, onClose, onSuccess }) => {
           newErrors['address.province'] = 'กรุณาระบุจังหวัด';
         }
         if (!formData.address.postal_code.trim()) {
-          newErrors['address.postal_code'] = 'กรุณาระบุรหัสไปรษณีย์';
+          newErrors['address.postal_code'] = 'กรุณาระบ��รหัสไปรษณีย์';
         }
         if (!formData.emergency_contact.name.trim()) {
           newErrors['emergency_contact.name'] = 'กรุณาระบุชื่อผู้ติดต่อฉุกเฉิน';
@@ -222,6 +221,8 @@ const OnsiteRegistrationForm = ({ course, isOpen, onClose, onSuccess }) => {
         if (!formData.emergency_contact.phone.trim()) {
           newErrors['emergency_contact.phone'] = 'กรุณาระบุเบอร์โทรผู้ติดต่อฉุกเฉิน';
         }
+        break;
+      default:
         break;
     }
 

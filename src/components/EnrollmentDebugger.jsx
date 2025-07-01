@@ -20,7 +20,7 @@ const EnrollmentDebugger = ({ courseId }) => {
     try {
       // Test database connection
       console.log('🔍 Testing database connection...');
-      const { data: connectionTest, error: connectionError } = await supabase
+      const { error: connectionError } = await supabase
         .from('enrollments')
         .select('count')
         .limit(1);

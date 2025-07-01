@@ -1,16 +1,20 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, BookOpen, Clock, Users, Award, ShoppingCart, Star, StarHalf, UserCheck, AlertCircle } from 'lucide-react';
+import { ArrowLeft, BookOpen, Clock, Users, Award, ShoppingCart, Star, UserCheck, AlertCircle, MessageSquare, Plus } from 'lucide-react';
 import { getCourseById } from '@/lib/courseService';
 import { enrollInCourse, isUserEnrolled } from '@/lib/enrollmentService';
 import { useAuth } from '@/contexts/AuthContext';
 import AttachmentViewer from '@/components/AttachmentViewer';
 import EnrollmentDebugger from '@/components/EnrollmentDebugger';
+import ForumTopicCard from '@/components/ForumTopicCard';
+import ForumTopicDetail from '@/components/ForumTopicDetail';
+import CreateTopicModal from '@/components/CreateTopicModal';
+import { getCourseTopics, toggleLike, toggleTopicPin, toggleTopicLock, deleteTopic } from '@/lib/forumService';
 
 const CourseDetailPage = () => {
   const { courseId } = useParams();
@@ -20,15 +24,15 @@ const CourseDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [enrollmentStatus, setEnrollmentStatus] = useState({ isEnrolled: false, status: null });
   const [enrolling, setEnrolling] = useState(false);
+  
+  // Forum states
+  const [activeTab, setActiveTab] = useState('content');
+  const [forumTopics, setForumTopics] = useState([]);
+  const [selectedTopicId, setSelectedTopicId] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [forumLoading, setForumLoading] = useState(false);
 
-  useEffect(() => {
-    loadCourse();
-    if (user) {
-      checkEnrollmentStatus();
-    }
-  }, [courseId, user]);
-
-  const loadCourse = async () => {
+  const loadCourse = useCallback(async () => {
     setLoading(true);
     console.log('Loading course with ID:', courseId);
     const { data, error } = await getCourseById(courseId);
@@ -44,9 +48,10 @@ const CourseDetailPage = () => {
       setCourse(data);
     }
     setLoading(false);
-  };
+  }, [courseId, toast]);
 
-  const checkEnrollmentStatus = async () => {
+  const checkEnrollmentStatus = useCallback(async () => {
+    if (!user) return;
     console.log('CourseDetailPage: Checking enrollment status for user:', user?.id, 'course:', courseId);
     const { isEnrolled, status, error } = await isUserEnrolled(courseId);
     console.log('CourseDetailPage: Enrollment check result:', { isEnrolled, status, error });
@@ -56,7 +61,20 @@ const CourseDetailPage = () => {
     } else {
       console.error('CourseDetailPage: Enrollment check error:', error);
     }
-  };
+  }, [courseId, user]);
+
+  useEffect(() => {
+    loadCourse();
+    if (user) {
+      checkEnrollmentStatus();
+    }
+  }, [loadCourse, checkEnrollmentStatus, user]);
+
+  useEffect(() => {
+    if (activeTab === 'forum' && enrollmentStatus.isEnrolled) {
+      loadForumTopics();
+    }
+  }, [activeTab, enrollmentStatus.isEnrolled]);
 
   const handleEnroll = async () => {
     if (!user) {
@@ -97,6 +115,107 @@ const CourseDetailPage = () => {
     }
     
     setEnrolling(false);
+  };
+
+  const loadForumTopics = async () => {
+    try {
+      setForumLoading(true);
+      const { data, error } = await getCourseTopics(courseId, {
+        sortBy: 'last_activity_at',
+        sortOrder: 'desc',
+        limit: 50
+      });
+      
+      if (error) throw error;
+      setForumTopics(data || []);
+    } catch (error) {
+      console.error('Error loading forum topics:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถโหลดหัวข้อฟอรัมได้",
+        variant: "destructive"
+      });
+    } finally {
+      setForumLoading(false);
+    }
+  };
+
+  const handleTopicClick = (topicId) => {
+    setSelectedTopicId(topicId);
+  };
+
+  const handleBackToForum = () => {
+    setSelectedTopicId(null);
+    loadForumTopics(); // Refresh topics
+  };
+
+  const handleTopicCreated = (newTopic) => {
+    setForumTopics(prev => [newTopic, ...prev]);
+    toast({
+      title: "สร้างหัวข้อสำเร็จ",
+      description: "หัวข้อของคุณถูกเพิ่มในฟอรัมแล้ว"
+    });
+  };
+
+  const handleTopicLike = async (topicId) => {
+    try {
+      await toggleLike('topic', topicId);
+      // Update topic in the list
+      setForumTopics(prev => prev.map(topic => 
+        topic.id === topicId 
+          ? { 
+              ...topic, 
+              like_count: topic.user_liked ? (topic.like_count || 0) - 1 : (topic.like_count || 0) + 1,
+              user_liked: !topic.user_liked 
+            }
+          : topic
+      ));
+    } catch (error) {
+      console.error('Error liking topic:', error);
+    }
+  };
+
+  const handleTopicPin = async (topicId, isPinned) => {
+    try {
+      await toggleTopicPin(topicId, isPinned);
+      setForumTopics(prev => prev.map(topic => 
+        topic.id === topicId ? { ...topic, is_pinned: isPinned } : topic
+      ));
+      toast({
+        title: isPinned ? "ปักหมุดหัวข้อแล้ว" : "ยกเลิกปักหมุดแล้ว",
+        description: "สถานะหัวข้อถูกอัปเดตแล้ว"
+      });
+    } catch (error) {
+      console.error('Error pinning topic:', error);
+    }
+  };
+
+  const handleTopicLock = async (topicId, isLocked) => {
+    try {
+      await toggleTopicLock(topicId, isLocked);
+      setForumTopics(prev => prev.map(topic => 
+        topic.id === topicId ? { ...topic, is_locked: isLocked } : topic
+      ));
+      toast({
+        title: isLocked ? "ล็อคหัวข้อแล้ว" : "ปลดล็อคหัวข้อแล้ว",
+        description: "สถานะหัวข้อถูกอัปเดตแล้ว"
+      });
+    } catch (error) {
+      console.error('Error locking topic:', error);
+    }
+  };
+
+  const handleTopicDelete = async (topicId) => {
+    try {
+      await deleteTopic(topicId);
+      setForumTopics(prev => prev.filter(topic => topic.id !== topicId));
+      toast({
+        title: "ลบหัวข้อแล้ว",
+        description: "หัวข้อถูกลบออกจากฟอรัมแล้ว"
+      });
+    } catch (error) {
+      console.error('Error deleting topic:', error);
+    }
   };
   
   const pageVariants = {
@@ -195,8 +314,39 @@ const CourseDetailPage = () => {
                src="https://images.unsplash.com/photo-1635251595512-dc52146d5ae8" />
           </div>
 
+          {/* Tab Navigation */}
           <div className="glass-effect p-6 sm:p-8 rounded-xl shadow-xl">
-            <h2 className="text-2xl font-semibold text-emerald-900 mb-4">เนื้อหาในคอร์ส</h2>
+            <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
+              <button
+                onClick={() => setActiveTab('content')}
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'content'
+                    ? 'bg-white text-emerald-900 shadow-sm'
+                    : 'text-emerald-700 hover:text-emerald-900'
+                }`}
+              >
+                <BookOpen className="w-4 h-4 inline mr-2" />
+                เนื้อหาคอร์ส
+              </button>
+              {enrollmentStatus.isEnrolled && (
+                <button
+                  onClick={() => setActiveTab('forum')}
+                  className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    activeTab === 'forum'
+                      ? 'bg-white text-emerald-900 shadow-sm'
+                      : 'text-emerald-700 hover:text-emerald-900'
+                  }`}
+                >
+                  <MessageSquare className="w-4 h-4 inline mr-2" />
+                  ฟอรัมสนทนา
+                </button>
+              )}
+            </div>
+
+            {/* Content Tab */}
+            {activeTab === 'content' && (
+              <div>
+                <h2 className="text-2xl font-semibold text-emerald-900 mb-4">เนื้อหาในคอร์ส</h2>
             {course.content && course.content.length > 0 ? (
               <ul className="space-y-3">
                 {course.content.map((content, index) => (
@@ -246,6 +396,77 @@ const CourseDetailPage = () => {
                 <p className="text-emerald-700">ยังไม่มีเนื้อหาในคอร์สนี้</p>
               </div>
             )}
+              </div>
+            )}
+
+            {/* Forum Tab */}
+            {activeTab === 'forum' && enrollmentStatus.isEnrolled && (
+              <div>
+                {selectedTopicId ? (
+                  <ForumTopicDetail
+                    topicId={selectedTopicId}
+                    onBack={handleBackToForum}
+                    currentUserId={user?.id}
+                    userRole={user?.user_profiles?.user_role || 'student'}
+                  />
+                ) : (
+                  <div>
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-semibold text-emerald-900 flex items-center">
+                        <MessageSquare className="w-6 h-6 mr-2" />
+                        ฟอรัมสนทนา
+                      </h2>
+                      <Button
+                        onClick={() => setShowCreateModal(true)}
+                        className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        สร้างหัวข้อใหม่
+                      </Button>
+                    </div>
+
+                    {forumLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                      </div>
+                    ) : forumTopics.length > 0 ? (
+                      <div className="space-y-4">
+                        {forumTopics.map(topic => (
+                          <ForumTopicCard
+                            key={topic.id}
+                            topic={topic}
+                            onTopicClick={handleTopicClick}
+                            onLike={handleTopicLike}
+                            onPin={handleTopicPin}
+                            onLock={handleTopicLock}
+                            onDelete={handleTopicDelete}
+                            onEdit={(topic) => {
+                              // TODO: Implement edit functionality
+                              console.log('Edit topic:', topic);
+                            }}
+                            userRole={user?.user_profiles?.user_role || 'student'}
+                            currentUserId={user?.id}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-600 mb-2">ยังไม่มีหัวข้อสนทนา</h3>
+                        <p className="text-gray-500 mb-6">เป็นคนแรกที่เริ่มการสนทนาในคอร์สนี้</p>
+                        <Button
+                          onClick={() => setShowCreateModal(true)}
+                          className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          สร้างหัวข้อแรก
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -276,7 +497,7 @@ const CourseDetailPage = () => {
               <Link to={`/courses/${courseId}/learn`} className="block w-full">
                 <Button 
                   size="lg" 
-                  className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-gray-800 text-lg py-3"
+                  className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white text-lg py-3"
                 >
                   <BookOpen className="w-5 h-5 mr-2" />
                   เริ่มเรียน
@@ -313,6 +534,14 @@ const CourseDetailPage = () => {
           )}
         </motion.div>
       </div>
+
+      {/* Create Topic Modal */}
+      <CreateTopicModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        courseId={courseId}
+        onTopicCreated={handleTopicCreated}
+      />
     </motion.div>
   );
 };
