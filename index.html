@@ -1,145 +1,57 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/TestLogin/assets/Logo.png" />
-    <meta name="generator" content="Login Learning" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Learning</title>
-    <script type="module" crossorigin src="/TestLogin/assets/index-3a7bc6d0.js"></script>
-    <link rel="modulepreload" crossorigin href="/TestLogin/assets/vendor-48cd178f.js">
-    <link rel="modulepreload" crossorigin href="/TestLogin/assets/router-c8d7685c.js">
-    <link rel="stylesheet" href="/TestLogin/assets/index-38b59443.css">
-    <script type="module">
-window.onerror = (message, source, lineno, colno, errorObj) => {
-	const errorDetails = errorObj ? JSON.stringify({
-		name: errorObj.name,
-		message: errorObj.message,
-		stack: errorObj.stack,
-		source,
-		lineno,
-		colno,
-	}) : null;
-
-	window.parent.postMessage({
-		type: 'horizons-runtime-error',
-		message,
-		error: errorDetails
-	}, '*');
-};
-</script>
-    <script type="module">
-const observer = new MutationObserver((mutations) => {
-	for (const mutation of mutations) {
-		for (const addedNode of mutation.addedNodes) {
-			if (
-				addedNode.nodeType === Node.ELEMENT_NODE &&
-				(
-					addedNode.tagName?.toLowerCase() === 'vite-error-overlay' ||
-					addedNode.classList?.contains('backdrop')
-				)
-			) {
-				handleViteOverlay(addedNode);
-			}
-		}
-	}
-});
-
-observer.observe(document.documentElement, {
-	childList: true,
-	subtree: true
-});
-
-function handleViteOverlay(node) {
-	if (!node.shadowRoot) {
-		return;
-	}
-
-	const backdrop = node.shadowRoot.querySelector('.backdrop');
-
-	if (backdrop) {
-		const overlayHtml = backdrop.outerHTML;
-		const parser = new DOMParser();
-		const doc = parser.parseFromString(overlayHtml, 'text/html');
-		const messageBodyElement = doc.querySelector('.message-body');
-		const fileElement = doc.querySelector('.file');
-		const messageText = messageBodyElement ? messageBodyElement.textContent.trim() : '';
-		const fileText = fileElement ? fileElement.textContent.trim() : '';
-		const error = messageText + (fileText ? ' File:' + fileText : '');
-
-		window.parent.postMessage({
-			type: 'horizons-vite-error',
-			error,
-		}, '*');
-	}
-}
-</script>
-    <script type="module">
-const originalConsoleError = console.error;
-console.error = function(...args) {
-	originalConsoleError.apply(console, args);
-
-	let errorString = '';
-
-	for (let i = 0; i < args.length; i++) {
-		const arg = args[i];
-		if (arg instanceof Error) {
-			errorString = arg.stack || `${arg.name}: ${arg.message}`;
-			break;
-		}
-	}
-
-	if (!errorString) {
-		errorString = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
-	}
-
-	window.parent.postMessage({
-		type: 'horizons-console-error',
-		error: errorString
-	}, '*');
-};
-</script>
-    <script type="module">
-const originalFetch = window.fetch;
-
-window.fetch = function(...args) {
-	const url = args[0] instanceof Request ? args[0].url : args[0];
-
-	// Skip WebSocket URLs
-	if (url.startsWith('ws:') || url.startsWith('wss:')) {
-		return originalFetch.apply(this, args);
-	}
-
-	return originalFetch.apply(this, args)
-		.then(async response => {
-			const contentType = response.headers.get('Content-Type') || '';
-
-			// Exclude HTML document responses
-			const isDocumentResponse =
-				contentType.includes('text/html') ||
-				contentType.includes('application/xhtml+xml');
-
-			if (!response.ok && !isDocumentResponse) {
-					const responseClone = response.clone();
-					const errorFromRes = await responseClone.text();
-					const requestUrl = response.url;
-					console.error(`Fetch error from ${requestUrl}: ${errorFromRes}`);
-			}
-
-			return response;
-		})
-		.catch(error => {
-			if (!url.match(/.html?$/i)) {
-				console.error(error);
-			}
-
-			throw error;
-		});
-};
-</script>
-  </head>
-  <body>
-    <div id="root"></div>
-    
-  </body>
+    <style>
+        body { 
+            margin: 0; 
+            font-family: Arial, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            padding: 2rem;
+        }
+        h1 { font-size: 3rem; margin-bottom: 1rem; }
+        p { font-size: 1.2rem; opacity: 0.9; }
+        .btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: white;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Login Learning</h1>
+        <p>ระบบการเรียนรู้ออนไลน์</p>
+        <p>Learning Management System</p>
+        <div style="margin-top: 2rem;">
+            <a href="#" class="btn" onclick="alert('ระบบจะเปิดใช้งานเร็วๆ นี้!')">เข้าสู่ระบบ</a>
+            <a href="#" class="btn" onclick="alert('ระบบจะเปิดใช้งานเร็วๆ นี้!')">สมัครสมาชิก</a>
+        </div>
+        <div style="margin-top: 2rem; font-size: 0.9rem; opacity: 0.7;">
+            <p>✅ ระบบ Deploy สำเร็จแล้ว!</p>
+            <p>พัฒนาโดย Claude Code</p>
+        </div>
+    </div>
+</body>
 </html>
