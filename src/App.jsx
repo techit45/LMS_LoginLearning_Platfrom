@@ -35,6 +35,8 @@ class ErrorBoundary extends React.Component {
   }
 }
 import { Toaster } from '@/components/ui/toaster';
+import { ToastProvider } from '@/hooks/use-toast';
+import ToastDisplay from '@/components/ToastDisplay';
 import { AuthProvider } from '@/contexts/AuthContext';
 import HomePage from '@/pages/HomePage';
 import AboutPage from '@/pages/AboutPage';
@@ -71,13 +73,14 @@ function App() {
           <title>Login Learning - แพลตฟอร์มเรียนรู้วิศวกรรมออนไลน์</title>
           <meta name="description" content="เรียนรู้การทำโครงงานวิศวกรรมกับผู้เชี่ยวชาญ ค้นหาตัวตนสำหรับน้องมัธยม เพื่อตัดสินใจเข้าเรียนต่อ พร้อมคอร์สเรียนที่หลากหลายและการสนับสนุนตลอด 24 ชั่วโมง" />
         </Helmet>
-        <Router 
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true
-          }}
-        >
-        <AuthProvider>
+        <ToastProvider>
+          <Router 
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true
+            }}
+          >
+          <AuthProvider>
           <div className="min-h-screen flex flex-col bg-gradient-to-br from-white to-slate-50 text-black">
             <Navbar />
             <main className="flex-grow pt-20">
@@ -146,9 +149,11 @@ function App() {
             </main>
             <Footer />
             <Toaster />
+            <ToastDisplay />
           </div>
         </AuthProvider>
       </Router>
+      </ToastProvider>
     </HelmetProvider>
     </ErrorBoundary>
   );

@@ -19,11 +19,12 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getProjectById } from '@/lib/projectService';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 const ProjectDetailPage = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
