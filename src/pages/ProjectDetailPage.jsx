@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getProjectById } from '@/lib/projectService';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast.jsx';
 
 const ProjectDetailPage = () => {
   const { projectId } = useParams();

@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast.jsx';
 import { createProject } from '@/lib/projectService';
 import { uploadCourseImage } from '@/lib/attachmentService';
 

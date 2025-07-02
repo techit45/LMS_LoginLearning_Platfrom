@@ -35,7 +35,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 import { Toaster } from '@/components/ui/toaster';
-import { ToastProvider } from '@/hooks/use-toast';
+import { ToastProvider } from '@/hooks/use-toast.jsx';
 import ToastDisplay from '@/components/ToastDisplay';
 import { AuthProvider } from '@/contexts/AuthContext';
 import HomePage from '@/pages/HomePage';
