@@ -55,6 +55,7 @@ import AdminCoursesPage from '@/pages/AdminCoursesPage';
 import AdminCourseContentPage from '@/pages/AdminCourseContentPage';
 import AdminAssignmentGradingPage from '@/pages/AdminAssignmentGradingPage';
 import ProjectsPage from '@/pages/ProjectsPage';
+import ProjectDetailPage from '@/pages/ProjectDetailPage';
 import AdminProjectsPage from '@/pages/AdminProjectsPage';
 import AdminLayout from '@/components/AdminLayout';
 import Navbar from '@/components/Navbar';
@@ -86,6 +87,7 @@ function App() {
                 <Route path="/courses" element={<CoursesPage />} />
                 <Route path="/courses/:courseId" element={<CourseDetailPage />} />
                 <Route path="/projects" element={<ProjectsPage />} />
+                <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
                 <Route 
                   path="/courses/:courseId/learn" 
                   element={

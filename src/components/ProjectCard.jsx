@@ -69,9 +69,9 @@ const ProjectCard = ({ project, onView, featured = false }) => {
 
       {/* Project Image */}
       <div className="relative h-48 overflow-hidden">
-        {project.image_url ? (
+        {(project.cover_image_url || project.featured_image_url || project.image_url) ? (
           <img
-            src={project.image_url}
+            src={project.cover_image_url || project.featured_image_url || project.image_url}
             alt={project.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             onError={(e) => {
@@ -89,14 +89,14 @@ const ProjectCard = ({ project, onView, featured = false }) => {
         
         {/* Quick Actions */}
         <div className="absolute top-4 left-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          {project.demo_url && (
+          {(project.project_url || project.demo_url) && (
             <Button
               size="icon"
               variant="ghost"
               className="bg-white/90 hover:bg-white text-gray-800 rounded-full shadow-lg"
               onClick={(e) => {
                 e.stopPropagation();
-                window.open(project.demo_url, '_blank');
+                window.open(project.project_url || project.demo_url, '_blank');
               }}
             >
               <Globe className="w-4 h-4" />
@@ -135,7 +135,7 @@ const ProjectCard = ({ project, onView, featured = false }) => {
           </div>
           
           <p className="text-gray-600 text-sm line-clamp-2 leading-relaxed">
-            {project.description || 'ไม่มีคำอธิบาย'}
+            {project.short_description || project.description || 'ไม่มีคำอธิบาย'}
           </p>
         </div>
 
@@ -161,21 +161,42 @@ const ProjectCard = ({ project, onView, featured = false }) => {
         )}
 
         {/* Project Meta */}
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-          <div className="flex items-center">
-            <Calendar className="w-4 h-4 mr-1" />
-            {formatDate(project.created_at)}
+        <div className="space-y-2 mb-4">
+          <div className="flex items-center justify-between text-sm text-gray-500">
+            <div className="flex items-center">
+              <Calendar className="w-4 h-4 mr-1" />
+              {formatDate(project.created_at)}
+            </div>
+            {project.status && (
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                project.status === 'published' ? 'bg-green-100 text-green-800' :
+                project.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {project.status === 'published' ? 'เผยแพร่แล้ว' :
+                 project.status === 'draft' ? 'ร่าง' : 'เก็บถาวร'}
+              </span>
+            )}
           </div>
-          {project.status && (
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-              project.status === 'completed' ? 'bg-green-100 text-green-800' :
-              project.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-              'bg-gray-100 text-gray-800'
-            }`}>
-              {project.status === 'completed' ? 'เสร็จสิ้น' :
-               project.status === 'in_progress' ? 'กำลังพัฒนา' : 'วางแผน'}
-            </span>
-          )}
+          
+          {/* Difficulty and Duration */}
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            {project.difficulty_level && (
+              <span className={`px-2 py-1 rounded-md font-medium ${
+                project.difficulty_level === 'beginner' ? 'bg-green-100 text-green-700' :
+                project.difficulty_level === 'intermediate' ? 'bg-yellow-100 text-yellow-700' :
+                'bg-red-100 text-red-700'
+              }`}>
+                {project.difficulty_level === 'beginner' ? 'เริ่มต้น' :
+                 project.difficulty_level === 'intermediate' ? 'ปานกลาง' : 'ขั้นสูง'}
+              </span>
+            )}
+            {project.duration_hours && (
+              <span className="text-gray-500">
+                ⏱️ {project.duration_hours} ชม.
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Action Buttons */}
@@ -189,12 +210,12 @@ const ProjectCard = ({ project, onView, featured = false }) => {
             ดูรายละเอียด
           </Button>
           
-          {project.demo_url && (
+          {(project.project_url || project.demo_url) && (
             <Button
               variant="outline"
               onClick={(e) => {
                 e.stopPropagation();
-                window.open(project.demo_url, '_blank');
+                window.open(project.project_url || project.demo_url, '_blank');
               }}
               className="border-indigo-300 text-indigo-600 hover:bg-indigo-50 rounded-xl"
               size="sm"

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -24,6 +25,7 @@ import { getAllProjects, getFeaturedProjects } from '@/lib/projectService';
 import ProjectCard from '@/components/ProjectCard';
 
 const ProjectsPage = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [projects, setProjects] = useState([]);
   const [featuredProjects, setFeaturedProjects] = useState([]);
@@ -97,7 +99,7 @@ const ProjectsPage = () => {
     });
 
   const handleProjectView = (project) => {
-    setSelectedProject(project);
+    navigate(`/projects/${project.id}`);
   };
 
   const pageVariants = {

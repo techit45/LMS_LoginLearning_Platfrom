@@ -28,19 +28,27 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    short_description: '',
     category: '',
-    difficulty: 'beginner',
+    difficulty_level: 'beginner',
+    duration_hours: '',
     is_featured: false,
-    technology: '',
-    demo_url: '',
+    technologies: [],
+    project_url: '',
     github_url: '',
-    thumbnail_url: ''
+    video_url: '',
+    cover_image_url: '',
+    content_html: '',
+    tags: [],
+    status: 'draft'
   });
 
   const [errors, setErrors] = useState({});
   const [projectImage, setProjectImage] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [newTechnology, setNewTechnology] = useState('');
+  const [newTag, setNewTag] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -53,6 +61,40 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+  };
+
+  const addTechnology = () => {
+    if (newTechnology.trim() && !formData.technologies.includes(newTechnology.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        technologies: [...prev.technologies, newTechnology.trim()]
+      }));
+      setNewTechnology('');
+    }
+  };
+
+  const removeTechnology = (techToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      technologies: prev.technologies.filter(tech => tech !== techToRemove)
+    }));
+  };
+
+  const addTag = () => {
+    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, newTag.trim()]
+      }));
+      setNewTag('');
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }));
   };
 
 
