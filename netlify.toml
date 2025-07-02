@@ -1,6 +1,6 @@
 [build]
   command = "npm run build"
-  publish = "docs"
+  publish = "dist"
 
 [build.environment]
   VITE_SUPABASE_URL = "https://vuitwzisazvikrhtfthh.supabase.co"

@@ -1,57 +1,14 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/assets/Logo.png" />
+    <meta name="generator" content="Login Learning" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login Learning</title>
-    <style>
-        body { 
-            margin: 0; 
-            font-family: Arial, sans-serif; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            text-align: center;
-        }
-        .container {
-            max-width: 600px;
-            padding: 2rem;
-        }
-        h1 { font-size: 3rem; margin-bottom: 1rem; }
-        p { font-size: 1.2rem; opacity: 0.9; }
-        .btn {
-            background: rgba(255,255,255,0.2);
-            border: 2px solid white;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            text-decoration: none;
-            display: inline-block;
-            margin: 10px;
-            transition: all 0.3s;
-        }
-        .btn:hover {
-            background: white;
-            color: #667eea;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🎓 Login Learning</h1>
-        <p>ระบบการเรียนรู้ออนไลน์</p>
-        <p>Learning Management System</p>
-        <div style="margin-top: 2rem;">
-            <a href="#" class="btn" onclick="alert('ระบบจะเปิดใช้งานเร็วๆ นี้!')">เข้าสู่ระบบ</a>
-            <a href="#" class="btn" onclick="alert('ระบบจะเปิดใช้งานเร็วๆ นี้!')">สมัครสมาชิก</a>
-        </div>
-        <div style="margin-top: 2rem; font-size: 0.9rem; opacity: 0.7;">
-            <p>✅ ระบบ Deploy สำเร็จแล้ว!</p>
-            <p>พัฒนาโดย Claude Code</p>
-        </div>
-    </div>
-</body>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
