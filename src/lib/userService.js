@@ -130,7 +130,7 @@ export const getUserLearningStats = async (userId = null) => {
     // Get enrollment statistics
     const { data: enrollments, error: enrollmentsError } = await supabase
       .from('enrollments')
-      .select('status, progress_percentage, enrolled_at, completed_at')
+      .select('progress_percentage, enrolled_at, completed_at, is_active')
       .eq('user_id', currentUserId);
 
     if (enrollmentsError) throw enrollmentsError;
@@ -146,15 +146,15 @@ export const getUserLearningStats = async (userId = null) => {
     // Calculate statistics
     const stats = {
       totalEnrollments: enrollments.length,
-      activeEnrollments: enrollments.filter(e => e.status === 'active').length,
-      completedCourses: enrollments.filter(e => e.status === 'completed').length,
-      droppedCourses: enrollments.filter(e => e.status === 'dropped').length,
+      activeEnrollments: enrollments.filter(e => e.is_active === true).length,
+      completedCourses: enrollments.filter(e => e.completed_at !== null).length,
+      droppedCourses: enrollments.filter(e => e.is_active === false).length,
       totalAchievements: achievementsCount || 0,
       averageProgress: enrollments.length > 0 
         ? Math.round(enrollments.reduce((sum, e) => sum + e.progress_percentage, 0) / enrollments.length)
         : 0,
       completionRate: enrollments.length > 0 
-        ? Math.round((enrollments.filter(e => e.status === 'completed').length / enrollments.length) * 100)
+        ? Math.round((enrollments.filter(e => e.completed_at !== null).length / enrollments.length) * 100)
         : 0
     };
 
@@ -233,22 +233,19 @@ export const awardAchievement = async (userId, achievementData) => {
  */
 export const getAllUserProfiles = async () => {
   try {
+    // Just get basic user profiles without foreign key relationships
     const { data, error } = await supabase
       .from('user_profiles')
-      .select(`
-        *,
-        enrollments(count),
-        achievements(count)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    // Add statistics to each profile
+    // Add default statistics to each profile
     const profilesWithStats = data.map(profile => ({
       ...profile,
-      enrollment_count: profile.enrollments?.length || 0,
-      achievement_count: profile.achievements?.length || 0
+      enrollment_count: 0,
+      achievement_count: 0
     }));
 
     return { data: profilesWithStats, error: null };
@@ -407,4 +404,283 @@ export const getProfileCompletionPercentage = (profile) => {
   });
   
   return Math.round((completedFields.length / allFields.length) * 100);
+};
+
+// ==========================================
+// ADMIN FUNCTIONS
+// ==========================================
+
+/**
+ * Get all users for admin management
+ */
+export const getAllUsersForAdmin = async () => {
+  try {
+    // Get all user profiles with enrollment and achievement counts
+    const { data: profiles, error: profilesError } = await supabase
+      .from('user_profiles')
+      .select(`
+        *,
+        enrollments(count),
+        achievements(count)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (profilesError) {
+      console.error('Error fetching user profiles:', profilesError);
+      return { data: [], error: profilesError };
+    }
+
+    // Transform the data to include counts
+    const usersWithStats = profiles.map(profile => ({
+      ...profile,
+      enrollment_count: profile.enrollments?.[0]?.count || 0,
+      achievement_count: profile.achievements?.[0]?.count || 0
+    }));
+
+    return { data: usersWithStats, error: null };
+  } catch (error) {
+    console.error('Error fetching users for admin:', error);
+    return { data: [], error };
+  }
+};
+
+/**
+ * Update user role (Admin only)
+ */
+export const updateUserRole = async (userId, newRole) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update({ role: newRole })
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    return { data: null, error };
+  }
+};
+
+// ==========================================
+// USER SETTINGS FUNCTIONS
+// ==========================================
+
+/**
+ * Get profile settings
+ */
+export const getProfileSettings = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await getUserProfile(user.id);
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error getting profile settings:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Save profile settings
+ */
+export const saveProfileSettings = async (settings) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await updateUserProfile(settings);
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error saving profile settings:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Get user settings
+ */
+export const getDisplaySettings = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+
+    // If no settings found, return defaults
+    if (!data) {
+      return {
+        data: {
+          theme: 'light',
+          language: 'th',
+          font_size: 'medium'
+        },
+        error: null
+      };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error getting display settings:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Save display settings
+ */
+export const saveDisplaySettings = async (settings) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('user_settings')
+      .upsert({
+        user_id: user.id,
+        theme: settings.theme,
+        language: settings.language,
+        font_size: settings.fontSize
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error saving display settings:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Get notification settings
+ */
+export const getNotificationSettings = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('email_notifications, push_notifications, sms_notifications')
+      .eq('user_id', user.id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+
+    // If no settings found, return defaults
+    if (!data) {
+      return {
+        data: {
+          email: true,
+          push: true,
+          sms: false
+        },
+        error: null
+      };
+    }
+
+    return {
+      data: {
+        email: data.email_notifications,
+        push: data.push_notifications,
+        sms: data.sms_notifications
+      },
+      error: null
+    };
+  } catch (error) {
+    console.error('Error getting notification settings:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Save notification settings
+ */
+export const saveNotificationSettings = async (settings) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('user_settings')
+      .upsert({
+        user_id: user.id,
+        email_notifications: settings.email,
+        push_notifications: settings.push,
+        sms_notifications: settings.sms
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error saving notification settings:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Get active tab (localStorage fallback)
+ */
+export const getActiveTab = async () => {
+  try {
+    const activeTab = localStorage.getItem('admin_active_tab') || 'profile';
+    return { data: activeTab, error: null };
+  } catch (error) {
+    return { data: 'profile', error: null };
+  }
+};
+
+/**
+ * Save active tab (localStorage)
+ */
+export const saveActiveTab = async (tab) => {
+  try {
+    localStorage.setItem('admin_active_tab', tab);
+    return { data: tab, error: null };
+  } catch (error) {
+    console.error('Error saving active tab:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Delete all user settings
+ */
+export const deleteAllUserSettings = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('user_settings')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    return { data: true, error: null };
+  } catch (error) {
+    console.error('Error deleting user settings:', error);
+    return { data: null, error };
+  }
 };

@@ -12,8 +12,7 @@ import {
   Trophy,
   Eye,
   GripVertical,
-  CheckSquare,
-  Settings
+  CheckSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -28,7 +27,6 @@ import {
 } from '@/lib/contentService';
 import { getCourseContentWithProgress } from '@/lib/progressManagementService';
 import ContentEditor from '@/components/ContentEditor';
-import ProgressRequirementEditor from '@/components/ProgressRequirementEditor';
 
 const AdminCourseContentPage = () => {
   const { courseId } = useParams();
@@ -46,8 +44,6 @@ const AdminCourseContentPage = () => {
   const [editorMode, setEditorMode] = useState('create'); // 'create' or 'edit'
   
   // Progress requirement editor state
-  const [showProgressEditor, setShowProgressEditor] = useState(false);
-  const [progressEditingContent, setProgressEditingContent] = useState(null);
   
   const loadCourseData = useCallback(async () => {
     setLoading(true);
@@ -91,16 +87,6 @@ const AdminCourseContentPage = () => {
     setShowEditor(true);
   };
 
-  const handleEditProgress = (content) => {
-    setProgressEditingContent(content);
-    setShowProgressEditor(true);
-  };
-
-  const handleUpdateProgress = (updatedContent) => {
-    setContents(contents.map(c => 
-      c.id === updatedContent.id ? { ...c, ...updatedContent } : c
-    ));
-  };
 
   const handleDeleteContent = async (contentId) => {
     // eslint-disable-next-line no-restricted-globals
@@ -397,16 +383,6 @@ const AdminCourseContentPage = () => {
                     </Link>
                   )}
                   
-                  {/* Progress Settings Button */}
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => handleEditProgress(content)}
-                    className="text-blue-600 hover:text-blue-700"
-                    title="ตั้งค่าความคืบหน้า"
-                  >
-                    <Settings className="w-4 h-4" />
-                  </Button>
                   
                   <Button 
                     size="sm" 
@@ -444,15 +420,6 @@ const AdminCourseContentPage = () => {
           />
         )}
         
-        {/* Progress Requirement Editor Modal */}
-        {showProgressEditor && (
-          <ProgressRequirementEditor
-            content={progressEditingContent}
-            courseContent={contents}
-            onUpdate={handleUpdateProgress}
-            onClose={() => setShowProgressEditor(false)}
-          />
-        )}
       </AnimatePresence>
     </div>
   );

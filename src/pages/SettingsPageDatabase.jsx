@@ -33,7 +33,7 @@ import {
   getActiveTab,
   saveActiveTab,
   deleteAllUserSettings
-} from '@/lib/userSettingsService';
+} from '@/lib/userService';
 import { uploadProfileImage, deleteProfileImage } from '@/lib/attachmentService';
 
 const SettingsPageDatabase = () => {
@@ -88,9 +88,15 @@ const SettingsPageDatabase = () => {
         // ตั้งค่าโปรไฟล์
         if (profileResult.data) {
           setProfileData({
-            ...profileResult.data,
-            email: user.email || '', // อัพเดท email จาก auth
-            full_name: profileResult.data.full_name || user.user_metadata?.full_name || ''
+            full_name: profileResult.data.full_name || user.user_metadata?.full_name || '',
+            email: user.email || '',
+            phone: profileResult.data.phone || '',
+            bio: profileResult.data.bio || '',
+            grade_level: profileResult.data.grade_level || '',
+            school_name: profileResult.data.school_name || '',
+            age: profileResult.data.age || '',
+            interested_fields: profileResult.data.interested_fields || [],
+            avatar_url: profileResult.data.avatar_url || ''
           });
         } else {
           // ถ้าไม่มีข้อมูล ใช้ข้อมูลจาก auth
@@ -344,7 +350,7 @@ const SettingsPageDatabase = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">ชื่อ-นามสกุล</label>
             <input
               type="text"
-              value={profileData.full_name}
+              value={profileData.full_name || ''}
               onChange={(e) => setProfileData({...profileData, full_name: e.target.value})}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="กรอกชื่อ-นามสกุล"
@@ -355,7 +361,7 @@ const SettingsPageDatabase = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">อีเมล</label>
             <input
               type="email"
-              value={profileData.email}
+              value={profileData.email || ''}
               readOnly
               className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
               placeholder="กรอกอีเมล"
@@ -367,7 +373,7 @@ const SettingsPageDatabase = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">เบอร์โทรศัพท์</label>
             <input
               type="tel"
-              value={profileData.phone}
+              value={profileData.phone || ''}
               onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="กรอกเบอร์โทรศัพท์"
@@ -378,7 +384,7 @@ const SettingsPageDatabase = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">อายุ</label>
             <input
               type="number"
-              value={profileData.age}
+              value={profileData.age || ''}
               onChange={(e) => setProfileData({...profileData, age: e.target.value})}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="กรอกอายุ"
@@ -390,7 +396,7 @@ const SettingsPageDatabase = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">ระดับชั้น</label>
             <select
-              value={profileData.grade_level}
+              value={profileData.grade_level || ''}
               onChange={(e) => setProfileData({...profileData, grade_level: e.target.value})}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
@@ -408,7 +414,7 @@ const SettingsPageDatabase = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">โรงเรียน</label>
             <input
               type="text"
-              value={profileData.school_name}
+              value={profileData.school_name || ''}
               onChange={(e) => setProfileData({...profileData, school_name: e.target.value})}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="กรอกชื่อโรงเรียน"
@@ -418,7 +424,7 @@ const SettingsPageDatabase = () => {
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">เกี่ยวกับฉัน</label>
             <textarea
-              value={profileData.bio}
+              value={profileData.bio || ''}
               onChange={(e) => setProfileData({...profileData, bio: e.target.value})}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -466,7 +472,7 @@ const SettingsPageDatabase = () => {
               </div>
             </div>
             <select
-              value={displaySettings.theme}
+              value={displaySettings.theme || 'light'}
               onChange={(e) => setDisplaySettings({...displaySettings, theme: e.target.value})}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
@@ -486,7 +492,7 @@ const SettingsPageDatabase = () => {
               </div>
             </div>
             <select
-              value={displaySettings.language}
+              value={displaySettings.language || 'th'}
               onChange={(e) => setDisplaySettings({...displaySettings, language: e.target.value})}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
@@ -532,7 +538,7 @@ const SettingsPageDatabase = () => {
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                checked={notificationSettings.email_notifications}
+                checked={!!notificationSettings.email_notifications}
                 onChange={(e) => setNotificationSettings({...notificationSettings, email_notifications: e.target.checked})}
                 className="sr-only peer"
               />
@@ -551,7 +557,7 @@ const SettingsPageDatabase = () => {
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                checked={notificationSettings.push_notifications}
+                checked={!!notificationSettings.push_notifications}
                 onChange={(e) => setNotificationSettings({...notificationSettings, push_notifications: e.target.checked})}
                 className="sr-only peer"
               />
@@ -574,7 +580,7 @@ const SettingsPageDatabase = () => {
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                checked={notificationSettings.sound_enabled}
+                checked={!!notificationSettings.sound_enabled}
                 onChange={(e) => setNotificationSettings({...notificationSettings, sound_enabled: e.target.checked})}
                 className="sr-only peer"
               />

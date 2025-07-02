@@ -16,7 +16,8 @@ import {
   Bell,
   Search,
   Menu,
-  X
+  X,
+  Code2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,6 +46,12 @@ const AdminLayout = () => {
       icon: BookOpen,
       path: '/admin/courses',
       description: 'อนุมัติและจัดการคอร์ส'
+    },
+    {
+      title: 'จัดการโครงงาน',
+      icon: Code2,
+      path: '/admin/projects',
+      description: 'จัดการผลงานและโครงงาน'
     },
     {
       title: 'สถิติและรายงาน',

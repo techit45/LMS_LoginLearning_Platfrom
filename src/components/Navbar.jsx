@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, UserCircle, ShieldCheck, Home, Briefcase, GraduationCap, Phone, LayoutDashboard, MapPin, Settings, Menu, X, ChevronDown } from 'lucide-react';
+import { LogOut, UserCircle, ShieldCheck, Home, Briefcase, GraduationCap, Phone, LayoutDashboard, MapPin, Settings, Menu, X, ChevronDown, Code2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +26,7 @@ const Navbar = () => {
   const navLinks = [
     { to: "/", label: "หน้าแรก", icon: Home },
     { to: "/courses", label: "คอร์สเรียน", icon: Briefcase },
+    { to: "/projects", label: "โครงงาน", icon: Code2 },
     { to: "/onsite", label: "การเรียน Onsite", icon: MapPin },
     { to: "/about", label: "เกี่ยวกับเรา", icon: UserCircle },
     { to: "/contact", label: "ติดต่อ", icon: Phone },

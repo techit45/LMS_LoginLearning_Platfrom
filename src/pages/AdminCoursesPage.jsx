@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { getAllCoursesAdmin, toggleCourseStatus, getCourseStats } from '@/lib/courseService';
 import { Link } from 'react-router-dom';
 import CreateCourseForm from '@/components/CreateCourseForm';
+import EditCourseForm from '@/components/EditCourseForm';
 
 const AdminCoursesPage = () => {
   const { toast } = useToast();
@@ -19,6 +20,8 @@ const AdminCoursesPage = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState(null);
 
   const loadCourses = useCallback(async () => {
     setLoading(true);
@@ -78,6 +81,21 @@ const AdminCoursesPage = () => {
   const handleCourseCreated = () => {
     loadCourses(); // Refresh the course list
     loadStats(); // Refresh statistics
+  };
+
+  const handleCourseUpdated = () => {
+    loadCourses(); // Refresh the course list
+    loadStats(); // Refresh statistics
+  };
+
+  const handleEditCourse = (courseId) => {
+    setEditingCourseId(courseId);
+    setShowEditForm(true);
+  };
+
+  const handleCloseEditForm = () => {
+    setShowEditForm(false);
+    setEditingCourseId(null);
   };
 
   const handleFeatureNotImplemented = (featureName) => {
@@ -279,7 +297,7 @@ const AdminCoursesPage = () => {
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      onClick={() => handleFeatureNotImplemented(`แก้ไขคอร์ส ${course.title}`)} 
+                      onClick={() => handleEditCourse(course.id)} 
                       className="text-blue-400 hover:bg-blue-500/20"
                       title="แก้ไขคอร์ส"
                     >
@@ -328,6 +346,14 @@ const AdminCoursesPage = () => {
         isOpen={showCreateForm}
         onClose={() => setShowCreateForm(false)}
         onSuccess={handleCourseCreated}
+      />
+
+      {/* Edit Course Form Modal */}
+      <EditCourseForm
+        isOpen={showEditForm}
+        onClose={handleCloseEditForm}
+        onSuccess={handleCourseUpdated}
+        courseId={editingCourseId}
       />
     </motion.div>
   );

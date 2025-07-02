@@ -11,9 +11,10 @@ import { supabase } from './supabaseClient';
 export const getContentAttachments = async (contentId) => {
   try {
     const { data, error } = await supabase
-      .from('content_attachments')
+      .from('attachments')
       .select('*')
-      .eq('content_id', contentId)
+      .eq('entity_type', 'course_content')
+      .eq('entity_id', contentId)
       .order('upload_order', { ascending: true });
 
     if (error) throw error;
@@ -128,14 +129,14 @@ export const uploadAttachmentFile = async (file, contentId, uploadOrder = 1) => 
 
     console.log('Generated public URL:', publicUrl);
 
-    // Check if content_attachments table exists
+    // Check if attachments table exists
     const { error: tableError } = await supabase
-      .from('content_attachments')
+      .from('attachments')
       .select('count')
       .limit(1);
 
     if (tableError && tableError.code === '42P01') {
-      throw new Error('Database table "content_attachments" not found. Please run the database schema setup.');
+      throw new Error('Database table "attachments" not found. Please run the database schema setup.');
     }
 
     // Save attachment record to database
@@ -155,22 +156,24 @@ export const uploadAttachmentFile = async (file, contentId, uploadOrder = 1) => 
     console.log('Original uploadOrder:', uploadOrder, 'Valid uploadOrder:', validUploadOrder);
     
     const attachmentRecord = {
-      content_id: contentId,
-      file_name: file.name,
+      entity_type: 'course_content',
+      entity_id: contentId,
+      filename: file.name,
+      original_filename: file.name,
+      file_url: publicUrl,
       file_path: filePath,
       file_size: file.size,
-      file_type: fileExt?.toLowerCase() || 'unknown',
+      file_extension: fileExt?.toLowerCase() || 'unknown',
       mime_type: file.type || 'application/octet-stream',
       upload_order: validUploadOrder,
-      is_downloadable: true,
-      is_preview_available: isPreviewable(file.type),
+      is_public: false,
       uploaded_by: user.id
     };
 
     console.log('Attachment record:', attachmentRecord);
 
     const { data: attachmentData, error: dbError } = await supabase
-      .from('content_attachments')
+      .from('attachments')
       .insert([attachmentRecord])
       .select()
       .single();
@@ -194,7 +197,8 @@ export const uploadAttachmentFile = async (file, contentId, uploadOrder = 1) => 
     return {
       data: {
         ...attachmentData,
-        url: publicUrl
+        url: publicUrl,
+        file_path: filePath
       },
       error: null
     };
@@ -251,7 +255,7 @@ export const updateAttachmentOrder = async (contentId, attachmentOrders) => {
   try {
     const updatePromises = attachmentOrders.map(({ id, upload_order }) =>
       supabase
-        .from('content_attachments')
+        .from('attachments')
         .update({ upload_order })
         .eq('id', id)
     );
@@ -416,9 +420,10 @@ export const formatFileSize = (bytes) => {
 export const getAttachmentStats = async (contentId) => {
   try {
     const { data: attachments, error } = await supabase
-      .from('content_attachments')
-      .select('file_size, file_type')
-      .eq('content_id', contentId);
+      .from('attachments')
+      .select('file_size, file_extension')
+      .eq('entity_type', 'course_content')
+      .eq('entity_id', contentId);
 
     if (error) throw error;
 
@@ -430,7 +435,7 @@ export const getAttachmentStats = async (contentId) => {
 
     // Group by file type
     attachments.forEach(att => {
-      const category = getFileCategory(att.file_type);
+      const category = getFileCategory(att.file_extension);
       stats.by_type[category] = (stats.by_type[category] || 0) + 1;
     });
 
@@ -459,7 +464,7 @@ export const deleteAttachment = async (attachmentId) => {
 
     // Get attachment details first
     const { data: attachment, error: fetchError } = await supabase
-      .from('content_attachments')
+      .from('attachments')
       .select('*')
       .eq('id', attachmentId)
       .single();
@@ -489,7 +494,7 @@ export const deleteAttachment = async (attachmentId) => {
     // Delete database record
     console.log('Deleting database record for attachment:', attachmentId);
     const { error: dbError } = await supabase
-      .from('content_attachments')
+      .from('attachments')
       .delete()
       .eq('id', attachmentId);
 
@@ -745,9 +750,10 @@ export const deleteAllContentAttachments = async (contentId) => {
 
     // Delete database records
     const { error: dbError } = await supabase
-      .from('content_attachments')
+      .from('attachments')
       .delete()
-      .eq('content_id', contentId);
+      .eq('entity_type', 'course_content')
+      .eq('entity_id', contentId);
 
     if (dbError) throw dbError;
 

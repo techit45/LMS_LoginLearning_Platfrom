@@ -271,8 +271,8 @@ const ForumTopicDetail = ({
             <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
               {topic.user_profiles?.avatar_url ? (
                 <img 
-                  src={topic.author.user_profiles.profile_image_url} 
-                  alt={topic.author.user_profiles.full_name}
+                  src={topic.user_profiles.avatar_url} 
+                  alt={topic.user_profiles.full_name}
                   className="w-full h-full rounded-full object-cover"
                 />
               ) : (
@@ -329,7 +329,7 @@ const ForumTopicDetail = ({
                   <Clock className="w-4 h-4" />
                   <span>{formatRelativeTime(topic.created_at)}</span>
                 </span>
-                {topic.user_profiles?.user_role === 'instructor' && (
+                {topic.user_profiles?.role === 'instructor' && (
                   <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
                     ผู้สอน
                   </span>
@@ -472,7 +472,7 @@ const ForumTopicDetail = ({
                         {reply.user_profiles?.full_name || 'ผู้ใช้ไม่ระบุตัวตน'}
                       </span>
                       
-                      {reply.user_profiles?.user_role === 'instructor' && (
+                      {reply.user_profiles?.role === 'instructor' && (
                         <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
                           ผู้สอน
                         </span>

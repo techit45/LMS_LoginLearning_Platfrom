@@ -11,7 +11,7 @@ import { supabase } from './supabaseClient';
 export const getCourseContentWithProgress = async (courseId) => {
   try {
     const { data, error } = await supabase
-      .from('content_with_progress')
+      .from('course_content')
       .select('*')
       .eq('course_id', courseId)
       .order('order_index', { ascending: true });
@@ -36,13 +36,8 @@ export const updateContentCompletionRequirements = async (contentId, requirement
       throw new Error('User not authenticated');
     }
 
+    // Progress requirements removed - not in schema
     const updateData = {
-      completion_type: requirements.completion_type || 'manual',
-      completion_criteria: requirements.completion_criteria || {},
-      minimum_score: requirements.minimum_score || 0,
-      minimum_time_minutes: requirements.minimum_time_minutes || 0,
-      is_required: requirements.is_required !== undefined ? requirements.is_required : true,
-      unlock_after: requirements.unlock_after || [],
       updated_at: new Date().toISOString()
     };
 
@@ -235,7 +230,7 @@ export const markContentCompleted = async (enrollmentId, contentId, completionDa
           .from('enrollments')
           .update({
             progress_percentage: newProgress,
-            status: newProgress >= 100 ? 'completed' : 'active',
+            completed_at: newProgress >= 100 ? new Date().toISOString() : null,
             completed_at: newProgress >= 100 ? new Date().toISOString() : null
           })
           .eq('id', enrollmentId);
@@ -274,7 +269,7 @@ const updateEnrollmentProgressVerySimple = async (enrollmentId) => {
       .from('enrollments')
       .update({
         progress_percentage: newProgress,
-        status: status,
+        // status field removed - not in schema
         completed_at: newProgress >= 100 ? new Date().toISOString() : null
       })
       .eq('id', enrollmentId);
@@ -294,7 +289,7 @@ export const getUserCourseProgress = async (enrollmentId) => {
       .from('course_progress')
       .select(`
         *,
-        content:course_content(id, title, content_type, completion_type, order_index, is_required)
+        content:course_content(id, title, content_type, order_index)
       `)
       .eq('enrollment_id', enrollmentId)
       .order('content.order_index', { ascending: true });
@@ -324,12 +319,11 @@ export const updateEnrollmentProgress = async (enrollmentId) => {
       throw new Error('Enrollment not found');
     }
 
-    // Get total required content count
+    // Get total content count (all content is required by default)
     const { data: totalContent, error: totalError } = await supabase
       .from('course_content')
       .select('id')
-      .eq('course_id', enrollment.course_id)
-      .eq('is_required', true);
+      .eq('course_id', enrollment.course_id);
 
     if (totalError) throw totalError;
 
@@ -357,7 +351,7 @@ export const updateEnrollmentProgress = async (enrollmentId) => {
       .from('enrollments')
       .update({
         progress_percentage: progressPercentage,
-        status: status,
+        // status field removed - not in schema
         completed_at: completedAt
       })
       .eq('id', enrollmentId)
@@ -480,11 +474,11 @@ export const resetContentProgress = async (enrollmentId, contentId) => {
     // Check if user is admin/instructor
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('user_role')
+      .select('role')
       .eq('user_id', user.id)
       .single();
 
-    if (!profile || !['admin', 'instructor'].includes(profile.user_role)) {
+    if (!profile || !['admin', 'instructor'].includes(profile.role)) {
       throw new Error('Admin access required');
     }
 
@@ -528,11 +522,11 @@ export const getCourseProgressAnalytics = async (courseId) => {
     // Check admin access
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('user_role')
+      .select('role')
       .eq('user_id', user.id)
       .single();
 
-    if (!profile || !['admin', 'instructor'].includes(profile.user_role)) {
+    if (!profile || !['admin', 'instructor'].includes(profile.role)) {
       throw new Error('Admin access required');
     }
 
@@ -543,7 +537,7 @@ export const getCourseProgressAnalytics = async (courseId) => {
         id,
         user_id,
         progress_percentage,
-        status,
+        // status field removed
         enrolled_at,
         completed_at,
         user_profiles!inner(full_name)
@@ -567,7 +561,7 @@ export const getCourseProgressAnalytics = async (courseId) => {
     // Calculate analytics
     const analytics = {
       total_enrollments: enrollments.length,
-      completed_enrollments: enrollments.filter(e => e.status === 'completed').length,
+      completed_enrollments: enrollments.filter(e => e.completed_at !== null).length,
       average_progress: enrollments.reduce((sum, e) => sum + e.progress_percentage, 0) / enrollments.length,
       content_completion_rates: {},
       completion_time_avg: 0

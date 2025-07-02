@@ -26,6 +26,14 @@ import {
 const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
   const { toast } = useToast();
   
+  // Helper function to determine status from submission data
+  const getSubmissionStatus = (submission) => {
+    if (!submission) return 'draft';
+    if (submission.graded_at && submission.score !== null) return 'graded';
+    if (submission.submitted_at) return 'submitted';
+    return 'draft';
+  };
+  
   // Assignment state
   const [loading, setLoading] = useState(true);
   const [assignmentData, setAssignmentData] = useState(assignment);
@@ -66,16 +74,10 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
           const latest = submissionsData[0];
           setCurrentSubmission(latest);
           setSubmissionText(latest.submission_text || '');
-          setFiles(latest.file_urls?.map((url, index) => ({
-            id: Date.now() + index,
-            name: latest.file_names?.[index] || `File ${index + 1}`,
-            size: latest.file_sizes?.[index] || 0,
-            url: url,
-            uploaded: true
-          })) || []);
+          setFiles([]); // ปิดการใช้งาน file upload ชั่วคราว
           
           // Set mode based on submission status
-          if (latest.status === 'submitted' || latest.status === 'graded') {
+          if (latest.submitted_at || getSubmissionStatus(latest) === 'submitted' || getSubmissionStatus(latest) === 'graded') {
             setMode('view');
           } else {
             setMode('edit');
@@ -104,19 +106,16 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
     setSaving(true);
     try {
       const submissionData = {
-        text: submissionText,
-        fileUrls: files.map(f => f.url),
-        fileNames: files.map(f => f.name),
-        fileSizes: files.map(f => f.size)
+        text: submissionText
       };
 
       let result;
-      if (currentSubmission && currentSubmission.status === 'draft') {
-        // Update existing draft
+      if (currentSubmission && !currentSubmission.submitted_at) {
+        // Update existing draft (has no submitted_at)
         result = await updateSubmission(currentSubmission.id, submissionData);
       } else {
         // Create new draft
-        result = await createSubmission(assignmentData.id, { ...submissionData, status: 'draft' });
+        result = await createSubmission(assignmentData.id, submissionData);
       }
 
       if (result.error) throw result.error;
@@ -146,10 +145,10 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
     if (!assignmentData) return;
 
     // Validate submission
-    if (!submissionText.trim() && files.length === 0) {
+    if (!submissionText.trim()) {
       toast({
         title: "กรุณาเพิ่มเนื้อหา",
-        description: "กรุณาเพิ่มข้อความหรืออัปโหลดไฟล์อย่างน้อย 1 รายการ",
+        description: "กรุณาเขียนคำตอบหรือเนื้อหางาน",
         variant: "destructive"
       });
       return;
@@ -158,20 +157,21 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
     setSubmitting(true);
     try {
       const submissionData = {
-        text: submissionText,
-        fileUrls: files.map(f => f.url),
-        fileNames: files.map(f => f.name),
-        fileSizes: files.map(f => f.size)
+        text: submissionText
       };
 
       let result;
-      if (currentSubmission && currentSubmission.status === 'draft') {
+      if (currentSubmission && !currentSubmission.submitted_at) {
         // Submit existing draft
         await updateSubmission(currentSubmission.id, submissionData);
         result = await submitFinalSubmission(currentSubmission.id);
       } else {
         // Create and submit new submission
         result = await createSubmission(assignmentData.id, submissionData);
+        if (!result.error) {
+          // Mark as submitted immediately
+          result = await submitFinalSubmission(result.data.id);
+        }
       }
 
       if (result.error) throw result.error;
@@ -199,14 +199,14 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
 
   const isOverdue = assignmentData?.due_date && new Date() > new Date(assignmentData.due_date);
   const canEdit = mode === 'submit' || mode === 'edit';
-  const hasSubmitted = currentSubmission?.status === 'submitted' || currentSubmission?.status === 'graded';
+  const hasSubmitted = currentSubmission?.submitted_at || getSubmissionStatus(currentSubmission) === 'submitted' || getSubmissionStatus(currentSubmission) === 'graded';
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-slate-400">กำลังโหลดงานมอบหมาย...</p>
+          <p className="text-gray-700">กำลังโหลดงานมอบหมาย...</p>
         </div>
       </div>
     );
@@ -215,9 +215,9 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
   if (!assignmentData) {
     return (
       <div className="text-center py-12">
-        <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-white mb-2">ไม่พบงานมอบหมาย</h3>
-        <p className="text-slate-400">ไม่สามารถโหลดข้อมูลงานมอบหมายได้</p>
+        <FileText className="w-16 h-16 text-gray-700 mx-auto mb-4" />
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">ไม่พบงานมอบหมาย</h3>
+        <p className="text-gray-700">ไม่สามารถโหลดข้อมูลงานมอบหมายได้</p>
       </div>
     );
   }
@@ -228,8 +228,8 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
       <div className="space-y-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h3 className="text-xl font-bold text-white mb-2">{assignmentData.title}</h3>
-            <p className="text-slate-300">{assignmentData.description}</p>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{assignmentData.title}</h3>
+            <p className="text-gray-800">{assignmentData.description}</p>
           </div>
           
           <div className="flex items-center space-x-2 ml-4">
@@ -249,13 +249,13 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
         </div>
 
         {/* Assignment Info */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-700/30 rounded-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-white border border-gray-300/30 rounded-lg">
           {assignmentData.due_date && (
             <div className="flex items-center space-x-2 text-sm">
               <Calendar className="w-4 h-4 text-blue-400" />
               <div>
-                <p className="text-slate-400">กำหนดส่ง</p>
-                <p className="text-slate-200">
+                <p className="text-gray-700">กำหนดส่ง</p>
+                <p className="text-gray-900">
                   {new Date(assignmentData.due_date).toLocaleDateString('th-TH', {
                     day: 'numeric',
                     month: 'short',
@@ -271,16 +271,16 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
           <div className="flex items-center space-x-2 text-sm">
             <Award className="w-4 h-4 text-yellow-400" />
             <div>
-              <p className="text-slate-400">คะแนนเต็ม</p>
-              <p className="text-slate-200">{assignmentData.max_score || 100} คะแนน</p>
+              <p className="text-gray-700">คะแนนเต็ม</p>
+              <p className="text-gray-900">{assignmentData.max_score || 100} คะแนน</p>
             </div>
           </div>
           
           <div className="flex items-center space-x-2 text-sm">
             <FileText className="w-4 h-4 text-purple-400" />
             <div>
-              <p className="text-slate-400">จำนวนไฟล์สูงสุด</p>
-              <p className="text-slate-200">{assignmentData.max_files || 5} ไฟล์</p>
+              <p className="text-gray-700">จำนวนไฟล์สูงสุด</p>
+              <p className="text-gray-900">{assignmentData.max_files || 5} ไฟล์</p>
             </div>
           </div>
         </div>
@@ -289,8 +289,8 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
       {/* Instructions */}
       {assignmentData.instructions && (
         <div className="glass-effect p-4 rounded-lg">
-          <h4 className="text-lg font-semibold text-white mb-2">คำแนะนำ</h4>
-          <div className="text-slate-300 whitespace-pre-wrap leading-relaxed">
+          <h4 className="text-lg font-semibold text-gray-900 mb-2">คำแนะนำ</h4>
+          <div className="text-gray-800 whitespace-pre-wrap leading-relaxed">
             {assignmentData.instructions}
           </div>
         </div>
@@ -299,27 +299,27 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
       {/* Submission History */}
       {submissions.length > 0 && (
         <div className="glass-effect p-4 rounded-lg">
-          <h4 className="text-lg font-semibold text-white mb-3">ประวัติการส่งงาน</h4>
+          <h4 className="text-lg font-semibold text-gray-900 mb-3">ประวัติการส่งงาน</h4>
           <div className="space-y-2">
             {submissions.map((submission, index) => (
-              <div key={submission.id} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+              <div key={submission.id} className="flex items-center justify-between p-3 bg-white border border-gray-300/30 rounded-lg">
                 <div className="flex items-center space-x-3">
                   <div className="text-sm">
-                    <span className="text-slate-300">ครั้งที่ {submission.attempt_number}</span>
-                    <span className="ml-2 text-xs text-slate-400">
-                      {new Date(submission.submitted_at || submission.created_at).toLocaleDateString('th-TH')}
+                    <span className="text-gray-800">ส่งเมื่อ</span>
+                    <span className="ml-2 text-xs text-gray-700">
+                      {submission.submitted_at ? new Date(submission.submitted_at).toLocaleDateString('th-TH') : 'ยังไม่ส่ง'}
                     </span>
                   </div>
                   <div className={`px-2 py-1 rounded text-xs ${
-                    submission.status === 'submitted' 
+                    getSubmissionStatus(submission) === 'submitted' 
                       ? 'bg-green-500/20 text-green-400'
-                      : submission.status === 'graded'
+                      : getSubmissionStatus(submission) === 'graded'
                         ? 'bg-blue-500/20 text-blue-400'
                         : 'bg-yellow-500/20 text-yellow-400'
                   }`}>
-                    {submission.status === 'submitted' && 'ส่งแล้ว'}
-                    {submission.status === 'graded' && `ให้คะแนนแล้ว (${submission.score}/${submission.max_score})`}
-                    {submission.status === 'draft' && 'แบบร่าง'}
+                    {getSubmissionStatus(submission) === 'submitted' && 'ส่งแล้ว'}
+                    {getSubmissionStatus(submission) === 'graded' && `ให้คะแนนแล้ว (${submission.score}/${assignmentData?.max_score || 100})`}
+                    {getSubmissionStatus(submission) === 'draft' && 'แบบร่าง'}
                   </div>
                 </div>
                 
@@ -329,13 +329,7 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
                   onClick={() => {
                     setCurrentSubmission(submission);
                     setSubmissionText(submission.submission_text || '');
-                    setFiles(submission.file_urls?.map((url, idx) => ({
-                      id: Date.now() + idx,
-                      name: submission.file_names?.[idx] || `File ${idx + 1}`,
-                      size: submission.file_sizes?.[idx] || 0,
-                      url: url,
-                      uploaded: true
-                    })) || []);
+                    setFiles([]); // ไม่ใช้ file upload
                     setMode('view');
                   }}
                 >
@@ -386,41 +380,22 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
             {mode === 'view' ? (
               /* View Mode */
               <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-white">งานที่ส่ง</h4>
+                <h4 className="text-lg font-semibold text-gray-900">งานที่ส่ง</h4>
                 
                 {currentSubmission?.submission_text && (
                   <div>
-                    <h5 className="text-sm font-medium text-slate-400 mb-2">ข้อความ</h5>
-                    <div className="p-4 bg-slate-700/30 rounded-lg text-slate-200 whitespace-pre-wrap">
+                    <h5 className="text-sm font-medium text-gray-700 mb-2">ข้อความ</h5>
+                    <div className="p-4 bg-white border border-gray-300/30 rounded-lg text-gray-900 whitespace-pre-wrap">
                       {currentSubmission.submission_text}
                     </div>
                   </div>
                 )}
 
-                {files.length > 0 && (
-                  <div>
-                    <h5 className="text-sm font-medium text-slate-400 mb-2">ไฟล์แนบ</h5>
-                    <div className="space-y-2">
-                      {files.map((file) => (
-                        <div key={file.id} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-                          <span className="text-slate-200">{file.name}</span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => window.open(file.url, '_blank')}
-                          >
-                            <Download className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {currentSubmission?.feedback && (
                   <div>
-                    <h5 className="text-sm font-medium text-slate-400 mb-2">ความคิดเห็นจากอาจารย์</h5>
-                    <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-200">
+                    <h5 className="text-sm font-medium text-gray-700 mb-2">ความคิดเห็นจากอาจารย์</h5>
+                    <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-800">
                       {currentSubmission.feedback}
                     </div>
                   </div>
@@ -429,13 +404,13 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
             ) : (
               /* Edit Mode */
               <div className="space-y-6">
-                <h4 className="text-lg font-semibold text-white">
+                <h4 className="text-lg font-semibold text-gray-900">
                   {currentSubmission ? 'แก้ไขงาน' : 'ส่งงานมอบหมาย'}
                 </h4>
 
                 {/* Text Submission */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     ข้อความ/คำตอบ
                   </label>
                   <textarea
@@ -443,29 +418,20 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
                     onChange={(e) => setSubmissionText(e.target.value)}
                     disabled={!canEdit}
                     rows={8}
-                    className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none resize-none"
+                    className="w-full p-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none resize-none"
                     placeholder="เขียนคำตอบหรือคำอธิบายงานของคุณที่นี่..."
                   />
                 </div>
 
-                {/* File Upload */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">
-                    ไฟล์แนบ
-                  </label>
-                  <FileUpload
-                    assignment={assignmentData}
-                    maxFiles={assignmentData.max_files || 5}
-                    onFilesChange={setFiles}
-                    initialFiles={files}
-                    disabled={!canEdit}
-                  />
+                {/* File Upload - ปิดใช้งานชั่วคราว */}
+                <div className="text-xs text-gray-500">
+                  หมายเหตุ: การอัปโหลดไฟล์จะเพิ่มเติมในเวอร์ชันถัดไป ตอนนี้ใช้ข้อความเท่านั้น
                 </div>
 
                 {/* Action Buttons */}
                 {canEdit && (
                   <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-gray-500">
                       {isOverdue && (
                         <div className="flex items-center space-x-1 text-amber-400">
                           <AlertTriangle className="w-3 h-3" />

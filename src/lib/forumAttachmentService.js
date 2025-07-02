@@ -86,7 +86,7 @@ export const uploadFile = async (file, targetType, targetId) => {
 
     // Upload to storage
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('forum-attachments')
+      .from('content-attachments')
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false
@@ -96,14 +96,14 @@ export const uploadFile = async (file, targetType, targetId) => {
 
     // Save attachment record
     const { data: attachment, error: dbError } = await supabase
-      .from('forum_attachments')
+      .from('attachments')
       .insert([{
-        target_type: targetType,
-        target_id: targetId,
-        file_name: file.name,
+        entity_type: targetType,
+        entity_id: targetId,
+        filename: file.name,
         file_url: uploadData.path,
         file_size: file.size,
-        file_type: file.type,
+        mime_type: file.type,
         uploaded_by: user.id
       }])
       .select('*')
@@ -112,7 +112,7 @@ export const uploadFile = async (file, targetType, targetId) => {
     if (dbError) {
       // Clean up storage if database insert fails
       await supabase.storage
-        .from('forum-attachments')
+        .from('content-attachments')
         .remove([uploadData.path]);
       throw dbError;
     }
@@ -163,27 +163,38 @@ export const uploadMultipleFiles = async (files, targetType, targetId) => {
 export const getAttachments = async (targetType, targetId) => {
   try {
     const { data, error } = await supabase
-      .from('forum_attachments')
-      .select(`
-        *,
-        uploader:uploaded_by (
-          user_profiles (
-            full_name,
-            avatar_url
-          )
-        )
-      `)
-      .eq('target_type', targetType)
-      .eq('target_id', targetId)
+      .from('attachments')
+      .select('*')
+      .eq('entity_type', targetType)
+      .eq('entity_id', targetId)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
 
-    // Enrich with file info
+    // Get user profiles for uploaders
+    let userProfiles = {};
+    if (data && data.length > 0) {
+      const uploaderIds = [...new Set(data.map(a => a.uploaded_by).filter(Boolean))];
+      if (uploaderIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('user_id, full_name, avatar_url')
+          .in('user_id', uploaderIds);
+        
+        if (profiles) {
+          profiles.forEach(profile => {
+            userProfiles[profile.user_id] = profile;
+          });
+        }
+      }
+    }
+
+    // Enrich with file info and user profiles
     const enrichedAttachments = data.map(attachment => ({
       ...attachment,
-      config: UPLOAD_CONFIG.allowedTypes[attachment.file_type] || { icon: '📎', preview: false },
+      config: UPLOAD_CONFIG.allowedTypes[attachment.mime_type] || { icon: '📎', preview: false },
       formattedSize: formatFileSize(attachment.file_size),
+      uploader: userProfiles[attachment.uploaded_by] || null,
       publicUrl: null // Will be set when needed
     }));
 
@@ -200,7 +211,7 @@ export const getAttachments = async (targetType, targetId) => {
 export const getFileUrl = async (filePath) => {
   try {
     const { data } = supabase.storage
-      .from('forum-attachments')
+      .from('content-attachments')
       .getPublicUrl(filePath);
 
     return data.publicUrl;
@@ -217,7 +228,7 @@ export const downloadFile = async (attachmentId) => {
   try {
     // Get attachment info
     const { data: attachment, error: attachmentError } = await supabase
-      .from('forum_attachments')
+      .from('attachments')
       .select('*')
       .eq('id', attachmentId)
       .single();
@@ -226,22 +237,19 @@ export const downloadFile = async (attachmentId) => {
 
     // Download from storage
     const { data, error } = await supabase.storage
-      .from('forum-attachments')
+      .from('content-attachments')
       .download(attachment.file_url);
 
     if (error) throw error;
 
     // Increment download count
-    await supabase
-      .from('forum_attachments')
-      .update({ download_count: (attachment.download_count || 0) + 1 })
-      .eq('id', attachmentId);
+    // Skip download count update since attachments table doesn't have this column
 
     // Create download link
     const url = URL.createObjectURL(data);
     const link = document.createElement('a');
     link.href = url;
-    link.download = attachment.file_name;
+    link.download = attachment.filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -261,7 +269,7 @@ export const deleteAttachment = async (attachmentId) => {
   try {
     // Get attachment info
     const { data: attachment, error: getError } = await supabase
-      .from('forum_attachments')
+      .from('attachments')
       .select('*')
       .eq('id', attachmentId)
       .single();
@@ -276,7 +284,7 @@ export const deleteAttachment = async (attachmentId) => {
 
     // Delete from storage
     const { error: storageError } = await supabase.storage
-      .from('forum-attachments')
+      .from('content-attachments')
       .remove([attachment.file_url]);
 
     if (storageError) {
@@ -286,7 +294,7 @@ export const deleteAttachment = async (attachmentId) => {
 
     // Delete from database
     const { error: dbError } = await supabase
-      .from('forum_attachments')
+      .from('attachments')
       .delete()
       .eq('id', attachmentId);
 
@@ -359,16 +367,16 @@ export const canPreview = (fileType) => {
 export const getAttachmentStats = async (targetType, targetId) => {
   try {
     const { data, error } = await supabase
-      .from('forum_attachments')
-      .select('file_size, file_type, download_count')
-      .eq('target_type', targetType)
-      .eq('target_id', targetId);
+      .from('attachments')
+      .select('file_size, mime_type')
+      .eq('entity_type', targetType)
+      .eq('entity_id', targetId);
 
     if (error) throw error;
 
     const totalSize = data.reduce((sum, att) => sum + att.file_size, 0);
-    const totalDownloads = data.reduce((sum, att) => sum + (att.download_count || 0), 0);
-    const fileTypes = [...new Set(data.map(att => att.file_type))];
+    const totalDownloads = 0; // download_count column doesn't exist in attachments table
+    const fileTypes = [...new Set(data.map(att => att.mime_type))];
 
     return {
       data: {

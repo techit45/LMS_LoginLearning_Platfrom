@@ -325,10 +325,7 @@ export const createCourseSchedule = async (scheduleData) => {
 
     const { data, error } = await supabase
       .from('onsite_course_schedules')
-      .insert([{
-        ...scheduleData,
-        created_by: user.id
-      }])
+      .insert([scheduleData])
       .select(`
         *,
         courses(title)
@@ -357,10 +354,7 @@ export const createProjectTemplate = async (templateData) => {
 
     const { data, error } = await supabase
       .from('onsite_project_templates')
-      .insert([{
-        ...templateData,
-        created_by: user.id
-      }])
+      .insert([templateData])
       .select()
       .single();
 

@@ -22,7 +22,8 @@ import AdminUsersPage from '@/pages/AdminUsersPage';
 import AdminCoursesPage from '@/pages/AdminCoursesPage';
 import AdminCourseContentPage from '@/pages/AdminCourseContentPage';
 import AdminAssignmentGradingPage from '@/pages/AdminAssignmentGradingPage';
-import AdminDashboard from '@/pages/AdminDashboard';
+import ProjectsPage from '@/pages/ProjectsPage';
+import AdminProjectsPage from '@/pages/AdminProjectsPage';
 import AdminLayout from '@/components/AdminLayout';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -36,7 +37,13 @@ function App() {
         <title>Login Learning - แพลตฟอร์มเรียนรู้วิศวกรรมออนไลน์</title>
         <meta name="description" content="เรียนรู้การทำโครงงานวิศวกรรมกับผู้เชี่ยวชาญ ค้นหาตัวตนสำหรับน้องมัธยม เพื่อตัดสินใจเข้าเรียนต่อ พร้อมคอร์สเรียนที่หลากหลายและการสนับสนุนตลอด 24 ชั่วโมง" />
       </Helmet>
-      <Router>
+      <Router 
+        basename="/TestLogin"
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true
+        }}
+      >
         <AuthProvider>
           <div className="min-h-screen flex flex-col bg-gradient-to-br from-white to-slate-50 text-black">
             <Navbar />
@@ -46,6 +53,7 @@ function App() {
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/courses" element={<CoursesPage />} />
                 <Route path="/courses/:courseId" element={<CourseDetailPage />} />
+                <Route path="/projects" element={<ProjectsPage />} />
                 <Route 
                   path="/courses/:courseId/learn" 
                   element={
@@ -93,11 +101,12 @@ function App() {
                     </AdminRoute>
                   }
                 >
-                  <Route index element={<AdminDashboard />} />
+                  <Route index element={<AdminPage />} />
                   <Route path="users" element={<AdminUsersPage />} />
                   <Route path="courses" element={<AdminCoursesPage />} />
                   <Route path="courses/:courseId/content" element={<AdminCourseContentPage />} />
                   <Route path="assignments/:assignmentId/grading" element={<AdminAssignmentGradingPage />} />
+                  <Route path="projects" element={<AdminProjectsPage />} />
                 </Route>
               </Routes>
             </main>

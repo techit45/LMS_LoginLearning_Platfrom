@@ -58,9 +58,7 @@ export const createContent = async (contentData) => {
     const { data, error } = await supabase
       .from('course_content')
       .insert([{
-        ...contentData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        ...contentData
       }])
       .select()
       .single();
@@ -88,8 +86,7 @@ export const updateContent = async (contentId, contentData) => {
     const { data, error } = await supabase
       .from('course_content')
       .update({
-        ...contentData,
-        updated_at: new Date().toISOString()
+        ...contentData
       })
       .eq('id', contentId)
       .select()
@@ -217,59 +214,6 @@ export const reorderContent = async (courseId, reorderedContents) => {
   }
 };
 
-/**
- * Duplicate content
- */
-export const duplicateContent = async (contentId) => {
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      throw new Error('User not authenticated');
-    }
-
-    // Get original content
-    const { data: originalContent, error: fetchError } = await supabase
-      .from('course_content')
-      .select('*')
-      .eq('id', contentId)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    // Get next order index
-    const { data: lastContent } = await supabase
-      .from('course_content')
-      .select('order_index')
-      .eq('course_id', originalContent.course_id)
-      .order('order_index', { ascending: false })
-      .limit(1)
-      .single();
-
-    const nextOrderIndex = (lastContent?.order_index || 0) + 1;
-
-    // Create duplicate
-    const { data, error } = await supabase
-      .from('course_content')
-      .insert([{
-        ...originalContent,
-        id: undefined, // Let database generate new ID
-        title: `${originalContent.title} (สำเนา)`,
-        order_index: nextOrderIndex,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return { data, error: null };
-  } catch (error) {
-    console.error('Error duplicating content:', error);
-    return { data: null, error };
-  }
-};
 
 // ==========================================
 // CONTENT VALIDATION
@@ -356,38 +300,3 @@ export const getContentStats = async (courseId) => {
 // CONTENT TEMPLATES
 // ==========================================
 
-/**
- * Get content templates for quick creation
- */
-export const getContentTemplates = () => {
-  return [
-    {
-      name: 'วิดีโอบทเรียน',
-      content_type: 'video',
-      title: 'บทเรียนที่ X: ',
-      description: 'วิดีโอการสอนเกี่ยวกับ...',
-      duration_minutes: 15
-    },
-    {
-      name: 'แบบทดสอบ',
-      content_type: 'quiz',
-      title: 'แบบทดสอบบทที่ X',
-      description: 'ทดสอบความเข้าใจจากบทเรียน',
-      duration_minutes: 10
-    },
-    {
-      name: 'งานมอบหมาย',
-      content_type: 'assignment',
-      title: 'งานมอบหมายที่ X',
-      description: 'สร้างโปรเจกต์เพื่อฝึกทักษะ',
-      duration_minutes: 60
-    },
-    {
-      name: 'เอกสารประกอบ',
-      content_type: 'document',
-      title: 'เอกสารประกอบการเรียน',
-      description: 'เอกสาร PDF หรือไฟล์สำหรับดาวน์โหลด',
-      duration_minutes: 0
-    }
-  ];
-};

@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { ensureUserProfile } from './userProfileHelper';
 
 // ==========================================
 // ENROLLMENT OPERATIONS
@@ -19,6 +20,21 @@ export const enrollInCourse = async (courseId) => {
     }
 
     console.log('enrollmentService: User authenticated:', user.id);
+
+    // Ensure user profile exists before enrollment
+    console.log('enrollmentService: Ensuring user profile exists...');
+    const { data: userProfile, error: profileError, created } = await ensureUserProfile(user);
+
+    if (profileError) {
+      console.error('enrollmentService: Error ensuring user profile:', profileError);
+      throw new Error('ไม่สามารถตรวจสอบหรือสร้างโปรไฟล์ผู้ใช้ได้ กรุณาลองใหม่');
+    }
+
+    if (created) {
+      console.log('enrollmentService: New user profile created for enrollment');
+    } else {
+      console.log('enrollmentService: User profile confirmed:', userProfile.user_id);
+    }
 
     // Check if already enrolled
     console.log('enrollmentService: Checking for existing enrollment...');
@@ -49,7 +65,7 @@ export const enrollInCourse = async (courseId) => {
     const enrollmentData = {
       user_id: user.id,
       course_id: courseId,
-      status: 'active',
+      is_active: true,
       progress_percentage: 0
     };
     console.log('enrollmentService: Enrollment data:', enrollmentData);
@@ -59,7 +75,10 @@ export const enrollInCourse = async (courseId) => {
       .insert([enrollmentData])
       .select(`
         *,
-        courses(title, instructor_name)
+        courses(
+          title,
+          user_profiles!courses_instructor_id_fkey(full_name)
+        )
       `)
       .single();
 
@@ -102,10 +121,10 @@ export const getUserEnrollments = async (userId = null) => {
           title,
           description,
           category,
-          difficulty_level,
+          level,
           duration_hours,
-          instructor_name,
-          image_url
+          thumbnail_url,
+          user_profiles!courses_instructor_id_fkey(full_name)
         )
       `)
       .eq('user_id', currentUserId)
@@ -136,7 +155,7 @@ export const isUserEnrolled = async (courseId) => {
     console.log('enrollmentService: Checking for user:', user.id);
     const { data, error } = await supabase
       .from('enrollments')
-      .select('id, status, enrolled_at')
+      .select('id, is_active, enrolled_at, progress_percentage, completed_at')
       .eq('user_id', user.id)
       .eq('course_id', courseId)
       .maybeSingle();
@@ -182,7 +201,6 @@ export const updateEnrollmentProgress = async (courseId, progressPercentage) => 
 
     // If progress is 100%, mark as completed
     if (progressPercentage >= 100) {
-      updateData.status = 'completed';
       updateData.completed_at = new Date().toISOString();
     }
 
@@ -207,9 +225,9 @@ export const updateEnrollmentProgress = async (courseId, progressPercentage) => 
 };
 
 /**
- * Update enrollment status
+ * Update enrollment active status
  */
-export const updateEnrollmentStatus = async (courseId, status) => {
+export const updateEnrollmentStatus = async (courseId, isActive) => {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
@@ -217,12 +235,10 @@ export const updateEnrollmentStatus = async (courseId, status) => {
       throw new Error('User not authenticated');
     }
 
-    const updateData = { status };
+    const updateData = { is_active: isActive };
     
-    if (status === 'completed') {
-      updateData.completed_at = new Date().toISOString();
-      updateData.progress_percentage = 100;
-    }
+    // If setting to inactive, don't change progress
+    // If reactivating, keep existing progress
 
     const { data, error } = await supabase
       .from('enrollments')
@@ -261,12 +277,12 @@ export const getEnrollmentDetails = async (courseId) => {
           title,
           description,
           category,
-          difficulty_level,
+          level,
           duration_hours,
-          instructor_name,
-          image_url
+          thumbnail_url,
+          user_profiles!courses_instructor_id_fkey(full_name)
         ),
-        course_progress(
+        video_progress(
           *,
           course_content(title, content_type, duration_minutes)
         )
@@ -297,7 +313,10 @@ export const getAllEnrollments = async () => {
       .from('enrollments')
       .select(`
         *,
-        courses(title, instructor_name),
+        courses(
+          title,
+          user_profiles!courses_instructor_id_fkey(full_name)
+        ),
         user_profiles!enrollments_user_id_fkey(full_name)
       `)
       .order('enrolled_at', { ascending: false });
@@ -368,26 +387,35 @@ export const updateUserEnrollment = async (enrollmentId, updateData) => {
  */
 export const getEnrollmentStats = async () => {
   try {
-    // Get enrollment stats by status
-    const { data: statusStats, error: statusError } = await supabase
+    // Get enrollment stats by activity and completion
+    const { data: enrollments, error: statusError } = await supabase
       .from('enrollments')
-      .select('status')
-      .then(({ data, error }) => {
-        if (error) throw error;
-        
-        const stats = {
-          active: 0,
-          completed: 0,
-          dropped: 0,
-          paused: 0
-        };
-        
-        data.forEach(enrollment => {
-          stats[enrollment.status] = (stats[enrollment.status] || 0) + 1;
-        });
-        
-        return { data: stats, error: null };
-      });
+      .select('is_active, progress_percentage, completed_at');
+
+    if (statusError) throw statusError;
+
+    const stats = {
+      active: 0,
+      completed: 0,
+      inactive: 0,
+      in_progress: 0
+    };
+    
+    enrollments?.forEach(enrollment => {
+      if (enrollment.completed_at) {
+        stats.completed++;
+      } else if (enrollment.is_active) {
+        if (enrollment.progress_percentage > 0) {
+          stats.in_progress++;
+        } else {
+          stats.active++;
+        }
+      } else {
+        stats.inactive++;
+      }
+    });
+
+    const statusStats = stats;
 
     if (statusError) throw statusError;
 

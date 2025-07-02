@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { createTopic, getCourseCategories } from '@/lib/forumService';
+import { createTopic } from '@/lib/forumService';
 import FileUploadZone from './FileUploadZone';
 
 const CreateTopicModal = ({ 
@@ -25,86 +25,22 @@ const CreateTopicModal = ({
 }) => {
   const [formData, setFormData] = useState({
     title: '',
-    content: '',
-    topic_type: 'discussion',
-    category_id: ''
+    content: ''
   });
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [loadingCategories, setLoadingCategories] = useState(false);
   const { toast } = useToast();
 
-  const topicTypes = [
-    {
-      value: 'discussion',
-      label: 'การสนทนา',
-      description: 'หัวข้อสนทนาทั่วไป',
-      icon: MessageSquare,
-      color: 'blue'
-    },
-    {
-      value: 'question',
-      label: 'คำถาม',
-      description: 'ถามคำถามและรอคำตอบ',
-      icon: HelpCircle,
-      color: 'yellow'
-    },
-    {
-      value: 'announcement',
-      label: 'ประกาศ',
-      description: 'ข้อมูลสำคัญจากผู้สอน',
-      icon: Megaphone,
-      color: 'red'
-    },
-    {
-      value: 'assignment_help',
-      label: 'ความช่วยเหลือเรื่องงาน',
-      description: 'ขอความช่วยเหลือเรื่องการบ้าน',
-      icon: BookOpen,
-      color: 'green'
-    }
-  ];
 
   useEffect(() => {
-    if (isOpen && courseId) {
-      loadCategories();
+    if (isOpen) {
       // Reset form when modal opens
       setFormData({
         title: '',
-        content: '',
-        topic_type: 'discussion',
-        category_id: ''
+        content: ''
       });
     }
-  }, [isOpen, courseId]);
+  }, [isOpen]);
 
-  const loadCategories = async () => {
-    try {
-      setLoadingCategories(true);
-      const { data, error } = await getCourseCategories(courseId);
-      
-      if (error) throw error;
-      
-      setCategories(data || []);
-      
-      // Set default category if available
-      if (data && data.length > 0) {
-        setFormData(prev => ({
-          ...prev,
-          category_id: data[0].id
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading categories:', error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถโหลดหมวดหมู่ได้",
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingCategories(false);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -124,9 +60,7 @@ const CreateTopicModal = ({
       const topicData = {
         course_id: courseId,
         title: formData.title.trim(),
-        content: formData.content.trim(),
-        topic_type: formData.topic_type,
-        category_id: formData.category_id || null
+        content: formData.content.trim()
       };
 
       const { data, error } = await createTopic(topicData);
@@ -207,77 +141,7 @@ const CreateTopicModal = ({
           {/* Form */}
           <div className="flex-1 overflow-y-auto">
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {/* Topic Type Selection */}
-            <div>
-              <label className="block text-lg font-semibold text-gray-800 mb-3">
-                ประเภทหัวข้อ
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {topicTypes.map(type => {
-                  const Icon = type.icon;
-                  const isSelected = formData.topic_type === type.value;
-                  const colorClasses = {
-                    blue: 'border-blue-500 bg-blue-50 text-blue-700',
-                    yellow: 'border-yellow-500 bg-yellow-50 text-yellow-700',
-                    red: 'border-red-500 bg-red-50 text-red-700',
-                    green: 'border-green-500 bg-green-50 text-green-700'
-                  };
 
-                  return (
-                    <div
-                      key={type.value}
-                      onClick={() => handleInputChange('topic_type', type.value)}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
-                        isSelected 
-                          ? colorClasses[type.color]
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3 mb-2">
-                        <Icon className={`w-5 h-5 ${
-                          isSelected ? `text-${type.color}-600` : 'text-gray-500'
-                        }`} />
-                        <span className={`font-semibold ${
-                          isSelected ? `text-${type.color}-800` : 'text-gray-700'
-                        }`}>
-                          {type.label}
-                        </span>
-                      </div>
-                      <p className={`text-sm ${
-                        isSelected ? `text-${type.color}-600` : 'text-gray-500'
-                      }`}>
-                        {type.description}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Category Selection */}
-            <div>
-              <label className="block text-lg font-semibold text-gray-800 mb-3">
-                หมวดหมู่
-              </label>
-              {loadingCategories ? (
-                <div className="flex items-center justify-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-                </div>
-              ) : (
-                <select
-                  value={formData.category_id}
-                  onChange={(e) => handleInputChange('category_id', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                >
-                  <option value="">ไม่ระบุหมวดหมู่</option>
-                  {categories.map(category => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
 
             {/* Title */}
             <div>
@@ -295,10 +159,7 @@ const CreateTopicModal = ({
               />
               <div className="flex justify-between mt-2">
                 <span className="text-sm text-gray-500">
-                  {formData.topic_type === 'question' 
-                    ? 'เขียนคำถามที่ชัดเจนและเฉพาะเจาะจง' 
-                    : 'ชื่อหัวข้อที่ดึงดูดความสนใจ'
-                  }
+                  ชื่อหัวข้อที่ดึงดูดความสนใจ
                 </span>
                 <span className="text-sm text-gray-400">
                   {formData.title.length}/200
@@ -314,13 +175,7 @@ const CreateTopicModal = ({
               <textarea
                 value={formData.content}
                 onChange={(e) => handleInputChange('content', e.target.value)}
-                placeholder={
-                  formData.topic_type === 'question' 
-                    ? 'อธิบายปัญหาหรือคำถามของคุณอย่างละเอียด...\n\n- สิ่งที่คุณพยายามทำ\n- สิ่งที่เกิดขึ้นจริง\n- สิ่งที่คุณได้ลองแล้ว'
-                    : formData.topic_type === 'announcement'
-                    ? 'เขียนประกาศหรือข้อมูลสำคัญที่ต้องการแจ้งให้นักเรียนทราบ...'
-                    : 'แบ่งปันความคิดเห็น ประสบการณ์ หรือข้อมูลที่น่าสนใจ...'
-                }
+                placeholder="แบ่งปันความคิดเห็น ประสบการณ์ หรือข้อมูลที่น่าสนใจ..."
                 className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                 rows={8}
                 maxLength={5000}

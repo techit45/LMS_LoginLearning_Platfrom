@@ -1,712 +1,158 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   Save, 
   X, 
-  PlayCircle, 
+  BookOpen, 
   FileText, 
-  Trophy, 
-  BookOpen,
+  Video, 
   Clock,
-  Link as LinkIcon,
-  Eye,
-  EyeOff,
-  Settings,
-  CheckSquare,
-  Award,
-  Unlock,
-  Lock
+  Paperclip
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { validateContentData, getContentTemplates } from '@/lib/contentService';
-import QuizEditor from '@/components/QuizEditor';
-import AssignmentEditor from '@/components/AssignmentEditor';
 import UniversalFileUpload from '@/components/UniversalFileUpload';
-import AttachmentViewer from '@/components/AttachmentViewer';
+import { getContentAttachments } from '@/lib/attachmentService';
 
 const ContentEditor = ({ mode, content, onSave, onClose }) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     title: content?.title || '',
-    description: content?.description || '',
     content_type: content?.content_type || 'video',
-    content_url: content?.content_url || '',
+    content: content?.content || '',
+    video_url: content?.video_url || '',
     duration_minutes: content?.duration_minutes || 0,
-    is_free: content?.is_free || false,
-    // Progress requirements
-    completion_type: content?.completion_type || 'manual',
-    minimum_score: content?.minimum_score || 0,
-    minimum_time_minutes: content?.minimum_time_minutes || 0,
-    is_required: content?.is_required !== false,
-    unlock_after: content?.unlock_after || [],
-    completion_criteria: content?.completion_criteria || {}
+    order_index: content?.order_index || 0,
+    is_preview: content?.is_preview || false,
+    completion_requirement: content?.completion_requirement || 'full_watch',
+    min_watch_time: content?.min_watch_time || 60,
+    allow_manual_completion: content?.allow_manual_completion !== false,
+    requires_previous_completion: content?.requires_previous_completion !== false,
+    lock_enabled: content?.lock_enabled !== false,
+    lock_message: content?.lock_message || 'คุณต้องทำเนื้อหาก่อนหน้าให้เสร็จก่อน'
   });
   
-  const [activeTab, setActiveTab] = useState('basic');
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [showPreview, setShowPreview] = useState(false);
-  const [showFileUpload, setShowFileUpload] = useState(false);
-  const [showUrlField, setShowUrlField] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  const [contentId, setContentId] = useState(content?.id || null);
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
 
+  const contentTypes = [
+    { value: 'video', label: 'วิดีโอ', icon: Video, color: 'blue' },
+    { value: 'lesson', label: 'บทเรียน', icon: BookOpen, color: 'green' },
+    { value: 'document', label: 'เอกสาร', icon: Paperclip, color: 'orange' },
+    { value: 'quiz', label: 'แบบทดสอบ', icon: FileText, color: 'yellow' },
+    { value: 'assignment', label: 'การบ้าน', icon: FileText, color: 'purple' }
+  ];
+
+  // Load existing attachments when contentId changes
   useEffect(() => {
-    if (formData.content_url && formData.content_type === 'video') {
-      // Convert YouTube URL to embed format
-      let embedUrl = formData.content_url;
-      if (embedUrl.includes('youtube.com/watch')) {
-        const videoId = embedUrl.split('v=')[1]?.split('&')[0];
-        embedUrl = `https://www.youtube.com/embed/${videoId}`;
-      } else if (embedUrl.includes('youtu.be/')) {
-        const videoId = embedUrl.split('youtu.be/')[1]?.split('?')[0];
-        embedUrl = `https://www.youtube.com/embed/${videoId}`;
-      }
-      setPreviewUrl(embedUrl);
-    }
-  }, [formData.content_url, formData.content_type]);
+    const loadAttachments = async () => {
+      if (!contentId) return;
+      
+      setLoadingAttachments(true);
+      try {
+        console.log('Loading attachments for content:', contentId);
+        const { data: attachments, error } = await getContentAttachments(contentId);
+        
+        if (error) {
+          console.error('Error loading attachments:', error);
+          toast({
+            title: "ไม่สามารถโหลดไฟล์แนบได้",
+            description: "มีข้อผิดพลาดในการโหลดไฟล์แนบที่มีอยู่",
+            variant: "destructive"
+          });
+          return;
+        }
 
-  const handleSubmit = (e) => {
+        console.log('Loaded attachments:', attachments);
+        
+        // Convert database attachments to component format
+        const formattedFiles = attachments.map(att => ({
+          id: att.id,
+          name: att.original_filename || att.filename,
+          size: att.file_size,
+          type: att.file_extension,
+          mimeType: att.mime_type,
+          isUploading: false,
+          isUploaded: true,
+          progress: 100,
+          url: att.file_url,
+          path: att.file_path,
+          attachmentId: att.id
+        }));
+
+        setAttachedFiles(formattedFiles);
+        console.log('Set attached files:', formattedFiles);
+      } catch (error) {
+        console.error('Error in loadAttachments:', error);
+      } finally {
+        setLoadingAttachments(false);
+      }
+    };
+
+    loadAttachments();
+  }, [contentId, toast]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate form data
-    const validation = validateContentData(formData);
-    if (!validation.isValid) {
+    if (!formData.title.trim()) {
       toast({
-        title: "ข้อมูลไม่ถูกต้อง",
-        description: validation.errors.join('\n'),
+        title: "ข้อมูลไม่ครบถ้วน",
+        description: "กรุณากรอกชื่อเนื้อหา",
         variant: "destructive"
       });
       return;
     }
 
-    onSave(formData);
-  };
-
-  const handleTemplateSelect = (template) => {
-    setFormData(prev => ({
-      ...prev,
-      ...template
-    }));
-  };
-
-  const renderBasicFields = () => (
-    <div className="space-y-4">
-      {/* Content Type */}
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
-        <label className="block text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <div className="bg-blue-500 p-2 rounded-lg mr-3">
-            <FileText className="w-5 h-5 text-white" />
-          </div>
-          เลือกประเภทเนื้อหา
-        </label>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { value: 'video', label: 'วิดีโอ', icon: PlayCircle, color: 'blue', bgColor: 'from-blue-500 to-blue-600' },
-            { value: 'quiz', label: 'แบบทดสอบ', icon: Trophy, color: 'yellow', bgColor: 'from-yellow-500 to-orange-500' },
-            { value: 'assignment', label: 'งานมอบหมาย', icon: FileText, color: 'purple', bgColor: 'from-purple-500 to-purple-600' },
-            { value: 'document', label: 'เอกสาร', icon: BookOpen, color: 'green', bgColor: 'from-green-500 to-green-600' }
-          ].map(type => {
-            const Icon = type.icon;
-            const isSelected = formData.content_type === type.value;
-            return (
-              <button
-                key={type.value}
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, content_type: type.value }))}
-                className={`p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${
-                  isSelected
-                    ? `border-${type.color}-500 bg-gradient-to-br ${type.bgColor} text-white shadow-lg`
-                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md text-gray-600'
-                }`}
-              >
-                <Icon className={`w-6 h-6 mx-auto mb-2 ${
-                  isSelected ? 'text-white' : `text-${type.color}-500`
-                }`} />
-                <div className={`text-sm font-medium ${
-                  isSelected ? 'text-white' : 'text-gray-700'
-                }`}>{type.label}</div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Title */}
-      <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200">
-        <label className="block text-lg font-semibold text-gray-800 mb-3 flex items-center">
-          <div className="bg-green-500 p-2 rounded-lg mr-3">
-            <BookOpen className="w-5 h-5 text-white" />
-          </div>
-          ชื่อเนื้อหา *
-        </label>
-        <input
-          type="text"
-          value={formData.title}
-          onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-          className="w-full p-4 bg-white border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:border-green-500 focus:ring-4 focus:ring-green-200 focus:outline-none transition-all duration-200 text-lg shadow-sm"
-          placeholder="เช่น การเขียนโปรแกรม Python เบื้องต้น"
-          required
-        />
-      </div>
-
-      {/* Description */}
-      <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-6 rounded-xl border border-purple-200">
-        <label className="block text-lg font-semibold text-gray-800 mb-3 flex items-center">
-          <div className="bg-purple-500 p-2 rounded-lg mr-3">
-            <FileText className="w-5 h-5 text-white" />
-          </div>
-          คำอธิบายเนื้อหา
-        </label>
-        <textarea
-          value={formData.description}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          className="w-full p-4 bg-white border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:border-purple-500 focus:ring-4 focus:ring-purple-200 focus:outline-none transition-all duration-200 resize-none shadow-sm"
-          rows={4}
-          placeholder="อธิบายสิ่งที่ผู้เรียนจะได้เรียนรู้จากเนื้อหานี้..."
-        />
-      </div>
-
-      {/* Add URL Option */}
-      <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-xl border border-orange-200">
-        <label className="block text-lg font-semibold text-gray-800 mb-3 flex items-center">
-          <div className="bg-orange-500 p-2 rounded-lg mr-3">
-            <LinkIcon className="w-5 h-5 text-white" />
-          </div>
-          เพิ่ม URL เนื้อหา (ถ้าต้องการ)
-        </label>
-        
-        {!showUrlField ? (
-          <Button
-            type="button"
-            onClick={() => setShowUrlField(true)}
-            className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-6 py-3 transition-all duration-200 shadow-md hover:shadow-lg"
-          >
-            <LinkIcon className="w-5 h-5 mr-2" />
-            เพิ่ม URL ลิงค์เนื้อหา
-          </Button>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">
-                {formData.content_type === 'video' && 'รองรับ YouTube URL'}
-                {formData.content_type === 'document' && 'รองรับลิงค์เอกสารออนไลน์'}
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  setShowUrlField(false);
-                  setFormData(prev => ({ ...prev, content_url: '' }));
-                  setShowPreview(false);
-                }}
-                className="text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg p-1"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            
-            <div className="flex space-x-3">
-              <input
-                type="url"
-                value={formData.content_url}
-                onChange={(e) => setFormData(prev => ({ ...prev, content_url: e.target.value }))}
-                className="flex-1 p-4 bg-white border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:border-orange-500 focus:ring-4 focus:ring-orange-200 focus:outline-none transition-all duration-200 text-lg shadow-sm"
-                placeholder={
-                  formData.content_type === 'video' 
-                    ? 'https://youtube.com/watch?v=... หรือ https://youtu.be/...'
-                    : 'https://example.com/document.pdf'
-                }
-              />
-              {formData.content_type === 'video' && formData.content_url && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowPreview(!showPreview)}
-                  className="px-4 py-2 border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400 rounded-xl"
-                >
-                  {showPreview ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </Button>
-              )}
-            </div>
-            
-            {/* Video Preview */}
-            {formData.content_type === 'video' && showPreview && previewUrl && (
-              <div className="mt-4">
-                <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden shadow-lg border-2 border-gray-200">
-                  <iframe
-                    src={previewUrl}
-                    className="w-full h-full"
-                    allowFullScreen
-                    title="Video Preview"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Duration and Free Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Duration */}
-        <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-6 rounded-xl border border-cyan-200">
-          <label className="block text-lg font-semibold text-gray-800 mb-3 flex items-center">
-            <div className="bg-cyan-500 p-2 rounded-lg mr-3">
-              <Clock className="w-5 h-5 text-white" />
-            </div>
-            ระยะเวลาเนื้อหา
-          </label>
-          <div className="flex items-center space-x-3">
-            <input
-              type="number"
-              value={formData.duration_minutes}
-              onChange={(e) => setFormData(prev => ({ ...prev, duration_minutes: parseInt(e.target.value) || 0 }))}
-              className="w-28 p-3 bg-white border-2 border-gray-200 rounded-xl text-gray-800 text-center text-lg font-semibold focus:border-cyan-500 focus:ring-4 focus:ring-cyan-200 focus:outline-none transition-all duration-200 shadow-sm"
-              min="0"
-              placeholder="0"
-            />
-            <span className="text-gray-600 font-medium">นาที</span>
-          </div>
-        </div>
-
-        {/* Is Free */}
-        <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-6 rounded-xl border border-emerald-200">
-          <label className="block text-lg font-semibold text-gray-800 mb-3 flex items-center">
-            <div className="bg-emerald-500 p-2 rounded-lg mr-3">
-              <Trophy className="w-5 h-5 text-white" />
-            </div>
-            การเข้าถึงเนื้อหา
-          </label>
-          <div className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              id="is_free"
-              checked={formData.is_free}
-              onChange={(e) => setFormData(prev => ({ ...prev, is_free: e.target.checked }))}
-              className="w-5 h-5 text-emerald-500 border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-emerald-200 focus:ring-opacity-50"
-            />
-            <label htmlFor="is_free" className="text-gray-700 font-medium cursor-pointer">
-              เนื้อหาฟรี (เข้าถึงได้โดยไม่ต้องลงทะเบียน)
-            </label>
-          </div>
-        </div>
-      </div>
-
-      {/* Progress Requirements */}
-      <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-6 rounded-xl border border-amber-200">
-        <label className="block text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <div className="bg-amber-500 p-2 rounded-lg mr-3">
-            <Settings className="w-5 h-5 text-white" />
-          </div>
-          เงื่อนไขการผ่านเนื้อหา
-        </label>
-        
-        {/* Completion Type */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">ประเภทการผ่าน</label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {[
-              { value: 'manual', label: 'กดผ่านเอง', icon: CheckSquare, color: 'blue' },
-              { value: 'quiz_required', label: 'ต้องทำแบบทดสอบ', icon: Award, color: 'yellow' },
-              { value: 'assignment_required', label: 'ต้องส่งงาน', icon: FileText, color: 'purple' },
-              { value: 'time_based', label: 'เวลาขั้นต่ำ', icon: Clock, color: 'green' },
-              { value: 'video_complete', label: 'ดูวิดีโอครบ', icon: PlayCircle, color: 'red' },
-              { value: 'sequential', label: 'เรียงลำดับ', icon: Lock, color: 'gray' }
-            ].map(type => {
-              const Icon = type.icon;
-              const isSelected = formData.completion_type === type.value;
-              return (
-                <button
-                  key={type.value}
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, completion_type: type.value }))}
-                  className={`p-3 rounded-lg border-2 transition-all duration-200 ${
-                    isSelected
-                      ? `border-${type.color}-500 bg-${type.color}-50 text-${type.color}-700`
-                      : 'border-gray-200 bg-white hover:border-gray-300 text-gray-600'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 mx-auto mb-1 ${
-                    isSelected ? `text-${type.color}-600` : 'text-gray-500'
-                  }`} />
-                  <div className="text-xs font-medium">{type.label}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Conditional Settings */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Minimum Score - for quiz/assignment */}
-          {(formData.completion_type === 'quiz_required' || formData.completion_type === 'assignment_required') && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">คะแนนขั้นต่ำ (%)</label>
-              <input
-                type="number"
-                value={formData.minimum_score}
-                onChange={(e) => setFormData(prev => ({ ...prev, minimum_score: parseInt(e.target.value) || 0 }))}
-                className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
-                min="0"
-                max="100"
-                placeholder="80"
-              />
-            </div>
-          )}
-
-          {/* Minimum Time - for time_based */}
-          {formData.completion_type === 'time_based' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">เวลาขั้นต่ำ (นาที)</label>
-              <input
-                type="number"
-                value={formData.minimum_time_minutes}
-                onChange={(e) => setFormData(prev => ({ ...prev, minimum_time_minutes: parseInt(e.target.value) || 0 }))}
-                className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
-                min="0"
-                placeholder="10"
-              />
-            </div>
-          )}
-
-          {/* Required Content */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">จำเป็นต้องผ่าน</label>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="is_required"
-                checked={formData.is_required}
-                onChange={(e) => setFormData(prev => ({ ...prev, is_required: e.target.checked }))}
-                className="w-4 h-4 text-amber-500 border-2 border-gray-300 rounded focus:ring-amber-500"
-              />
-              <label htmlFor="is_required" className="text-sm text-gray-700 cursor-pointer">
-                {formData.is_required ? (
-                  <span className="flex items-center text-amber-600">
-                    <Lock className="w-4 h-4 mr-1" /> เนื้อหาบังคับ
-                  </span>
-                ) : (
-                  <span className="flex items-center text-gray-500">
-                    <Unlock className="w-4 h-4 mr-1" /> เนื้อหาเสริม
-                  </span>
-                )}
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderAttachmentsTab = () => {
-    if (mode === 'create') {
-      return (
-        <div className="text-center py-8">
-          <FileText className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-          <p className="text-slate-400 mb-2">บันทึกเนื้อหาก่อนเพื่อเพิ่มไฟล์แนบ</p>
-          <p className="text-xs text-slate-500 mb-4">ไฟล์แนบจะใช้ได้หลังจากสร้างเนื้อหาเรียบร้อยแล้ว</p>
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 max-w-md mx-auto">
-            <h4 className="text-blue-300 font-medium mb-2">💡 วิธีการใช้งาน</h4>
-            <ol className="text-blue-200 text-sm space-y-1 text-left">
-              <li>1. กรอกข้อมูลในแท็บ "ข้อมูลพื้นฐาน"</li>
-              <li>2. คลิก "บันทึก" เพื่อสร้างเนื้อหา</li>
-              <li>3. กลับมาแก้ไขเนื้อหาอีกครั้ง</li>
-              <li>4. คลิกแท็บ "ไฟล์แนบ" เพื่ออัปโหลดไฟล์</li>
-            </ol>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-6">
-        <div className="glass-effect p-4 rounded-lg">
-          <h3 className="text-lg font-semibold text-white mb-4">ไฟล์แนบ</h3>
-          <p className="text-slate-400 text-sm mb-4">
-            เพิ่มไฟล์แนบเพื่อให้นักเรียนดาวน์โหลด เช่น เอกสารประกอบ แบบฝึกหัด หรือทรัพยากรการเรียนรู้
-          </p>
-          
-          {/* File Upload Section */}
-          <AnimatePresence>
-            {showFileUpload && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-6"
-              >
-                <UniversalFileUpload
-                  contentId={content?.id}
-                  onFilesChange={(files) => {
-                    console.log('Files changed:', files);
-                    // Refresh attachments after upload
-                    // You can add a callback here to refresh the AttachmentViewer
-                  }}
-                  uploadMode="admin"
-                  maxFiles={10}
-                  maxFileSize={50 * 1024 * 1024} // 50MB
-                />
-                <div className="flex justify-end space-x-2 mt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowFileUpload(false)}
-                  >
-                    ยกเลิก
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Attachment Viewer */}
-          <AttachmentViewer
-            contentId={content?.id}
-            showUploadButton={!showFileUpload}
-            onUploadClick={() => setShowFileUpload(true)}
-            isAdminView={true}
-            className="admin-attachment-viewer"
-          />
-        </div>
-
-        {/* Attachment Guidelines */}
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-          <h4 className="text-blue-300 font-medium mb-2">💡 คำแนะนำสำหรับไฟล์แนบ</h4>
-          <ul className="text-blue-200 text-sm space-y-1">
-            <li>• ไฟล์ PDF, Word, PowerPoint จะแสดงตัวอย่างได้</li>
-            <li>• รูปภาพจะแสดงตัวอย่างแบบเต็มหน้าจอ</li>
-            <li>• ชื่อไฟล์ควรมีความหมายและเข้าใจง่าย</li>
-            <li>• ขนาดไฟล์สูงสุด 50MB ต่อไฟล์</li>
-            <li>• นักเรียนสามารถดาวน์โหลดไฟล์ได้ทั้งหมด</li>
-          </ul>
-        </div>
-      </div>
-    );
-  };
-
-  const renderProgressRequirements = () => (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-6 rounded-xl border border-purple-200">
-        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-          <Award className="w-6 h-6 mr-3 text-purple-600" />
-          การตั้งค่าเงื่อนไขการผ่านเนื้อหา
-        </h3>
-        <p className="text-gray-600 mb-6">
-          กำหนดเงื่อนไขที่นักเรียนต้องปฏิบัติเพื่อถือว่าผ่านเนื้อหานี้แล้ว
-        </p>
-
-        {/* Completion Type Selection */}
-        <div className="mb-6">
-          <label className="block text-lg font-semibold text-gray-800 mb-3">ประเภทการผ่าน</label>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[
-              { 
-                value: 'manual', 
-                label: 'กดผ่านเอง', 
-                description: 'นักเรียนกดปุ่มเสร็จสิ้นเอง', 
-                icon: CheckSquare, 
-                color: 'blue' 
-              },
-              { 
-                value: 'quiz_required', 
-                label: 'ต้องทำแบบทดสอบ', 
-                description: 'ต้องทำแบบทดสอบและได้คะแนนตามที่กำหนด', 
-                icon: Award, 
-                color: 'yellow' 
-              },
-              { 
-                value: 'assignment_required', 
-                label: 'ต้องส่งงาน', 
-                description: 'ต้องส่งงานมอบหมายและได้คะแนนผ่าน', 
-                icon: FileText, 
-                color: 'purple' 
-              },
-              { 
-                value: 'time_based', 
-                label: 'เวลาขั้นต่ำ', 
-                description: 'ต้องใช้เวลาเรียนครบตามที่กำหนด', 
-                icon: Clock, 
-                color: 'green' 
-              },
-              { 
-                value: 'video_complete', 
-                label: 'ดูวิดีโอครบ', 
-                description: 'ต้องดูวิดีโอจนจบ', 
-                icon: PlayCircle, 
-                color: 'red' 
-              },
-              { 
-                value: 'sequential', 
-                label: 'เรียงลำดับ', 
-                description: 'ต้องผ่านเนื้อหาก่อนหน้าก่อน', 
-                icon: Lock, 
-                color: 'gray' 
-              }
-            ].map(type => {
-              const Icon = type.icon;
-              const isSelected = formData.completion_type === type.value;
-              return (
-                <div
-                  key={type.value}
-                  onClick={() => setFormData(prev => ({ ...prev, completion_type: type.value }))}
-                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
-                    isSelected
-                      ? `border-${type.color}-500 bg-${type.color}-50 shadow-lg`
-                      : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
-                  <div className="flex items-center mb-2">
-                    <Icon className={`w-5 h-5 mr-2 ${
-                      isSelected ? `text-${type.color}-600` : 'text-gray-500'
-                    }`} />
-                    <span className={`font-semibold ${
-                      isSelected ? `text-${type.color}-800` : 'text-gray-700'
-                    }`}>{type.label}</span>
-                  </div>
-                  <p className={`text-sm ${
-                    isSelected ? `text-${type.color}-600` : 'text-gray-500'
-                  }`}>{type.description}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Conditional Settings */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Minimum Score */}
-          {(formData.completion_type === 'quiz_required' || formData.completion_type === 'assignment_required') && (
-            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-              <label className="block text-sm font-semibold text-gray-800 mb-2 flex items-center">
-                <Award className="w-4 h-4 mr-2 text-yellow-600" />
-                คะแนนขั้นต่ำที่ต้องได้ (%)
-              </label>
-              <input
-                type="number"
-                value={formData.minimum_score}
-                onChange={(e) => setFormData(prev => ({ ...prev, minimum_score: parseInt(e.target.value) || 0 }))}
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:outline-none text-center text-lg font-semibold"
-                min="0"
-                max="100"
-                placeholder="80"
-              />
-              <p className="text-xs text-gray-600 mt-1">นักเรียนต้องได้คะแนนอย่างน้อย {formData.minimum_score}% เพื่อผ่าน</p>
-            </div>
-          )}
-
-          {/* Minimum Time */}
-          {formData.completion_type === 'time_based' && (
-            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-              <label className="block text-sm font-semibold text-gray-800 mb-2 flex items-center">
-                <Clock className="w-4 h-4 mr-2 text-green-600" />
-                เวลาขั้นต่ำที่ต้องใช้ (นาที)
-              </label>
-              <input
-                type="number"
-                value={formData.minimum_time_minutes}
-                onChange={(e) => setFormData(prev => ({ ...prev, minimum_time_minutes: parseInt(e.target.value) || 0 }))}
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none text-center text-lg font-semibold"
-                min="0"
-                placeholder="10"
-              />
-              <p className="text-xs text-gray-600 mt-1">นักเรียนต้องใช้เวลาอย่างน้อย {formData.minimum_time_minutes} นาที</p>
-            </div>
-          )}
-        </div>
-
-        {/* Required Content Toggle */}
-        <div className="mt-6 bg-amber-50 p-4 rounded-lg border border-amber-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-1 flex items-center">
-                {formData.is_required ? (
-                  <Lock className="w-4 h-4 mr-2 text-amber-600" />
-                ) : (
-                  <Unlock className="w-4 h-4 mr-2 text-gray-500" />
-                )}
-                สถานะการเรียน
-              </label>
-              <p className="text-sm text-gray-600">
-                {formData.is_required 
-                  ? 'เนื้อหาบังคับ - นักเรียนต้องผ่านเพื่อดำเนินการต่อ'
-                  : 'เนื้อหาเสริม - นักเรียนสามารถข้ามได้'
-                }
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className={`text-sm font-medium ${
-                formData.is_required ? 'text-amber-600' : 'text-gray-500'
-              }`}>
-                {formData.is_required ? 'บังคับ' : 'เสริม'}
-              </span>
-              <input
-                type="checkbox"
-                id="is_required_detailed"
-                checked={formData.is_required}
-                onChange={(e) => setFormData(prev => ({ ...prev, is_required: e.target.checked }))}
-                className="w-5 h-5 text-amber-500 border-2 border-gray-300 rounded focus:ring-amber-500"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Preview Section */}
-      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-        <h4 className="text-blue-800 font-semibold mb-2 flex items-center">
-          <Eye className="w-4 h-4 mr-2" />
-          ตัวอย่างสำหรับนักเรียน
-        </h4>
-        <div className="bg-white p-3 rounded border">
-          <p className="text-sm text-gray-700">
-            <strong>เงื่อนไขการผ่าน:</strong> {{
-              'manual': 'กดปุ่มเสร็จสิ้นเมื่อเรียนจบ',
-              'quiz_required': `ทำแบบทดสอบและได้คะแนนอย่างน้อย ${formData.minimum_score}%`,
-              'assignment_required': `ส่งงานมอบหมายและได้คะแนนอย่างน้อย ${formData.minimum_score}%`,
-              'time_based': `ใช้เวลาเรียนอย่างน้อย ${formData.minimum_time_minutes} นาที`,
-              'video_complete': 'ดูวิดีโอจนจบ',
-              'sequential': 'ผ่านเนื้อหาก่อนหน้าก่อน'
-            }[formData.completion_type]}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            สถานะ: {formData.is_required ? '🔒 เนื้อหาบังคับ' : '🔓 เนื้อหาเสริม'}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderAdvancedSettings = () => {
-    switch (formData.content_type) {
-      case 'quiz':
-        return (
-          <QuizEditor 
-            contentId={content?.id}
-            onSave={(quizData) => {
-              // Quiz data will be saved separately
-              console.log('Quiz data:', quizData);
-            }}
-          />
-        );
+    setLoading(true);
+    try {
+      // บันทึกเนื้อหาพร้อมการตั้งค่าล็อค
+      const savedContent = await onSave(formData);
       
-      case 'assignment':
-        return (
-          <AssignmentEditor 
-            contentId={content?.id}
-            onSave={(assignmentData) => {
-              // Assignment data will be saved separately
-              console.log('Assignment data:', assignmentData);
-            }}
-          />
-        );
+      // หากเป็นการสร้างใหม่ ให้อัปเดต contentId
+      if (mode === 'create' && savedContent?.id) {
+        setContentId(savedContent.id);
+      }
       
-      default:
-        return (
-          <div className="text-center py-8">
-            <FileText className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-            <p className="text-slate-400">ไม่มีการตั้งค่าเพิ่มเติมสำหรับประเภทเนื้อหานี้</p>
-          </div>
-        );
+      // Show success message
+      let description = `${mode === 'create' ? 'สร้าง' : 'แก้ไข'}เนื้อหาเรียบร้อยแล้ว`;
+      
+      // Add note about lock settings if configured
+      if (formData.lock_enabled || formData.requires_previous_completion) {
+        description += '\n🔒 การตั้งค่าล็อคเนื้อหาได้รับการบันทึกแล้ว';
+      }
+      
+      toast({
+        title: "บันทึกสำเร็จ",
+        description
+      });
+      
+      // ให้ผู้ใช้อัปโหลดไฟล์หลังจากบันทึกเนื้อหาแล้ว
+      if (mode === 'create' && savedContent?.id && attachedFiles.length > 0) {
+        toast({
+          title: "สามารถอัปโหลดไฟล์แล้ว",
+          description: "คุณสามารถอัปโหลดไฟล์แนบได้แล้ว"
+        });
+        return; // ไม่ปิด modal ให้ผู้ใช้อัปโหลดไฟล์ต่อ
+      }
+      
+      onClose();
+    } catch (error) {
+      console.error('Error saving content:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: error.message || "ไม่สามารถบันทึกข้อมูลได้",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -714,161 +160,392 @@ const ContentEditor = ({ mode, content, onSave, onClose }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
+        initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white shadow-2xl rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col"
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 rounded-t-xl">
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-t-xl">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                <BookOpen className="w-8 h-8 text-white" />
+            <div className="flex items-center space-x-3">
+              <div className="bg-white/20 p-2 rounded-lg">
+                <BookOpen className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-3xl font-bold text-white">
-                  {mode === 'create' ? 'เพิ่มเนื้อหาใหม่' : 'แก้ไขเนื้อหา'}
+                <h2 className="text-2xl font-bold text-white">
+                  {mode === 'create' ? 'สร้างเนื้อหาใหม่' : 'แก้ไขเนื้อหา'}
                 </h2>
-                <p className="text-indigo-100 mt-1">สร้างเนื้อหาการเรียนรู้ที่น่าสนใจสำหรับนักเรียน</p>
+                <p className="text-indigo-100 mt-1">จัดการเนื้อหาในคอร์ส</p>
               </div>
             </div>
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={onClose}
-              className="text-white hover:bg-white/20 rounded-xl p-2"
+              className="text-white hover:bg-white/20 rounded-lg"
             >
               <X className="w-6 h-6" />
             </Button>
           </div>
-
-          {/* Tabs */}
-          <div className="flex space-x-2 mt-6 bg-white/10 p-1 rounded-xl backdrop-blur-sm">
-            <button
-              type="button"
-              onClick={() => setActiveTab('basic')}
-              className={`flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === 'basic'
-                  ? 'bg-white text-indigo-600 shadow-lg'
-                  : 'text-white hover:bg-white/20'
-              }`}
-            >
-              📝 ข้อมูลพื้นฐาน
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('attachments')}
-              className={`flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === 'attachments'
-                  ? 'bg-white text-indigo-600 shadow-lg'
-                  : 'text-white hover:bg-white/20'
-              }`}
-            >
-              📎 ไฟล์แนบ
-            </button>
-            {(formData.content_type === 'quiz' || formData.content_type === 'assignment') && (
-              <button
-                type="button"
-                onClick={() => setActiveTab('advanced')}
-                className={`flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  activeTab === 'advanced'
-                    ? 'bg-white text-indigo-600 shadow-lg'
-                    : 'text-white hover:bg-white/20'
-                }`}
-              >
-                ⚙️ การตั้งค่าเพิ่มเติม
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setActiveTab('requirements')}
-              className={`flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === 'requirements'
-                  ? 'bg-white text-indigo-600 shadow-lg'
-                  : 'text-white hover:bg-white/20'
-              }`}
-            >
-              🎯 เงื่อนไขการผ่าน
-            </button>
-          </div>
         </div>
 
-        {/* Content */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 overflow-y-auto p-8">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
-              >
-                {activeTab === 'basic' && renderBasicFields()}
-                {activeTab === 'attachments' && renderAttachmentsTab()}
-                {activeTab === 'advanced' && renderAdvancedSettings()}
-                {activeTab === 'requirements' && renderProgressRequirements()}
-              </motion.div>
-            </AnimatePresence>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Title */}
+          <div>
+            <label className="block text-lg font-semibold text-gray-800 mb-3">
+              ชื่อเนื้อหา *
+            </label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => handleInputChange('title', e.target.value)}
+              className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-lg"
+              placeholder="เช่น การใช้ React Hooks"
+              required
+            />
           </div>
 
-          {/* Footer */}
-          <div className="bg-gray-50 p-8 border-t border-gray-200 flex-shrink-0">
-            {/* Templates - Only show on basic tab and create mode */}
-            {activeTab === 'basic' && mode === 'create' && (
-              <div className="mb-6">
-                <p className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                  <Trophy className="w-5 h-5 mr-2 text-yellow-500" />
-                  เทมเพลตเนื้อหาสำเร็จรูป
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  {getContentTemplates().map((template, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => handleTemplateSelect(template)}
-                      className="px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-full transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-                    >
-                      ✨ {template.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+          {/* Content Type */}
+          <div>
+            <label className="block text-lg font-semibold text-gray-800 mb-3">
+              ประเภทเนื้อหา
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {contentTypes.map(type => {
+                const Icon = type.icon;
+                const isSelected = formData.content_type === type.value;
+                return (
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() => handleInputChange('content_type', type.value)}
+                    className={`p-3 rounded-lg border-2 transition-all ${
+                      isSelected
+                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                        : 'border-gray-200 bg-white hover:border-gray-300 text-gray-600'
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 mx-auto mb-1 ${
+                      isSelected ? 'text-indigo-600' : 'text-gray-500'
+                    }`} />
+                    <div className="text-sm font-medium">{type.label}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-            {/* Actions - Show on all tabs */}
-            <div className="flex items-center justify-center space-x-4">
+          {/* Video URL (if video) */}
+          {formData.content_type === 'video' && (
+            <div>
+              <label className="block text-lg font-semibold text-gray-800 mb-3">
+                URL วิดีโอ
+              </label>
+              <input
+                type="url"
+                value={formData.video_url}
+                onChange={(e) => handleInputChange('video_url', e.target.value)}
+                className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                placeholder="https://www.youtube.com/watch?v=..."
+              />
+            </div>
+          )}
+
+          {/* Content */}
+          <div>
+            <label className="block text-lg font-semibold text-gray-800 mb-3">
+              เนื้อหา
+            </label>
+            <textarea
+              value={formData.content}
+              onChange={(e) => handleInputChange('content', e.target.value)}
+              className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+              rows={6}
+              placeholder="เขียนเนื้อหาบทเรียน หรือคำอธิบายเพิ่มเติม..."
+            />
+          </div>
+
+          {/* Duration and Settings */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ระยะเวลา (นาที)
+              </label>
+              <input
+                type="number"
+                value={formData.duration_minutes}
+                onChange={(e) => handleInputChange('duration_minutes', parseInt(e.target.value) || 0)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                min="0"
+                placeholder="15"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ลำดับที่
+              </label>
+              <input
+                type="number"
+                value={formData.order_index}
+                onChange={(e) => handleInputChange('order_index', parseInt(e.target.value) || 0)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                min="0"
+                placeholder="1"
+              />
+            </div>
+
+            <div className="flex items-center">
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="is_preview"
+                  checked={formData.is_preview}
+                  onChange={(e) => handleInputChange('is_preview', e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="is_preview" className="text-sm font-medium text-gray-700">
+                  เปิดให้ดูฟรี
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* File Attachments Section (แสดงสำหรับ document, assignment, หรือ lesson) */}
+          {(['document', 'assignment', 'lesson'].includes(formData.content_type)) && (
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <Paperclip className="w-5 h-5 mr-2 text-orange-500" />
+                ไฟล์แนบเอกสาร
+              </h3>
+              
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-orange-800">
+                  💡 <strong>การแนบไฟล์:</strong> 
+                  {!contentId && (
+                    <span className="text-orange-600">
+                      {' '}กรุณาบันทึกเนื้อหาก่อน จึงจะสามารถอัปโหลดไฟล์ได้
+                    </span>
+                  )}
+                  {contentId && !loadingAttachments && (
+                    <span className="text-green-600">
+                      {' '}สามารถอัปโหลดไฟล์เอกสารประกอบการเรียนได้แล้ว
+                      {attachedFiles.filter(f => f.isUploaded).length > 0 && (
+                        <span className="ml-2">({attachedFiles.filter(f => f.isUploaded).length} ไฟล์)</span>
+                      )}
+                    </span>
+                  )}
+                  {loadingAttachments && (
+                    <span className="text-blue-600">
+                      {' '}กำลังโหลดไฟล์แนบ...
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <UniversalFileUpload
+                contentId={contentId}
+                existingFiles={attachedFiles}
+                onFilesChange={setAttachedFiles}
+                maxFiles={5}
+                maxFileSize={25 * 1024 * 1024} // 25MB
+                allowedTypes={['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'jpg', 'jpeg', 'png', 'gif']}
+                uploadMode="admin"
+                className="bg-white"
+              />
+            </div>
+          )}
+
+          {/* Content Lock Settings Section */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">การล็อคเนื้อหา</h3>
+            
+            <div className="space-y-4">
+              {/* Enable Content Lock */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="lock_enabled"
+                  checked={formData.lock_enabled}
+                  onChange={(e) => handleInputChange('lock_enabled', e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="lock_enabled" className="text-sm font-medium text-gray-700">
+                  เปิดใช้งานระบบล็อคเนื้อหา
+                </label>
+              </div>
+
+              {/* Require Previous Completion */}
+              {formData.lock_enabled && (
+                <div className="ml-7 space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      id="requires_previous_completion"
+                      checked={formData.requires_previous_completion}
+                      onChange={(e) => handleInputChange('requires_previous_completion', e.target.checked)}
+                      className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                    />
+                    <label htmlFor="requires_previous_completion" className="text-sm font-medium text-gray-700">
+                      ต้องทำเนื้อหาก่อนหน้าให้เสร็จก่อน
+                    </label>
+                  </div>
+
+                  {/* Lock Message */}
+                  {formData.requires_previous_completion && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        ข้อความเมื่อเนื้อหาถูกล็อค
+                      </label>
+                      <textarea
+                        value={formData.lock_message}
+                        onChange={(e) => handleInputChange('lock_message', e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                        rows={2}
+                        placeholder="คุณต้องทำเนื้อหาก่อนหน้าให้เสร็จก่อน"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Help Text */}
+              <div className="bg-yellow-50 p-3 rounded-lg">
+                <p className="text-xs text-yellow-800">
+                  💡 <strong>คำแนะนำ:</strong> 
+                  {!formData.lock_enabled && ' ระบบล็อคถูกปิด - ผู้เรียนสามารถเข้าถึงเนื้อหานี้ได้ทันที'}
+                  {formData.lock_enabled && !formData.requires_previous_completion && ' ระบบล็อคเปิด แต่ไม่ต้องรอเนื้อหาก่อนหน้า'}
+                  {formData.lock_enabled && formData.requires_previous_completion && ' ผู้เรียนต้องทำเนื้อหาก่อนหน้าให้เสร็จก่อนจึงจะเข้าถึงได้'}
+                </p>
+                <p className="text-xs text-blue-600 mt-2">
+                  💡 <strong>หมายเหตุ:</strong> รันคำสั่ง SQL ใน add-lock-columns.sql เพื่อเพิ่มคอลัมน์ในฐานข้อมูลก่อนใช้งานฟีเจอร์นี้
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Completion Requirements Section */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">เงื่อนไขการผ่านเนื้อหา</h3>
+            
+            <div className="space-y-4">
+              {/* Completion Requirement Dropdown */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  เงื่อนไขการผ่าน
+                </label>
+                <select
+                  value={formData.completion_requirement}
+                  onChange={(e) => handleInputChange('completion_requirement', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  <option value="manual_only">ให้ผู้เรียนกดผ่านเอง</option>
+                  <option value="full_watch">ดูวิดีโอให้ครบ 90%</option>
+                  <option value="time_based">ดูวิดีโอครบตามเวลาที่กำหนด</option>
+                  <option value="end_reach">เลื่อนไปจุดสิ้นสุดของเนื้อหา (95%)</option>
+                  <option value="any_watch">ดูวิดีโอแค่บางส่วน (10%)</option>
+                </select>
+              </div>
+
+              {/* Min Watch Time (only shown when time_based is selected) */}
+              {formData.completion_requirement === 'time_based' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    เวลาขั้นต่ำที่ต้องดู (วินาที)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.min_watch_time}
+                    onChange={(e) => handleInputChange('min_watch_time', parseInt(e.target.value) || 0)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    min="0"
+                    placeholder="60"
+                  />
+                  <p className="text-xs text-gray-600 mt-1">
+                    ระบุเป็นวินาที เช่น 120 = 2 นาที
+                  </p>
+                </div>
+              )}
+
+              {/* Allow Manual Completion Checkbox */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="allow_manual_completion"
+                  checked={formData.allow_manual_completion}
+                  onChange={(e) => handleInputChange('allow_manual_completion', e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="allow_manual_completion" className="text-sm font-medium text-gray-700">
+                  อนุญาตให้ผู้เรียนกดผ่านเองได้ (แสดงปุ่ม "ทำเครื่องหมายว่าเสร็จแล้ว")
+                </label>
+              </div>
+
+              {/* Help Text */}
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-xs text-blue-800">
+                  💡 <strong>คำแนะนำ:</strong> 
+                  {formData.completion_requirement === 'manual_only' && ' ผู้เรียนต้องกดปุ่มเพื่อผ่านเนื้อหานี้'}
+                  {formData.completion_requirement === 'full_watch' && ' ผู้เรียนต้องดูวิดีโอให้ครบ 90% จึงจะผ่านอัตโนมัติ'}
+                  {formData.completion_requirement === 'time_based' && ' ผู้เรียนต้องดูวิดีโอตามเวลาที่กำหนดจึงจะผ่านอัตโนมัติ'}
+                  {formData.completion_requirement === 'end_reach' && ' ผู้เรียนต้องเลื่อนวิดีโอไปใกล้จบ (95%) จึงจะผ่านอัตโนมัติ'}
+                  {formData.completion_requirement === 'any_watch' && ' ผู้เรียนดูวิดีโอแค่ 10% ก็จะผ่านอัตโนมัติ'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-between pt-4">
+            <div className="flex space-x-3">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={onClose}
-                className="px-8 py-3 text-gray-600 border-gray-300 hover:bg-gray-50 rounded-xl font-medium text-lg h-14 min-w-[120px]"
+                disabled={loading}
               >
                 ยกเลิก
               </Button>
-              {(activeTab === 'basic' || activeTab === 'requirements') && (
-                <Button 
-                  type="submit" 
-                  className="px-12 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold text-lg h-14 min-w-[160px] shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  <Save className="w-5 h-5 mr-3" />
-                  บันทึกเนื้อหา
-                </Button>
+            </div>
+            
+            <div className="flex space-x-3">
+              {/* แสดงข้อมูล files สถิติ */}
+              {attachedFiles.length > 0 && (
+                <div className="flex items-center text-sm text-gray-600 mr-4">
+                  <Paperclip className="w-4 h-4 mr-1" />
+                  <span>
+                    {attachedFiles.filter(f => f.isUploaded).length}/{attachedFiles.length} ไฟล์
+                  </span>
+                </div>
               )}
-              {(activeTab !== 'basic' && activeTab !== 'requirements') && (
+              
+              <Button 
+                type="submit"
+                disabled={loading}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {loading ? 'กำลังบันทึก...' : (
+                  contentId ? 'บันทึกการเปลี่ยนแปลง' : 'บันทึกเนื้อหา'
+                )}
+              </Button>
+              
+              {/* ปุ่มสำหรับปิด modal หลังจากอัปโหลดไฟล์เสร็จ */}
+              {contentId && attachedFiles.some(f => f.isUploaded) && (
                 <Button 
                   type="button"
-                  onClick={() => setActiveTab('basic')}
-                  className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold text-lg h-14 min-w-[140px] shadow-lg hover:shadow-xl transition-all duration-200"
+                  variant="outline" 
+                  onClick={onClose}
+                  className="border-green-500 text-green-600 hover:bg-green-50"
                 >
-                  กลับไปบันทึก
+                  เสร็จสิ้น
                 </Button>
               )}
             </div>

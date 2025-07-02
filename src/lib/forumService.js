@@ -60,7 +60,7 @@ export const getCourseTopics = async (courseId, options = {}) => {
       categoryId = null,
       topicType = null,
       search = null,
-      sortBy = 'last_activity_at',
+      sortBy = 'last_reply_at',
       sortOrder = 'desc',
       page = 1,
       limit = 20
@@ -72,14 +72,7 @@ export const getCourseTopics = async (courseId, options = {}) => {
       .select('*')
       .eq('course_id', courseId);
 
-    // Apply filters
-    if (categoryId) {
-      query = query.eq('category_id', categoryId);
-    }
-
-    if (topicType) {
-      query = query.eq('topic_type', topicType);
-    }
+    // Apply filters (removed category_id and topic_type as they don't exist in schema)
 
     if (search) {
       query = query.textSearch('search_vector', search);
@@ -113,14 +106,14 @@ export const getCourseTopics = async (courseId, options = {}) => {
 
     // Get unique author IDs and category IDs
     const authorIds = [...new Set(topics.map(t => t.author_id).filter(Boolean))];
-    const categoryIds = [...new Set(topics.map(t => t.category_id).filter(Boolean))];
+    // Skip category mapping since category_id doesn't exist in schema
 
     // Get user profiles
     let userProfiles = {};
     if (authorIds.length > 0) {
       const { data: profiles } = await supabase
         .from('user_profiles')
-        .select('user_id, full_name, avatar_url, user_role')
+        .select('user_id, full_name, avatar_url, role')
         .in('user_id', authorIds);
       
       if (profiles) {
@@ -130,26 +123,13 @@ export const getCourseTopics = async (courseId, options = {}) => {
       }
     }
 
-    // Get categories
-    let categories = {};
-    if (categoryIds.length > 0) {
-      const { data: cats } = await supabase
-        .from('forum_categories')
-        .select('id, name')
-        .in('id', categoryIds);
-      
-      if (cats) {
-        cats.forEach(cat => {
-          categories[cat.id] = cat;
-        });
-      }
-    }
+    // Skip category mapping since category_id doesn't exist in schema
 
     // Combine data
     const enrichedTopics = topics.map(topic => ({
       ...topic,
       user_profiles: userProfiles[topic.author_id] || null,
-      forum_categories: categories[topic.category_id] || null
+      // forum_categories removed since category_id doesn't exist
     }));
 
     return {
@@ -187,22 +167,14 @@ export const getTopicWithReplies = async (topicId) => {
     if (topic.author_id) {
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('user_id, full_name, avatar_url, user_role')
+        .select('user_id, full_name, avatar_url, role')
         .eq('user_id', topic.author_id)
         .single();
       topicAuthorProfile = profile;
     }
 
-    // Get topic category
+    // Skip category mapping since category_id doesn't exist in schema
     let topicCategory = null;
-    if (topic.category_id) {
-      const { data: category } = await supabase
-        .from('forum_categories')
-        .select('id, name')
-        .eq('id', topic.category_id)
-        .single();
-      topicCategory = category;
-    }
 
     // Get course info
     let courseInfo = null;
@@ -231,7 +203,7 @@ export const getTopicWithReplies = async (topicId) => {
       if (authorIds.length > 0) {
         const { data: profiles } = await supabase
           .from('user_profiles')
-          .select('user_id, full_name, avatar_url, user_role')
+          .select('user_id, full_name, avatar_url, role')
           .in('user_id', authorIds);
         
         if (profiles) {
@@ -294,22 +266,14 @@ export const createTopic = async (topicData) => {
     if (userId) {
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('user_id, full_name, avatar_url, user_role')
+        .select('user_id, full_name, avatar_url, role')
         .eq('user_id', userId)
         .single();
       userProfile = profile;
     }
 
-    // Get category
+    // Skip category mapping since category_id doesn't exist in schema
     let category = null;
-    if (topic.category_id) {
-      const { data: cat } = await supabase
-        .from('forum_categories')
-        .select('id, name')
-        .eq('id', topic.category_id)
-        .single();
-      category = cat;
-    }
 
     // Combine data
     const enrichedTopic = {
@@ -486,7 +450,7 @@ export const createReply = async (replyData) => {
     if (userId) {
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('user_id, full_name, avatar_url, user_role')
+        .select('user_id, full_name, avatar_url, role')
         .eq('user_id', userId)
         .single();
       userProfile = profile;
@@ -758,7 +722,7 @@ export const searchForum = async (courseId, searchQuery, options = {}) => {
       .select('*')
       .eq('course_id', courseId)
       .or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`)
-      .order('last_activity_at', { ascending: false })
+      .order('last_reply_at', { ascending: false })
       .limit(limit);
 
     if (topicsError) throw topicsError;
@@ -770,7 +734,7 @@ export const searchForum = async (courseId, searchQuery, options = {}) => {
       if (authorIds.length > 0) {
         const { data: profiles } = await supabase
           .from('user_profiles')
-          .select('user_id, full_name, avatar_url, user_role')
+          .select('user_id, full_name, avatar_url, role')
           .in('user_id', authorIds);
         
         if (profiles) {
@@ -781,29 +745,13 @@ export const searchForum = async (courseId, searchQuery, options = {}) => {
       }
     }
 
-    // Get categories
-    let categories = {};
-    if (topics && topics.length > 0) {
-      const categoryIds = [...new Set(topics.map(t => t.category_id).filter(Boolean))];
-      if (categoryIds.length > 0) {
-        const { data: cats } = await supabase
-          .from('forum_categories')
-          .select('id, name')
-          .in('id', categoryIds);
-        
-        if (cats) {
-          cats.forEach(cat => {
-            categories[cat.id] = cat;
-          });
-        }
-      }
-    }
+    // Skip category mapping since category_id doesn't exist in schema
 
     // Enrich topics with user and category data
     const enrichedTopics = (topics || []).map(topic => ({
       ...topic,
       user_profiles: userProfiles[topic.author_id] || null,
-      forum_categories: categories[topic.category_id] || null
+      // forum_categories removed since category_id doesn't exist
     }));
 
     return {
@@ -828,13 +776,8 @@ export const searchForum = async (courseId, searchQuery, options = {}) => {
  */
 export const getForumStats = async (courseId) => {
   try {
-    // Get topic count by category
-    const { data: categoryStats, error: categoryError } = await supabase
-      .from('forum_topics')
-      .select('category_id, forum_categories(name)')
-      .eq('course_id', courseId);
-
-    if (categoryError) throw categoryError;
+    // Skip category stats since forum_topics doesn't have category_id
+    const categoryStats = [];
 
     // Get total counts
     const { count: topicCount, error: topicCountError } = await supabase

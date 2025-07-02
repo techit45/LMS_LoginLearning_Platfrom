@@ -44,13 +44,18 @@ export const getCourseById = async (courseId) => {
       `)
       .eq('id', courseId)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
     console.log('getCourseById: Database result:', { data, error });
 
     if (error) {
       console.error('getCourseById: Database error:', error);
       throw error;
+    }
+
+    if (!data) {
+      console.log('getCourseById: Course not found or inactive');
+      return { data: null, error: { message: 'ไม่พบคอร์สที่ระบุหรือคอร์สไม่เปิดใช้งาน', code: 'COURSE_NOT_FOUND' } };
     }
 
     // Get enrollment count separately to avoid RLS issues
@@ -95,9 +100,13 @@ export const getCourseByIdAdmin = async (courseId) => {
         course_content(*)
       `)
       .eq('id', courseId)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+
+    if (!data) {
+      return { data: null, error: { message: 'ไม่พบคอร์สที่ระบุ', code: 'COURSE_NOT_FOUND' } };
+    }
 
     // Get enrollment count separately to avoid RLS issues
     let enrollmentCount = 0;
@@ -134,7 +143,8 @@ export const getCoursesByCategory = async (category) => {
       .from('courses')
       .select(`
         *,
-        enrollments(count)
+        enrollments(count),
+        user_profiles!courses_instructor_id_fkey(full_name)
       `)
       .eq('category', category)
       .eq('is_active', true)
@@ -142,7 +152,14 @@ export const getCoursesByCategory = async (category) => {
 
     if (error) throw error;
 
-    return { data, error: null };
+    // Transform data to include enrollment count and instructor name
+    const coursesWithStats = data.map(course => ({
+      ...course,
+      enrollment_count: course.enrollments?.[0]?.count || 0,
+      instructor_name: course.user_profiles?.full_name || 'ไม่ระบุ'
+    }));
+
+    return { data: coursesWithStats, error: null };
   } catch (error) {
     console.error('Error fetching courses by category:', error);
     return { data: null, error };
@@ -158,11 +175,33 @@ export const getCoursesByCategory = async (category) => {
  */
 export const createCourse = async (courseData) => {
   try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Check if user profile exists
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('Error checking user profile:', profileError);
+      throw new Error('ไม่สามารถตรวจสอบข้อมูลผู้ใช้ได้');
+    }
+
+    if (!profile) {
+      throw new Error('ไม่พบข้อมูลผู้ใช้ กรุณาติดต่อผู้ดูแลระบบ');
+    }
+
     const { data, error } = await supabase
       .from('courses')
       .insert([{
         ...courseData,
-        created_by: (await supabase.auth.getUser()).data.user?.id
+        instructor_id: user.id
       }])
       .select()
       .single();
@@ -414,7 +453,7 @@ export const getCourseStats = async () => {
     const { count: activeEnrollments, error: activeError } = await supabase
       .from('enrollments')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'active');
+      .eq('is_active', true);
 
     if (activeError) throw activeError;
 
@@ -422,7 +461,7 @@ export const getCourseStats = async () => {
     const { count: completedEnrollments, error: completedError } = await supabase
       .from('enrollments')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'completed');
+      .not('completed_at', 'is', null);
 
     if (completedError) throw completedError;
 

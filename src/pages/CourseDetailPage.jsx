@@ -10,7 +10,6 @@ import { getCourseById } from '@/lib/courseService';
 import { enrollInCourse, isUserEnrolled } from '@/lib/enrollmentService';
 import { useAuth } from '@/contexts/AuthContext';
 import AttachmentViewer from '@/components/AttachmentViewer';
-import EnrollmentDebugger from '@/components/EnrollmentDebugger';
 import ForumTopicCard from '@/components/ForumTopicCard';
 import ForumTopicDetail from '@/components/ForumTopicDetail';
 import CreateTopicModal from '@/components/CreateTopicModal';
@@ -25,8 +24,8 @@ const CourseDetailPage = () => {
   const [enrollmentStatus, setEnrollmentStatus] = useState({ isEnrolled: false, status: null });
   const [enrolling, setEnrolling] = useState(false);
   
-  // Forum states
-  const [activeTab, setActiveTab] = useState('content');
+  // Forum states  
+  const [activeTab, setActiveTab] = useState('forum');
   const [forumTopics, setForumTopics] = useState([]);
   const [selectedTopicId, setSelectedTopicId] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -121,7 +120,7 @@ const CourseDetailPage = () => {
     try {
       setForumLoading(true);
       const { data, error } = await getCourseTopics(courseId, {
-        sortBy: 'last_activity_at',
+        sortBy: 'last_reply_at',
         sortOrder: 'desc',
         limit: 50
       });
@@ -305,117 +304,42 @@ const CourseDetailPage = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <Award className="w-5 h-5 text-[#667eea]" />
-                <span className="text-emerald-800">ระดับ: {course.difficulty_level || 'ไม่ระบุ'}</span>
+                <span className="text-emerald-800">ระดับ: {course.level || 'ไม่ระบุ'}</span>
               </div>
             </div>
              <img  
                 className="w-full h-64 sm:h-96 object-cover rounded-lg mb-6 shadow-md" 
                 alt={course.title}
-               src="https://images.unsplash.com/photo-1635251595512-dc52146d5ae8" />
+                src={course.image_url || "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8"}
+                onError={(e) => {
+                  e.target.src = "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8";
+                }}
+              />
           </div>
 
-          {/* Tab Navigation */}
+          {/* Forum Section Only */}
           <div className="glass-effect p-6 sm:p-8 rounded-xl shadow-xl">
-            <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
-              <button
-                onClick={() => setActiveTab('content')}
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  activeTab === 'content'
-                    ? 'bg-white text-emerald-900 shadow-sm'
-                    : 'text-emerald-700 hover:text-emerald-900'
-                }`}
-              >
-                <BookOpen className="w-4 h-4 inline mr-2" />
-                เนื้อหาคอร์ส
-              </button>
-              {enrollmentStatus.isEnrolled && (
-                <button
-                  onClick={() => setActiveTab('forum')}
-                  className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                    activeTab === 'forum'
-                      ? 'bg-white text-emerald-900 shadow-sm'
-                      : 'text-emerald-700 hover:text-emerald-900'
-                  }`}
-                >
-                  <MessageSquare className="w-4 h-4 inline mr-2" />
-                  ฟอรัมสนทนา
-                </button>
-              )}
+
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold text-emerald-900 flex items-center">
+                <MessageSquare className="w-6 h-6 mr-2" />
+                ฟอรัมสนทนา
+              </h2>
             </div>
 
-            {/* Content Tab */}
-            {activeTab === 'content' && (
-              <div>
-                <h2 className="text-2xl font-semibold text-emerald-900 mb-4">เนื้อหาในคอร์ส</h2>
-            {course.content && course.content.length > 0 ? (
-              <ul className="space-y-3">
-                {course.content.map((content, index) => (
-                  <motion.li 
-                    key={content.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 + index * 0.05 }}
-                    className="p-4 bg-slate-700/30 rounded-lg space-y-3"
-                  >
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0">
-                          {content.content_type === 'video' && <BookOpen className="w-5 h-5 text-blue-400" />}
-                          {content.content_type === 'quiz' && <Award className="w-5 h-5 text-yellow-400" />}
-                          {content.content_type === 'assignment' && <Users className="w-5 h-5 text-purple-400" />}
-                          {content.content_type === 'document' && <BookOpen className="w-5 h-5 text-green-400" />}
-                        </div>
-                        <span className="text-emerald-800 font-medium">{content.title}</span>
-                      </div>
-                      <div className="text-sm text-emerald-700">
-                        {content.duration_minutes > 0 && `${content.duration_minutes} นาที`}
-                        {content.content_type === 'quiz' && 'แบบทดสอบ'}
-                        {content.content_type === 'assignment' && 'งานมอบหมาย'}
-                      </div>
-                    </div>
-                    
-                    {/* Content Description */}
-                    {content.description && (
-                      <p className="text-emerald-800 text-sm leading-relaxed">
-                        {content.description}
-                      </p>
-                    )}
-                    
-                    {/* Attachments */}
-                    <AttachmentViewer 
-                      contentId={content.id}
-                      compact={true}
-                      className="mt-3"
-                    />
-                  </motion.li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-center py-8">
-                <BookOpen className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-                <p className="text-emerald-700">ยังไม่มีเนื้อหาในคอร์สนี้</p>
-              </div>
-            )}
-              </div>
-            )}
-
-            {/* Forum Tab */}
-            {activeTab === 'forum' && enrollmentStatus.isEnrolled && (
+            {/* Forum Content - Always Show */}
+            {enrollmentStatus.isEnrolled ? (
               <div>
                 {selectedTopicId ? (
                   <ForumTopicDetail
                     topicId={selectedTopicId}
                     onBack={handleBackToForum}
                     currentUserId={user?.id}
-                    userRole={user?.user_profiles?.user_role || 'student'}
+                    userRole={user?.user_profiles?.role || 'student'}
                   />
                 ) : (
                   <div>
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-2xl font-semibold text-emerald-900 flex items-center">
-                        <MessageSquare className="w-6 h-6 mr-2" />
-                        ฟอรัมสนทนา
-                      </h2>
+                    <div className="flex items-center justify-end mb-6">
                       <Button
                         onClick={() => setShowCreateModal(true)}
                         className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
@@ -444,7 +368,7 @@ const CourseDetailPage = () => {
                               // TODO: Implement edit functionality
                               console.log('Edit topic:', topic);
                             }}
-                            userRole={user?.user_profiles?.user_role || 'student'}
+                            userRole={user?.user_profiles?.role || 'student'}
                             currentUserId={user?.id}
                           />
                         ))}
@@ -465,6 +389,13 @@ const CourseDetailPage = () => {
                     )}
                   </div>
                 )}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-600 mb-2">ลงทะเบียนเพื่อเข้าถึงฟอรัมสนทนา</h3>
+                <p className="text-gray-500 mb-6">เข้าร่วมการสนทนาและแลกเปลี่ยนความคิดเห็นกับเพื่อนนักเรียนและอาจารย์</p>
+                <p className="text-sm text-gray-400">กรุณาลงทะเบียนคอร์สก่อนเพื่อเข้าถึงฟอรัมสนทนา</p>
               </div>
             )}
           </div>
@@ -520,18 +451,63 @@ const CourseDetailPage = () => {
           <div className="glass-effect p-6 sm:p-8 rounded-xl shadow-xl">
             <h3 className="text-xl font-semibold text-emerald-900 mb-3">สิ่งที่คุณจะได้รับ</h3>
             <ul className="space-y-2 text-emerald-800 text-sm list-disc list-inside">
-              <li>ความรู้และทักษะทางวิศวกรรมที่แข็งแกร่ง</li>
-              <li>ประสบการณ์ทำโปรเจกต์จริง</li>
-              <li>ใบประกาศนียบัตรเมื่อเรียนจบ</li>
-              <li>คำแนะนำจากผู้เชี่ยวชาญ</li>
-              <li>โอกาสในการสร้างเครือข่าย</li>
+              {course.learning_outcomes && course.learning_outcomes.length > 0 ? (
+                (() => {
+                  try {
+                    const outcomes = typeof course.learning_outcomes === 'string' 
+                      ? JSON.parse(course.learning_outcomes) 
+                      : course.learning_outcomes;
+                    return outcomes.filter(outcome => outcome.trim() !== '').map((outcome, index) => (
+                      <li key={index}>{outcome}</li>
+                    ));
+                  } catch (error) {
+                    console.warn('Error parsing learning outcomes:', error);
+                    return [
+                      <li key="default-1">ความรู้และทักษะทางวิศวกรรมที่แข็งแกร่ง</li>,
+                      <li key="default-2">ประสบการณ์ทำโปรเจกต์จริง</li>,
+                      <li key="default-3">ใบประกาศนียบัตรเมื่อเรียนจบ</li>,
+                      <li key="default-4">คำแนะนำจากผู้เชี่ยวชาญ</li>,
+                      <li key="default-5">โอกาสในการสร้างเครือข่าย</li>
+                    ];
+                  }
+                })()
+              ) : (
+                <>
+                  <li>ความรู้และทักษะทางวิศวกรรมที่แข็งแกร่ง</li>
+                  <li>ประสบการณ์ทำโปรเจกต์จริง</li>
+                  <li>ใบประกาศนียบัตรเมื่อเรียนจบ</li>
+                  <li>คำแนะนำจากผู้เชี่ยวชาญ</li>
+                  <li>โอกาสในการสร้างเครือข่าย</li>
+                </>
+              )}
             </ul>
           </div>
 
-          {/* Debug Panel - Remove this after debugging */}
-          {user && (
-            <EnrollmentDebugger courseId={courseId} />
-          )}
+          {/* Tools Required Section */}
+          {course.tools_required && (() => {
+            try {
+              const tools = typeof course.tools_required === 'string' 
+                ? JSON.parse(course.tools_required) 
+                : course.tools_required;
+              const filteredTools = tools.filter(tool => tool.trim() !== '');
+              if (filteredTools.length > 0) {
+                return (
+                  <div className="glass-effect p-6 sm:p-8 rounded-xl shadow-xl">
+                    <h3 className="text-xl font-semibold text-emerald-900 mb-3">เครื่องมือที่ใช้</h3>
+                    <ul className="space-y-2 text-emerald-800 text-sm list-disc list-inside">
+                      {filteredTools.map((tool, index) => (
+                        <li key={index}>{tool}</li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              }
+            } catch (error) {
+              console.warn('Error parsing tools required:', error);
+            }
+            return null;
+          })()}
+
         </motion.div>
       </div>
 

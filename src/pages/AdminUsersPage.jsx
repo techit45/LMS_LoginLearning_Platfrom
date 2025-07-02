@@ -7,7 +7,7 @@ import { Users, UserPlus, Search, Edit, Trash2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { getAllUsersForAdmin, updateUserRole } from '@/lib/adminService';
+import { getAllUsersForAdmin, updateUserRole } from '@/lib/userService';
 
 const AdminUsersPage = () => {
   const { toast } = useToast();
@@ -24,17 +24,28 @@ const AdminUsersPage = () => {
         const { data: userList, error } = await getAllUsersForAdmin();
         
         if (error) {
-          throw new Error(error);
+          console.error('Database error:', error);
+          // Don't show error toast for missing table relationships
+          if (error.code !== 'PGRST200') {
+            toast({
+              title: "เกิดข้อผิดพลาด",
+              description: `ไม่สามารถโหลดข้อมูลผู้ใช้ได้`,
+              variant: "destructive"
+            });
+          }
         }
         
         setUsers(userList || []);
       } catch (error) {
         console.error('Error loading users:', error);
-        toast({
-          title: "เกิดข้อผิดพลาด",
-          description: `ไม่สามารถโหลดข้อมูลผู้ใช้ได้: ${error.message}`,
-          variant: "destructive"
-        });
+        // Only show toast for real errors, not database relationship issues
+        if (!error.message?.includes('relationship')) {
+          toast({
+            title: "เกิดข้อผิดพลาด", 
+            description: "ไม่สามารถโหลดข้อมูลผู้ใช้ได้",
+            variant: "destructive"
+          });
+        }
       } finally {
         setLoading(false);
       }
@@ -45,35 +56,17 @@ const AdminUsersPage = () => {
 
   const handleRoleUpdate = async (userId, newRole) => {
     try {
-      // ถ้าเป็นข้อมูล mock (id เป็นตัวเลข) ให้แสดง toast เฉยๆ
-      if (userId === '1' || userId === '2' || typeof userId === 'string' && userId.length < 10) {
-        // อัพเดท state local สำหรับ mock data
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.id === userId 
-              ? { ...user, role: newRole }
-              : user
-          )
-        );
-        
-        toast({
-          title: "อัพเดทสำเร็จ (ข้อมูลตัวอย่าง)",
-          description: `เปลี่ยนบทบาทผู้ใช้เป็น ${newRole} แล้ว`,
-        });
-        return;
-      }
-
       // สำหรับข้อมูลจริงจาก database
       const { data, error } = await updateUserRole(userId, newRole);
       
       if (error) {
-        throw new Error(error);
+        throw error;
       }
       
       // อัพเดท state local
       setUsers(prevUsers => 
         prevUsers.map(user => 
-          user.id === userId 
+          user.user_id === userId 
             ? { ...user, role: newRole }
             : user
         )
@@ -101,8 +94,8 @@ const AdminUsersPage = () => {
   };
   
   const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    (user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+    (user.email?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
   );
 
   const pageVariants = {
@@ -181,7 +174,7 @@ const AdminUsersPage = () => {
           <tbody>
             {filteredUsers.map((user, index) => (
               <motion.tr 
-                key={user.id}
+                key={user.user_id}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: index * 0.05 }}
@@ -189,21 +182,21 @@ const AdminUsersPage = () => {
               >
                 <td className="p-4">
                   <div>
-                    <div className="font-medium">{user.name}</div>
-                    {user.school && (
-                      <div className="text-sm text-gray-500">{user.school}</div>
+                    <div className="font-medium">{user.full_name || 'ไม่ระบุชื่อ'}</div>
+                    {user.school_name && (
+                      <div className="text-sm text-gray-500">{user.school_name}</div>
                     )}
                   </div>
                 </td>
-                <td className="p-4">{user.email}</td>
+                <td className="p-4">{user.email || 'ไม่ระบุอีเมล'}</td>
                 <td className="p-4">
                   <select 
-                    value={user.role} 
-                    onChange={(e) => handleRoleUpdate(user.id, e.target.value)}
+                    value={user.role || 'student'} 
+                    onChange={(e) => handleRoleUpdate(user.user_id, e.target.value)}
                     className={`px-2 py-1 text-xs rounded-full border-0 ${
-                      user.role === 'admin' ? 'bg-red-500/30 text-red-300' :
-                      user.role === 'instructor' ? 'bg-blue-500/30 text-blue-300' :
-                      user.role === 'branch_manager' ? 'bg-purple-500/30 text-purple-300' :
+                      (user.role || 'student') === 'admin' ? 'bg-red-500/30 text-red-300' :
+                      (user.role || 'student') === 'instructor' ? 'bg-blue-500/30 text-blue-300' :
+                      (user.role || 'student') === 'branch_manager' ? 'bg-purple-500/30 text-purple-300' :
                       'bg-green-500/30 text-green-300'
                     }`}
                   >
@@ -222,10 +215,10 @@ const AdminUsersPage = () => {
                   </div>
                 </td>
                 <td className="p-4 text-center space-x-2">
-                  <Button variant="ghost" size="icon" onClick={() => handleFeatureNotImplemented(`แก้ไขผู้ใช้ ${user.name}`)} className="text-blue-400 hover:bg-blue-500/20">
+                  <Button variant="ghost" size="icon" onClick={() => handleFeatureNotImplemented(`แก้ไขผู้ใช้ ${user.full_name || 'ไม่ระบุชื่อ'}`)} className="text-blue-400 hover:bg-blue-500/20">
                     <Edit className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleFeatureNotImplemented(`ลบผู้ใช้ ${user.name}`)} className="text-red-400 hover:bg-red-500/20">
+                  <Button variant="ghost" size="icon" onClick={() => handleFeatureNotImplemented(`ลบผู้ใช้ ${user.full_name || 'ไม่ระบุชื่อ'}`)} className="text-red-400 hover:bg-red-500/20">
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </td>

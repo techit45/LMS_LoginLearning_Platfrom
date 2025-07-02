@@ -26,14 +26,12 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
     title: '',
     description: '',
     category: '',
-    difficulty_level: 'beginner',
+    level: 'beginner',
     duration_hours: 0,
     price: 0,
-    instructor_name: '',
-    instructor_email: '',
     max_students: 50,
     is_active: true,
-    image_url: ''
+    thumbnail_url: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -69,9 +67,6 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
       newErrors.category = 'กรุณาระบุหมวดหมู่';
     }
 
-    if (!formData.instructor_name.trim()) {
-      newErrors.instructor_name = 'กรุณาระบุชื่ออาจารย์';
-    }
 
     if (formData.duration_hours <= 0) {
       newErrors.duration_hours = 'ระยะเวลาต้องมากกว่า 0 ชั่วโมง';
@@ -115,7 +110,7 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
           throw new Error(`ไม่สามารถอัปโหลดรูปหน้าปกได้: ${uploadError.message}`);
         }
         
-        finalFormData.image_url = uploadData.publicUrl;
+        finalFormData.thumbnail_url = uploadData.publicUrl;
         setUploadingImage(false);
       }
       
@@ -135,14 +130,12 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
         title: '',
         description: '',
         category: '',
-        difficulty_level: 'beginner',
+        level: 'beginner',
         duration_hours: 0,
         price: 0,
-        instructor_name: '',
-        instructor_email: '',
         max_students: 50,
         is_active: true,
-        image_url: ''
+        thumbnail_url: ''
       });
       setCoverImage(null);
       setImagePreview(null);
@@ -349,8 +342,8 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
                   ระดับความยาก
                 </label>
                 <select
-                  name="difficulty_level"
-                  value={formData.difficulty_level}
+                  name="level"
+                  value={formData.level}
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 h-12 shadow-sm"
                 >
@@ -421,49 +414,6 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
               </div>
             </div>
 
-            {/* Instructor Info */}
-            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-6 rounded-xl border border-indigo-200">
-              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                <div className="bg-indigo-500 p-2 rounded-lg mr-3">
-                  <Users className="w-5 h-5 text-white" />
-                </div>
-                ข้อมูลอาจารย์
-              </h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-700 font-medium mb-2">
-                    ชื่ออาจารย์ *
-                  </label>
-                  <Input
-                    name="instructor_name"
-                    value={formData.instructor_name}
-                    onChange={handleInputChange}
-                    placeholder="อาจารย์สมชาย"
-                    className="bg-white border-gray-300 text-gray-800 h-12 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl shadow-sm"
-                  />
-                  {errors.instructor_name && (
-                    <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
-                      <AlertCircle className="w-4 h-4 mr-2" />
-                      {errors.instructor_name}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 font-medium mb-2">
-                    อีเมลอาจารย์
-                  </label>
-                  <Input
-                    type="email"
-                    name="instructor_email"
-                    value={formData.instructor_email}
-                    onChange={handleInputChange}
-                    placeholder="teacher@loginlearning.com"
-                    className="bg-white border-gray-300 text-gray-800 h-12 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl shadow-sm"
-                  />
-                </div>
-              </div>
-            </div>
 
             {/* Max Students */}
             <div className="bg-gradient-to-br from-rose-50 to-pink-50 p-6 rounded-xl border border-rose-200">

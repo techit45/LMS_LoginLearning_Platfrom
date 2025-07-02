@@ -109,8 +109,8 @@ const ForumTopicCard = ({
           <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
             {topic.user_profiles?.avatar_url ? (
               <img 
-                src={topic.author.user_profiles.profile_image_url} 
-                alt={topic.author.user_profiles.full_name}
+                src={topic.user_profiles.avatar_url} 
+                alt={topic.user_profiles.full_name}
                 className="w-full h-full rounded-full object-cover"
               />
             ) : (
@@ -257,7 +257,7 @@ const ForumTopicCard = ({
                 <Clock className="w-3 h-3" />
                 <span>{formatRelativeTime(topic.created_at)}</span>
               </span>
-              {topic.user_profiles?.user_role === 'instructor' && (
+              {topic.user_profiles?.role === 'instructor' && (
                 <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
                   ผู้สอน
                 </span>

@@ -131,7 +131,7 @@ const QuizPlayer = ({ quiz, onComplete, onClose }) => {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-slate-400">กำลังเตรียมแบบทดสอบ...</p>
+          <p className="text-gray-700">กำลังเตรียมแบบทดสอบ...</p>
         </div>
       </div>
     );
@@ -154,34 +154,34 @@ const QuizPlayer = ({ quiz, onComplete, onClose }) => {
           </div>
           
           <div>
-            <h3 className="text-2xl font-bold text-white mb-2">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
               {results.is_passed ? 'ยินดีด้วย! คุณผ่านแบบทดสอบ' : 'เสียใจด้วย คุณไม่ผ่านแบบทดสอบ'}
             </h3>
-            <p className="text-slate-400">
+            <p className="text-gray-700">
               คะแนนที่ได้: {results.score}% | ต้องการ: {quiz.passing_score}%
             </p>
           </div>
         </div>
 
         {/* Score Details */}
-        <div className="glass-effect p-6 rounded-xl">
-          <h4 className="text-lg font-semibold text-white mb-4">รายละเอียดคะแนน</h4>
+        <div className="bg-white border border-gray-200 shadow-sm p-6 rounded-xl">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4">รายละเอียดคะแนน</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-400">{results.score_details?.correct_count || 0}</div>
-              <div className="text-sm text-slate-400">ตอบถูก</div>
+              <div className="text-sm text-gray-700">ตอบถูก</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-slate-300">{results.score_details?.total_questions || 0}</div>
-              <div className="text-sm text-slate-400">ทั้งหมด</div>
+              <div className="text-sm text-gray-700">ทั้งหมด</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-400">{results.score}%</div>
-              <div className="text-sm text-slate-400">คะแนนรวม</div>
+              <div className="text-sm text-gray-700">คะแนนรวม</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-400">{results.time_spent_minutes || 0}</div>
-              <div className="text-sm text-slate-400">นาที</div>
+              <div className="text-sm text-gray-700">นาที</div>
             </div>
           </div>
         </div>
@@ -189,7 +189,7 @@ const QuizPlayer = ({ quiz, onComplete, onClose }) => {
         {/* Question Review (if enabled) */}
         {quiz.show_correct_answers && results.score_details?.feedback && (
           <div className="space-y-4">
-            <h4 className="text-lg font-semibold text-white">ตรวจสอบคำตอบ</h4>
+            <h4 className="text-lg font-semibold text-gray-900">ตรวจสอบคำตอบ</h4>
             {quiz.questions.map((question, index) => {
               const questionId = question.id || index.toString();
               const feedback = results.score_details.feedback[questionId];
@@ -200,7 +200,7 @@ const QuizPlayer = ({ quiz, onComplete, onClose }) => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className={`glass-effect p-4 rounded-lg border-l-4 ${
+                  className={`bg-white border border-gray-200 shadow-sm p-4 rounded-lg border-l-4 ${
                     feedback?.is_correct ? 'border-green-500' : 'border-red-500'
                   }`}
                 >
@@ -210,11 +210,11 @@ const QuizPlayer = ({ quiz, onComplete, onClose }) => {
                     </div>
                     
                     <div className="flex-1">
-                      <p className="text-white font-medium mb-2">{question.question}</p>
+                      <p className="text-gray-900 font-medium mb-2">{question.question}</p>
                       
                       <div className="space-y-2 text-sm">
                         <div>
-                          <span className="text-slate-400">คำตอบของคุณ: </span>
+                          <span className="text-gray-700">คำตอบของคุณ: </span>
                           <span className={feedback?.is_correct ? 'text-green-400' : 'text-red-400'}>
                             {Array.isArray(feedback?.user_answer) 
                               ? feedback.user_answer.join(', ') 
@@ -224,7 +224,7 @@ const QuizPlayer = ({ quiz, onComplete, onClose }) => {
                         
                         {!feedback?.is_correct && (
                           <div>
-                            <span className="text-slate-400">คำตอบที่ถูก: </span>
+                            <span className="text-gray-700">คำตอบที่ถูก: </span>
                             <span className="text-green-400">
                               {Array.isArray(feedback?.correct_answer) 
                                 ? feedback.correct_answer.join(', ') 
@@ -283,8 +283,8 @@ const QuizPlayer = ({ quiz, onComplete, onClose }) => {
       {/* Quiz Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-bold text-white">{quiz.title}</h3>
-          <p className="text-slate-400">
+          <h3 className="text-xl font-bold text-gray-900">{quiz.title}</h3>
+          <p className="text-gray-700">
             คำถามที่ {currentQuestion + 1} จาก {quiz.questions.length}
           </p>
         </div>
@@ -293,7 +293,7 @@ const QuizPlayer = ({ quiz, onComplete, onClose }) => {
           {/* Timer */}
           {quiz.time_limit > 0 && (
             <div className={`flex items-center space-x-2 ${
-              timeLeft < 300 ? 'text-red-400' : 'text-slate-400'
+              timeLeft < 300 ? 'text-red-400' : 'text-gray-700'
             }`}>
               <Clock className="w-4 h-4" />
               <span className="font-mono">{formatTime(timeLeft)}</span>
@@ -301,14 +301,14 @@ const QuizPlayer = ({ quiz, onComplete, onClose }) => {
           )}
           
           {/* Progress */}
-          <div className="text-slate-400 text-sm">
+          <div className="text-gray-700 text-sm">
             ตอบแล้ว: {getAnsweredCount()}/{quiz.questions.length}
           </div>
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="w-full bg-slate-700 rounded-full h-2">
+      <div className="w-full bg-gray-200 rounded-full h-2">
         <div 
           className="bg-blue-500 h-2 rounded-full transition-all duration-300"
           style={{ width: `${((currentQuestion + 1) / quiz.questions.length) * 100}%` }}
@@ -323,7 +323,7 @@ const QuizPlayer = ({ quiz, onComplete, onClose }) => {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3 }}
-          className="glass-effect p-6 rounded-xl"
+          className="bg-white border border-gray-200 shadow-sm p-6 rounded-xl"
         >
           <QuestionRenderer
             question={question}
@@ -382,7 +382,7 @@ const QuestionRenderer = ({ question, questionId, userAnswer, onAnswerChange }) 
         return (
           <div className="space-y-3">
             {question.options.map((option, index) => (
-              <label key={index} className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-slate-700/30 transition-colors">
+              <label key={index} className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-gray-100 transition-colors bg-gray-50 border border-gray-200">
                 <input
                   type="radio"
                   name={questionId}
@@ -391,7 +391,7 @@ const QuestionRenderer = ({ question, questionId, userAnswer, onAnswerChange }) 
                   onChange={(e) => onAnswerChange(questionId, e.target.value)}
                   className="w-4 h-4 text-blue-500"
                 />
-                <span className="text-slate-200">{option}</span>
+                <span className="text-gray-900">{option}</span>
               </label>
             ))}
           </div>
@@ -401,7 +401,7 @@ const QuestionRenderer = ({ question, questionId, userAnswer, onAnswerChange }) 
         return (
           <div className="space-y-3">
             {question.options.map((option, index) => (
-              <label key={index} className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-slate-700/30 transition-colors">
+              <label key={index} className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-gray-100 transition-colors bg-gray-50 border border-gray-200">
                 <input
                   type="checkbox"
                   value={option}
@@ -416,7 +416,7 @@ const QuestionRenderer = ({ question, questionId, userAnswer, onAnswerChange }) 
                   }}
                   className="w-4 h-4 text-blue-500"
                 />
-                <span className="text-slate-200">{option}</span>
+                <span className="text-gray-900">{option}</span>
               </label>
             ))}
           </div>
@@ -426,7 +426,7 @@ const QuestionRenderer = ({ question, questionId, userAnswer, onAnswerChange }) 
         return (
           <div className="space-y-3">
             {[true, false].map((value) => (
-              <label key={value.toString()} className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-slate-700/30 transition-colors">
+              <label key={value.toString()} className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-gray-100 transition-colors bg-gray-50 border border-gray-200">
                 <input
                   type="radio"
                   name={questionId}
@@ -435,7 +435,7 @@ const QuestionRenderer = ({ question, questionId, userAnswer, onAnswerChange }) 
                   onChange={(e) => onAnswerChange(questionId, e.target.value === 'true')}
                   className="w-4 h-4 text-blue-500"
                 />
-                <span className="text-slate-200">{value ? 'ถูก' : 'ผิด'}</span>
+                <span className="text-gray-900">{value ? 'ถูก' : 'ผิด'}</span>
               </label>
             ))}
           </div>
@@ -448,7 +448,7 @@ const QuestionRenderer = ({ question, questionId, userAnswer, onAnswerChange }) 
             value={userAnswer || ''}
             onChange={(e) => onAnswerChange(questionId, e.target.value)}
             placeholder="พิมพ์คำตอบของคุณ..."
-            className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
+            className="w-full p-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-blue-500 focus:outline-none"
           />
         );
 
@@ -459,7 +459,7 @@ const QuestionRenderer = ({ question, questionId, userAnswer, onAnswerChange }) 
 
   return (
     <div className="space-y-4">
-      <h4 className="text-lg font-semibold text-white">{question.question}</h4>
+      <h4 className="text-lg font-semibold text-gray-900">{question.question}</h4>
       
       {question.image && (
         <img 

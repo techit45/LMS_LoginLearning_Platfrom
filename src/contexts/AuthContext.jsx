@@ -61,11 +61,11 @@ export const AuthProvider = ({ children }) => {
             try {
               const { data: profile } = await supabase
                 .from('user_profiles')
-                .select('user_role')
+                .select('role')
                 .eq('user_id', currentUser.id)
                 .single();
               
-              const dbRole = profile?.user_role || 'student';
+              const dbRole = profile?.role || 'student';
               const mappedRole = dbRole === 'admin' ? ROLES.SUPER_ADMIN : 
                                dbRole === 'instructor' ? ROLES.INSTRUCTOR : ROLES.STUDENT;
               
@@ -105,11 +105,11 @@ export const AuthProvider = ({ children }) => {
           try {
             const { data: profile } = await supabase
               .from('user_profiles')
-              .select('user_role')
+              .select('role')
               .eq('user_id', currentUser.id)
               .single();
             
-            const dbRole = profile?.user_role || 'student';
+            const dbRole = profile?.role || 'student';
             const mappedRole = dbRole === 'admin' ? ROLES.SUPER_ADMIN : 
                              dbRole === 'instructor' ? ROLES.INSTRUCTOR : ROLES.STUDENT;
             

@@ -17,7 +17,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { uploadAttachmentFile } from '@/lib/attachmentService';
-import SystemCheck from '@/components/SystemCheck';
 
 const UniversalFileUpload = ({ 
   contentId, 
@@ -34,7 +33,6 @@ const UniversalFileUpload = ({
   const [files, setFiles] = useState(existingFiles);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [showSystemCheck, setShowSystemCheck] = useState(false);
 
   // File type icons mapping
   const getFileIcon = (fileType) => {
@@ -240,13 +238,8 @@ const UniversalFileUpload = ({
       // Show detailed error to user with system check option
       toast({
         title: "ไม่สามารถอัปโหลดไฟล์ได้",
-        description: `${errorMessage}\n\nคลิก "ตรวจสอบระบบ" หากต้องการความช่วยเหลือ`,
-        variant: "destructive",
-        action: (
-          <Button size="sm" onClick={() => setShowSystemCheck(true)}>
-            ตรวจสอบระบบ
-          </Button>
-        )
+        description: errorMessage,
+        variant: "destructive"
       });
 
       throw error;
@@ -456,14 +449,6 @@ const UniversalFileUpload = ({
                           <AlertCircle className="w-3 h-3 text-red-400 mt-0.5 flex-shrink-0" />
                           <div className="flex-1">
                             <p className="text-red-400">{file.error}</p>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-red-300 hover:text-red-200 h-auto p-0 mt-1 text-xs"
-                              onClick={() => setShowSystemCheck(true)}
-                            >
-                              ตรวจสอบระบบ →
-                            </Button>
                           </div>
                         </div>
                       </div>
@@ -530,10 +515,6 @@ const UniversalFileUpload = ({
         </div>
       )}
 
-      {/* System Check Modal */}
-      {showSystemCheck && (
-        <SystemCheck onClose={() => setShowSystemCheck(false)} />
-      )}
     </div>
   );
 };
