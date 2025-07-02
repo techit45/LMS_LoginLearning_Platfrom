@@ -62,3 +62,4 @@ test-*.sql
 /src/components/SystemCheck.jsx
 /src/components/DatabaseHealthCheck.jsx
 /src/components/EnrollmentDebugger.jsx
+.vercel
