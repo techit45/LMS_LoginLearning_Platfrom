@@ -2,6 +2,38 @@
 import React from 'react';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', textAlign: 'center', color: '#e74c3c' }}>
+          <h1>Something went wrong</h1>
+          <p>Error: {this.state.error?.message}</p>
+          <button onClick={() => this.setState({ hasError: false, error: null })}>
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import HomePage from '@/pages/HomePage';
@@ -32,18 +64,18 @@ import AdminRoute from '@/components/AdminRoute';
 
 function App() {
   return (
-    <HelmetProvider>
-      <Helmet>
-        <title>Login Learning - แพลตฟอร์มเรียนรู้วิศวกรรมออนไลน์</title>
-        <meta name="description" content="เรียนรู้การทำโครงงานวิศวกรรมกับผู้เชี่ยวชาญ ค้นหาตัวตนสำหรับน้องมัธยม เพื่อตัดสินใจเข้าเรียนต่อ พร้อมคอร์สเรียนที่หลากหลายและการสนับสนุนตลอด 24 ชั่วโมง" />
-      </Helmet>
-      <Router 
-        basename="/TestLogin"
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true
-        }}
-      >
+    <ErrorBoundary>
+      <HelmetProvider>
+        <Helmet>
+          <title>Login Learning - แพลตฟอร์มเรียนรู้วิศวกรรมออนไลน์</title>
+          <meta name="description" content="เรียนรู้การทำโครงงานวิศวกรรมกับผู้เชี่ยวชาญ ค้นหาตัวตนสำหรับน้องมัธยม เพื่อตัดสินใจเข้าเรียนต่อ พร้อมคอร์สเรียนที่หลากหลายและการสนับสนุนตลอด 24 ชั่วโมง" />
+        </Helmet>
+        <Router 
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
         <AuthProvider>
           <div className="min-h-screen flex flex-col bg-gradient-to-br from-white to-slate-50 text-black">
             <Navbar />
@@ -116,6 +148,7 @@ function App() {
         </AuthProvider>
       </Router>
     </HelmetProvider>
+    </ErrorBoundary>
   );
 }
 
