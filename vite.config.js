@@ -185,7 +185,7 @@ logger.error = (msg, options) => {
 
 export default defineConfig({
 	customLogger: logger,
-	base: '/',
+	base: '/TestLogin/',
 	plugins: [
 		react(),
 		addTransformIndexHtml
