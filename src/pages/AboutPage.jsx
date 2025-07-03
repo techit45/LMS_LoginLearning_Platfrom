@@ -88,7 +88,7 @@ const AboutPage = () => {
             <div>
               <img 
                 className="rounded-lg shadow-md w-full h-64 object-cover mb-4"
-                alt="ทีมงาน Login Learning กำลังสอนนักเรียน" src="/images/profile.jpg?v=1" />
+                alt="ทีมงาน Login Learning กำลังสอนนักเรียน" src="/images/profile.png?v=3" />
               <div className="flex items-start space-x-3 mb-3">
                 <MapPin className="w-6 h-6 text-blue-400 mt-1 shrink-0" />
                 <p className="text-gray-800">{companyInfo.address}</p>
@@ -157,7 +157,7 @@ const AboutPage = () => {
               className="glass-effect rounded-xl p-6 hover:shadow-xl transition-shadow"
             >
               <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mb-6 mx-auto">
-                <service.icon className="w-8 h-8 text-blue-800" />
+                <service.icon className="w-8 h-8 text-white-100" />
               </div>
               <h3 className="text-2xl font-semibold text-gray-900 mb-3 text-center">{service.title}</h3>
               <p className="text-gray-700 leading-relaxed text-center">{service.description}</p>
