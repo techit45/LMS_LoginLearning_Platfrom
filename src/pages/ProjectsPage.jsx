@@ -16,7 +16,8 @@ import {
   Eye,
   Github,
   ExternalLink,
-  X
+  X,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getAllProjects, getFeaturedProjects } from '@/lib/projectService';
 import ProjectCard from '@/components/ProjectCard';
 import EditProjectForm from '@/components/EditProjectForm';
+import CreateProjectForm from '@/components/CreateProjectForm';
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
@@ -42,6 +44,7 @@ const ProjectsPage = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const loadProjects = useCallback(async () => {
     setLoading(true);
@@ -127,6 +130,23 @@ const ProjectsPage = () => {
     setEditingProjectId(null);
   };
 
+  const handleCreateProject = () => {
+    setShowCreateForm(true);
+  };
+
+  const handleCreateSuccess = () => {
+    loadProjects(); // Refresh the projects list
+    setShowCreateForm(false);
+    toast({
+      title: "สร้างโครงงานสำเร็จ! 🎉",
+      description: "โครงงานของคุณถูกเพิ่มแล้ว"
+    });
+  };
+
+  const handleCloseCreateForm = () => {
+    setShowCreateForm(false);
+  };
+
   const pageVariants = {
     initial: { opacity: 0, y: 20 },
     in: { opacity: 1, y: 0 },
@@ -162,9 +182,26 @@ const ProjectsPage = () => {
             โครงงาน
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"> & ผลงาน</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-8">
             สำรวจผลงานและโครงงานที่น่าสนใจ พร้อมเทคโนโลยีที่ทันสมัยและนวัตกรรมใหม่ๆ
           </p>
+          
+          {/* Create Project Button - Show for logged in users */}
+          {user && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Button
+                onClick={handleCreateProject}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                เพิ่มโครงงานใหม่
+              </Button>
+            </motion.div>
+          )}
         </motion.div>
 
         {/* Featured Projects */}
@@ -453,6 +490,13 @@ const ProjectsPage = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Create Project Form Modal */}
+      <CreateProjectForm
+        isOpen={showCreateForm}
+        onClose={handleCloseCreateForm}
+        onSuccess={handleCreateSuccess}
+      />
 
       {/* Edit Project Form Modal */}
       <EditProjectForm

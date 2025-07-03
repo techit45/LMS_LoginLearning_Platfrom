@@ -221,8 +221,8 @@ const ProjectCard = ({ project, onView, onEdit, featured = false, currentUserId,
             ดูรายละเอียด
           </Button>
           
-          {/* Edit Button - Show for project owner or admin */}
-          {(isAdmin || (currentUserId && project.creator_id === currentUserId)) && onEdit && (
+          {/* Edit Button - Show for logged in users (for now) */}
+          {currentUserId && onEdit && (
             <Button
               variant="outline"
               onClick={(e) => {
