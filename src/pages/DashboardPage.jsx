@@ -20,7 +20,8 @@ import {
   GraduationCap,
   PlusCircle,
   BookPlus,
-  UserPlus
+  UserPlus,
+  Wrench
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
