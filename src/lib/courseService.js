@@ -1,33 +1,38 @@
 import { supabase } from './supabaseClient';
+import { withCache, getCacheKey } from './cache';
 
 // ==========================================
 // COURSE CRUD OPERATIONS
 // ==========================================
 
 /**
- * Get all active courses
+ * Get all active courses (with caching)
  */
 export const getAllCourses = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('courses')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
+  const cacheKey = getCacheKey('courses', 'all');
+  
+  return withCache(cacheKey, async () => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    // Add enrollment count to each course (set to 0 for now to avoid RLS issues)
-    const coursesWithStats = data.map(course => ({
-      ...course,
-      enrollment_count: 0
-    }));
+      // Add enrollment count to each course (set to 0 for now to avoid RLS issues)
+      const coursesWithStats = data.map(course => ({
+        ...course,
+        enrollment_count: 0
+      }));
 
-    return { data: coursesWithStats, error: null };
-  } catch (error) {
-    console.error('Error fetching courses:', error);
-    return { data: null, error };
-  }
+      return { data: coursesWithStats, error: null };
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      return { data: null, error };
+    }
+  }, 2 * 60 * 1000); // Cache for 2 minutes
 };
 
 /**
@@ -433,28 +438,73 @@ export const getCourseContent = async (courseId) => {
  * Get featured courses for homepage
  */
 export const getFeaturedCourses = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('courses')
-      .select('*')
-      .eq('is_active', true)
-      .eq('is_featured', true)
-      .order('created_at', { ascending: false })
-      .limit(4);
+  const cacheKey = getCacheKey('courses', 'featured');
+  
+  return withCache(cacheKey, async () => {
+    try {
+      console.log('Fetching featured courses...');
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 10000); // 10 second timeout
+      });
 
-    if (error) throw error;
+      const queryPromise = supabase
+        .from('courses')
+        .select('*')
+        .eq('is_active', true)
+        .eq('is_featured', true)
+        .order('created_at', { ascending: false })
+        .limit(4);
 
-    // Add enrollment count to each course (set to 0 for now to avoid RLS issues)
-    const coursesWithStats = data.map(course => ({
-      ...course,
-      enrollment_count: 0
-    }));
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
-    return { data: coursesWithStats, error: null };
-  } catch (error) {
-    console.error('Error fetching featured courses:', error);
-    return { data: null, error };
-  }
+      console.log('Featured courses query result:', { data, error });
+
+      if (error) throw error;
+
+      // If no featured courses, get first 4 active courses
+      if (!data || data.length === 0) {
+        console.log('No featured courses found, getting first 4 active courses');
+        
+        const fallbackQueryPromise = supabase
+          .from('courses')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(4);
+
+        const { data: fallbackData, error: fallbackError } = await Promise.race([
+          fallbackQueryPromise, 
+          timeoutPromise
+        ]);
+
+        console.log('Fallback courses query result:', { fallbackData, fallbackError });
+
+        if (fallbackError) throw fallbackError;
+
+        const coursesWithStats = (fallbackData || []).map(course => ({
+          ...course,
+          enrollment_count: 0
+        }));
+
+        return { data: coursesWithStats, error: null };
+      }
+
+      // Add enrollment count to each course (set to 0 for now to avoid RLS issues)
+      const coursesWithStats = data.map(course => ({
+        ...course,
+        enrollment_count: 0
+      }));
+
+      return { data: coursesWithStats, error: null };
+    } catch (error) {
+      console.error('Error fetching featured courses:', error);
+      
+      // Return empty array on error to prevent infinite loading
+      return { data: [], error: null };
+    }
+  }, 3 * 60 * 1000); // Cache for 3 minutes
 };
 
 /**

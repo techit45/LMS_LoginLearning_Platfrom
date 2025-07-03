@@ -38,32 +38,43 @@ import { Toaster } from '@/components/ui/toaster';
 import { ToastProvider } from '@/hooks/use-toast.jsx';
 import ToastDisplay from '@/components/ToastDisplay';
 import { AuthProvider } from '@/contexts/AuthContext';
-import HomePage from '@/pages/HomePage';
-import AboutPage from '@/pages/AboutPage';
-import CoursesPage from '@/pages/CoursesPage';
-import CourseDetailPage from '@/pages/CourseDetailPage';
-import CourseLearningPage from '@/pages/CourseLearningPage';
-import OnsitePage from '@/pages/OnsitePage';
-import AdmissionsPage from '@/pages/AdmissionsPage';
-import ContactPage from '@/pages/ContactPage';
-import LoginPage from '@/pages/LoginPage';
-import SignupPage from '@/pages/SignupPage';
-import DashboardPage from '@/pages/DashboardPage';
-import UserProfilePage from '@/pages/UserProfilePage';
-import SettingsPageDatabase from '@/pages/SettingsPageDatabase';
-import AdminPage from '@/pages/AdminPage';
-import AdminUsersPage from '@/pages/AdminUsersPage';
-import AdminCoursesPage from '@/pages/AdminCoursesPage';
-import AdminCourseContentPage from '@/pages/AdminCourseContentPage';
-import AdminAssignmentGradingPage from '@/pages/AdminAssignmentGradingPage';
-import ProjectsPage from '@/pages/ProjectsPage';
-import ProjectDetailPage from '@/pages/ProjectDetailPage';
-import AdminProjectsPage from '@/pages/AdminProjectsPage';
-import AdminLayout from '@/components/AdminLayout';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
+
+// Lazy load components for better performance
+const HomePage = React.lazy(() => import('@/pages/HomePage'));
+const AboutPage = React.lazy(() => import('@/pages/AboutPage'));
+const CoursesPage = React.lazy(() => import('@/pages/CoursesPage'));
+const CourseDetailPage = React.lazy(() => import('@/pages/CourseDetailPage'));
+const CourseLearningPage = React.lazy(() => import('@/pages/CourseLearningPage'));
+const OnsitePage = React.lazy(() => import('@/pages/OnsitePage'));
+const AdmissionsPage = React.lazy(() => import('@/pages/AdmissionsPage'));
+const ContactPage = React.lazy(() => import('@/pages/ContactPage'));
+const LoginPage = React.lazy(() => import('@/pages/LoginPage'));
+const SignupPage = React.lazy(() => import('@/pages/SignupPage'));
+const DashboardPage = React.lazy(() => import('@/pages/DashboardPage'));
+const UserProfilePage = React.lazy(() => import('@/pages/UserProfilePage'));
+const SettingsPageDatabase = React.lazy(() => import('@/pages/SettingsPageDatabase'));
+const ProjectsPage = React.lazy(() => import('@/pages/ProjectsPage'));
+const ProjectDetailPage = React.lazy(() => import('@/pages/ProjectDetailPage'));
+
+// Admin components (lazy loaded)
+const AdminLayout = React.lazy(() => import('@/components/AdminLayout'));
+const AdminPage = React.lazy(() => import('@/pages/AdminPage'));
+const AdminUsersPage = React.lazy(() => import('@/pages/AdminUsersPage'));
+const AdminCoursesPage = React.lazy(() => import('@/pages/AdminCoursesPage'));
+const AdminCourseContentPage = React.lazy(() => import('@/pages/AdminCourseContentPage'));
+const AdminAssignmentGradingPage = React.lazy(() => import('@/pages/AdminAssignmentGradingPage'));
+const AdminProjectsPage = React.lazy(() => import('@/pages/AdminProjectsPage'));
+
+// Loading component for Suspense fallback
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  </div>
+);
 
 function App() {
   return (
@@ -84,7 +95,8 @@ function App() {
           <div className="min-h-screen flex flex-col bg-gradient-to-br from-white to-slate-50 text-black">
             <Navbar />
             <main className="flex-grow pt-20">
-              <Routes>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/courses" element={<CoursesPage />} />
@@ -134,7 +146,9 @@ function App() {
                   path="/admin/*" 
                   element={
                     <AdminRoute>
-                      <AdminLayout />
+                      <React.Suspense fallback={<LoadingSpinner />}>
+                        <AdminLayout />
+                      </React.Suspense>
                     </AdminRoute>
                   }
                 >
@@ -145,7 +159,8 @@ function App() {
                   <Route path="assignments/:assignmentId/grading" element={<AdminAssignmentGradingPage />} />
                   <Route path="projects" element={<AdminProjectsPage />} />
                 </Route>
-              </Routes>
+                </Routes>
+              </React.Suspense>
             </main>
             <Footer />
             <Toaster />

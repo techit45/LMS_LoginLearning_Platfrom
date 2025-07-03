@@ -13,7 +13,7 @@ const AboutPage = () => {
       { name: "พี่เก็ก", phone: "083-436-0294" },
     ],
     lineGroup: "https://line.me/ti/g/TbTTLXEkRS",
-    email: "info@loginlearning.com",
+    email: "Iretutor01@gmail.com",
   };
 
   const branches = [

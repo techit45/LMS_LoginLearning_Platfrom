@@ -31,7 +31,7 @@ import CreateProjectForm from '@/components/CreateProjectForm';
 const ProjectsPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, userProfile } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [projects, setProjects] = useState([]);
   const [featuredProjects, setFeaturedProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -187,7 +187,7 @@ const ProjectsPage = () => {
           </p>
           
           {/* Create Project Button - Show for Admin only */}
-          {userProfile?.role === 'admin' && (
+          {isAdmin && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -230,7 +230,7 @@ const ProjectsPage = () => {
                     onView={handleProjectView}
                     onEdit={handleEditProject}
                     currentUserId={user?.id}
-                    isAdmin={userProfile?.role === 'admin'}
+                    isAdmin={isAdmin}
                   />
                 </motion.div>
               ))}
@@ -377,7 +377,7 @@ const ProjectsPage = () => {
                     onView={handleProjectView}
                     onEdit={handleEditProject}
                     currentUserId={user?.id}
-                    isAdmin={userProfile?.role === 'admin'}
+                    isAdmin={isAdmin}
                   />
                 </motion.div>
               ))}

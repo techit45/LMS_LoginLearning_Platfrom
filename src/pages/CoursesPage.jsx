@@ -147,12 +147,12 @@ const CoursesPage = () => {
                           alt={`ภาพปกคอร์ส ${course.title}`} 
                           src={course.image_url || "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8"} 
                         />
-                        <div className="absolute top-3 right-3 bg-blue-800/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white-800">
+                        <div className="absolute top-3 right-3 bg-blue-300/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white-300">
                           {course.level === 'beginner' ? 'ระดับเริ่มต้น' :
                            course.level === 'intermediate' ? 'ระดับกลาง' :
                            course.level === 'advanced' ? 'ระดับสูง' : 'ไม่ระบุ'}
                         </div>
-                        <div className="absolute bottom-3 left-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white-800 px-2 py-1 rounded text-xs font-semibold">
+                        <div className="absolute bottom-3 left-3 bg-gradient-to-r from-yellow-300 to-red-200 text-white-300 px-2 py-1 rounded text-xs font-semibold">
                           {course.category || 'ทั่วไป'}
                         </div>
                       </div>

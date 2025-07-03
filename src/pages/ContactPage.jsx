@@ -16,7 +16,7 @@ const ContactPage = () => {
       { name: "พี่ก้อง", phone: "090-969-9578" },
       { name: "พี่เก็ก", phone: "083-436-0294" },
     ],
-    email: "info@loginlearning.com",
+    email: "Iretutor01@gmail.com",
     lineGroup: "https://line.me/ti/g/TbTTLXEkRS",
   };
   

@@ -219,9 +219,28 @@ export default defineConfig({
 				'@babel/types'
 			],
 			output: {
-				manualChunks: {
-					vendor: ['react', 'react-dom'],
-					router: ['react-router-dom']
+				manualChunks: (id) => {
+					if (id.includes('node_modules')) {
+						if (id.includes('react') || id.includes('react-dom')) {
+							return 'vendor';
+						}
+						if (id.includes('react-router-dom')) {
+							return 'router';
+						}
+						if (id.includes('lucide-react') || id.includes('framer-motion')) {
+							return 'ui';
+						}
+						return 'vendor-misc';
+					}
+					if (id.includes('src/pages/Admin')) {
+						return 'admin';
+					}
+					if (id.includes('src/pages/Course')) {
+						return 'courses';
+					}
+					if (id.includes('src/pages/Project')) {
+						return 'projects';
+					}
 				}
 			}
 		}

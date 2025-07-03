@@ -93,11 +93,15 @@ export const AuthProvider = ({ children }) => {
           } else {
             // ดึง role จากฐานข้อมูล user_profiles
             try {
-              const { data: profile } = await supabase
+              const { data: profile, error: profileError } = await supabase
                 .from('user_profiles')
                 .select('role')
                 .eq('user_id', currentUser.id)
-                .single();
+                .maybeSingle();
+              
+              if (profileError) {
+                console.log('Error fetching user profile:', profileError);
+              }
               
               const dbRole = profile?.role || 'student';
               const mappedRole = dbRole === 'admin' ? ROLES.SUPER_ADMIN : 
@@ -139,11 +143,15 @@ export const AuthProvider = ({ children }) => {
         } else {
           // ดึง role จากฐานข้อมูล user_profiles
           try {
-            const { data: profile } = await supabase
+            const { data: profile, error: profileError } = await supabase
               .from('user_profiles')
               .select('role')
               .eq('user_id', currentUser.id)
-              .single();
+              .maybeSingle();
+            
+            if (profileError) {
+              console.log('Error fetching user profile:', profileError);
+            }
             
             const dbRole = profile?.role || 'student';
             const mappedRole = dbRole === 'admin' ? ROLES.SUPER_ADMIN : 
@@ -190,7 +198,27 @@ export const AuthProvider = ({ children }) => {
       return { error: { message: "Supabase client not initialized" } };
     }
     setLoading(true);
+    console.log('Attempting to sign in with email:', email);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    console.log('Sign in result:', { data, error });
+    
+    if (error) {
+      console.error('Sign in error:', error);
+      if (error.message.includes('Email not confirmed')) {
+        toast({ 
+          title: "อีเมลยังไม่ได้รับการยืนยัน", 
+          description: "กรุณาตรวจสอบอีเมลและคลิกลิงก์ยืนยันก่อนเข้าสู่ระบบ", 
+          variant: "destructive" 
+        });
+      } else if (error.message.includes('Invalid login credentials')) {
+        toast({ 
+          title: "ข้อมูลไม่ถูกต้อง", 
+          description: "อีเมลหรือรหัสผ่านไม่ถูกต้อง", 
+          variant: "destructive" 
+        });
+      }
+    }
+    
     setLoading(false);
     return { data, error };
   };
