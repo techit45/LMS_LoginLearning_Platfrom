@@ -69,9 +69,9 @@ const ProjectCard = ({ project, onView, featured = false }) => {
 
       {/* Project Image */}
       <div className="relative h-48 overflow-hidden">
-        {(project.cover_image_url || project.featured_image_url || project.image_url) ? (
+        {(project.cover_image_url || project.featured_image_url || project.image_url || project.thumbnail_url) ? (
           <img
-            src={project.cover_image_url || project.featured_image_url || project.image_url}
+            src={project.cover_image_url || project.featured_image_url || project.image_url || project.thumbnail_url}
             alt={project.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             onError={(e) => {
@@ -140,13 +140,13 @@ const ProjectCard = ({ project, onView, featured = false }) => {
         </div>
 
         {/* Technologies */}
-        {project.technologies && project.technologies.length > 0 && (
+        {(project.technologies && project.technologies.length > 0) ? (
           <div className="mb-4">
             <div className="flex flex-wrap gap-2">
               {project.technologies.slice(0, 4).map((tech, index) => (
                 <span
                   key={index}
-                  className={`px-2 py-1 rounded-md text-xs font-medium ${getTechBadgeColor(tech)}`}
+                  className="px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
                 >
                   {tech}
                 </span>
@@ -156,6 +156,15 @@ const ProjectCard = ({ project, onView, featured = false }) => {
                   +{project.technologies.length - 4}
                 </span>
               )}
+            </div>
+          </div>
+        ) : project.technology && (
+          <div className="mb-4">
+            <div className="flex flex-wrap gap-2">
+              <span className="px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                <Code className="w-3 h-3 mr-1 inline" />
+                {project.technology}
+              </span>
             </div>
           </div>
         )}
@@ -181,19 +190,20 @@ const ProjectCard = ({ project, onView, featured = false }) => {
           
           {/* Difficulty and Duration */}
           <div className="flex items-center justify-between text-xs text-gray-500">
-            {project.difficulty_level && (
+            {(project.difficulty_level || project.difficulty) && (
               <span className={`px-2 py-1 rounded-md font-medium ${
-                project.difficulty_level === 'beginner' ? 'bg-green-100 text-green-700' :
-                project.difficulty_level === 'intermediate' ? 'bg-yellow-100 text-yellow-700' :
+                (project.difficulty_level || project.difficulty) === 'beginner' ? 'bg-green-100 text-green-700' :
+                (project.difficulty_level || project.difficulty) === 'intermediate' ? 'bg-yellow-100 text-yellow-700' :
                 'bg-red-100 text-red-700'
               }`}>
-                {project.difficulty_level === 'beginner' ? 'เริ่มต้น' :
-                 project.difficulty_level === 'intermediate' ? 'ปานกลาง' : 'ขั้นสูง'}
+                {(project.difficulty_level || project.difficulty) === 'beginner' ? 'เริ่มต้น' :
+                 (project.difficulty_level || project.difficulty) === 'intermediate' ? 'ปานกลาง' : 'ขั้นสูง'}
               </span>
             )}
             {project.duration_hours && (
-              <span className="text-gray-500">
-                ⏱️ {project.duration_hours} ชม.
+              <span className="text-gray-500 flex items-center">
+                <Calendar className="w-3 h-3 mr-1" />
+                {project.duration_hours} ชม.
               </span>
             )}
           </div>

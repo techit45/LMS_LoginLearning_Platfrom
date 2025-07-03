@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase, ADMIN_DOMAIN } from '@/lib/supabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast.jsx';
 
 const AuthContext = createContext();
 
@@ -29,24 +29,58 @@ export const AuthProvider = ({ children }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!supabase) {
-      console.warn("Supabase client is not initialized. This might be because Supabase URL or Anon Key are missing or incorrect.");
-      toast({ 
-        title: "⚠️ Supabase ยังไม่ได้เริ่มการทำงาน", 
-        description: "กรุณาตรวจสอบการตั้งค่า Supabase URL และ Anon Key", 
-        variant: "destructive",
-        duration: 10000 
-      });
-      setLoading(false);
-      return;
-    }
+    const initAuth = async () => {
+      try {
+        if (!supabase) {
+          console.warn("Supabase client is not initialized. This might be because Supabase URL or Anon Key are missing or incorrect.");
+          // Only show toast if toast function is available
+          if (toast) {
+            toast({ 
+              title: "⚠️ Supabase ยังไม่ได้เริ่มการทำงาน", 
+              description: "กรุณาตรวจสอบการตั้งค่า Supabase URL และ Anon Key", 
+              variant: "destructive",
+              duration: 10000 
+            });
+          }
+          setLoading(false);
+          return;
+        }
+
+    // Clear any invalid stored auth data first
+    const clearInvalidAuth = () => {
+      try {
+        const storedSession = localStorage.getItem('sb-vuitwzisazvikrhtfthh-auth-token');
+        if (storedSession) {
+          const parsed = JSON.parse(storedSession);
+          if (!parsed.refresh_token || !parsed.access_token) {
+            localStorage.removeItem('sb-vuitwzisazvikrhtfthh-auth-token');
+            console.log('Cleared invalid stored auth data');
+          }
+        }
+      } catch (e) {
+        // If parsing fails, clear the data
+        localStorage.removeItem('sb-vuitwzisazvikrhtfthh-auth-token');
+        console.log('Cleared corrupted stored auth data');
+      }
+    };
+
+    clearInvalidAuth();
 
     const getSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error("Error getting session:", error);
-          toast({ title: "ข้อผิดพลาดในการโหลดเซสชัน", description: error.message, variant: "destructive" });
+          // If refresh token is invalid, clear the stored session and continue
+          if (error.message.includes('Invalid Refresh Token') || error.message.includes('Refresh Token Not Found')) {
+            await supabase.auth.signOut();
+            localStorage.removeItem('sb-vuitwzisazvikrhtfthh-auth-token');
+            console.log("Cleared invalid session");
+            return;
+          }
+          if (toast) {
+            toast({ title: "ข้อผิดพลาดในการโหลดเซสชัน", description: error.message, variant: "destructive" });
+          }
         }
         const currentUser = session?.user ?? null;
         setUser(currentUser);
@@ -93,6 +127,8 @@ export const AuthProvider = ({ children }) => {
     getSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event, session);
+      
       const currentUser = session?.user ?? null;
       setUser(currentUser);
 
@@ -136,10 +172,17 @@ export const AuthProvider = ({ children }) => {
       setLoading(false); 
     });
 
-    return () => {
-      authListener?.subscription.unsubscribe();
+        return () => {
+          authListener?.subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        setLoading(false);
+      }
     };
-  }, [toast, userRole]);
+
+    initAuth();
+  }, [toast]);
 
   const signInWithPassword = async (email, password) => {
     if (!supabase) {
@@ -235,5 +278,9 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

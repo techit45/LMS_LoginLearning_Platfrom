@@ -430,6 +430,53 @@ export const getCourseContent = async (courseId) => {
 // ==========================================
 
 /**
+ * Get featured courses for homepage
+ */
+export const getFeaturedCourses = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('courses')
+      .select('*')
+      .eq('is_active', true)
+      .eq('is_featured', true)
+      .order('created_at', { ascending: false })
+      .limit(4);
+
+    if (error) throw error;
+
+    // Add enrollment count to each course (set to 0 for now to avoid RLS issues)
+    const coursesWithStats = data.map(course => ({
+      ...course,
+      enrollment_count: 0
+    }));
+
+    return { data: coursesWithStats, error: null };
+  } catch (error) {
+    console.error('Error fetching featured courses:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Toggle course featured status (Admin only)
+ */
+export const toggleCourseFeatured = async (courseId, isFeatured) => {
+  try {
+    const { error } = await supabase
+      .from('courses')
+      .update({ is_featured: isFeatured })
+      .eq('id', courseId);
+
+    if (error) throw error;
+
+    return { error: null };
+  } catch (error) {
+    console.error('Error toggling course featured status:', error);
+    return { error };
+  }
+};
+
+/**
  * Get course statistics for admin dashboard
  */
 export const getCourseStats = async () => {

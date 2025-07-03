@@ -73,7 +73,7 @@ const ProjectsPage = () => {
 
   // Get unique categories and technologies
   const categories = [...new Set(projects.map(p => p.category).filter(Boolean))];
-  const technologies = [...new Set(projects.flatMap(p => p.technologies || []))];
+  const technologies = [...new Set(projects.flatMap(p => p.technologies || []).filter(Boolean))];
 
   // Filter and sort projects
   const filteredProjects = projects
@@ -81,7 +81,7 @@ const ProjectsPage = () => {
       const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            project.description?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || project.category === selectedCategory;
-      const matchesTech = selectedTech === 'all' || project.technologies?.includes(selectedTech);
+      const matchesTech = selectedTech === 'all' || (project.technologies && project.technologies.includes(selectedTech));
       
       return matchesSearch && matchesCategory && matchesTech;
     })
@@ -383,7 +383,7 @@ const ProjectsPage = () => {
                     {selectedProject.description}
                   </p>
                   
-                  {selectedProject.technologies && (
+                  {(selectedProject.technologies && selectedProject.technologies.length > 0) && (
                     <div className="mb-6">
                       <h4 className="text-lg font-semibold text-gray-900 mb-3">เทคโนโลยีที่ใช้</h4>
                       <div className="flex flex-wrap gap-2">
@@ -400,13 +400,13 @@ const ProjectsPage = () => {
                   )}
 
                   <div className="flex space-x-4 pt-6">
-                    {selectedProject.demo_url && (
+                    {(selectedProject.project_url || selectedProject.demo_url) && (
                       <Button
-                        onClick={() => window.open(selectedProject.demo_url, '_blank')}
+                        onClick={() => window.open(selectedProject.project_url || selectedProject.demo_url, '_blank')}
                         className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
                       >
                         <ExternalLink className="w-5 h-5 mr-2" />
-                        ดูเดโม
+                        ดูโครงงาน
                       </Button>
                     )}
                     {selectedProject.github_url && (

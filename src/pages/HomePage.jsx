@@ -1,15 +1,42 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { BookOpen, Users, Award, Play, Star, Clock, ChevronRight, Zap, Target, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast.jsx';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { getFeaturedCourses } from '@/lib/courseService';
 
 const HomePage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [featuredCourses, setFeaturedCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFeaturedCourses = async () => {
+      try {
+        const { data, error } = await getFeaturedCourses();
+        if (error) {
+          console.error('Error loading featured courses:', error);
+          toast({
+            title: "ไม่สามารถโหลดคอร์สแนะนำได้",
+            description: error.message,
+            variant: "destructive"
+          });
+        } else {
+          setFeaturedCourses(data || []);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFeaturedCourses();
+  }, [toast]);
 
   const handleFeatureClick = () => {
     toast({
@@ -18,53 +45,11 @@ const HomePage = () => {
     });
   };
 
-  const courses = [
-    {
-      id: 1,
-      title: "โครงงานระบบควบคุมอัตโนมัติ",
-      description: "เรียนรู้การสร้างระบบควบคุมอัตโนมัติด้วย Arduino และ IoT",
-      duration: "8 สัปดาห์",
-      students: 1250,
-      rating: 4.8,
-      level: "ระดับกลาง",
-      image: "Engineering automation control system with Arduino and IoT sensors"
-    },
-    {
-      id: 2,
-      title: "การออกแบบโครงสร้างอาคาร",
-      description: "หลักการออกแบบและคำนวณโครงสร้างอาคารสูง",
-      duration: "12 สัปดาห์",
-      students: 890,
-      rating: 4.9,
-      level: "ระดับสูง",
-      image: "Modern building structural design with engineering blueprints"
-    },
-    {
-      id: 3,
-      title: "โครงงานพลังงานทดแทน",
-      description: "สร้างระบบผลิตไฟฟ้าจากพลังงานแสงอาทิตย์และลม",
-      duration: "10 สัปดาห์",
-      students: 2100,
-      rating: 4.7,
-      level: "ระดับกลาง",
-      image: "Solar panels and wind turbines renewable energy project"
-    },
-    {
-      id: 4,
-      title: "การพัฒนาแอปพลิเคชันมือถือ",
-      description: "สร้างแอปมือถือด้วย React Native และ Flutter",
-      duration: "6 สัปดาห์",
-      students: 1680,
-      rating: 4.6,
-      level: "ระดับเริ่มต้น",
-      image: "Mobile app development with React Native and Flutter coding"
-    }
-  ];
 
   const stats = [
-    { icon: Users, value: "15,000+", label: "นักเรียน" },
-    { icon: BookOpen, value: "200+", label: "คอร์สเรียน" },
-    { icon: Award, value: "95%", label: "อัตราสำเร็จ" },
+    { icon: Users, value: "100+", label: "นักเรียน" },
+    { icon: BookOpen, value: "10+", label: "คอร์สเรียน" },
+    { icon: Award, value: "90%", label: "อัตราสำเร็จ" },
     { icon: Star, value: "4.8", label: "คะแนนเฉลี่ย" }
   ];
   
@@ -205,59 +190,100 @@ const HomePage = () => {
               </p>
             </motion.div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {courses.slice(0, 4).map((course, index) => (
-                <motion.div
-                  key={course.id}
-                  initial={{ y: 50, opacity: 0 }}
-                  whileInView={{ y: 0, opacity: 1 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                  className="course-card rounded-xl overflow-hidden"
-                >
-                  <Link to={`/courses`} className="block" onClick={handleFeatureClick}>
-                    <div className="relative">
-                      <img 
-                        className="w-full h-48 object-cover"
-                        alt={`ภาพปกคอร์ส ${course.title}`} src="https://images.unsplash.com/photo-1635251595512-dc52146d5ae8" />
-                      <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
-                        <span className="text-gray-800 text-sm font-medium">{course.level}</span>
+            {loading ? (
+              <div className="col-span-full text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">กำลังโหลดคอร์สแนะนำ...</p>
+              </div>
+            ) : featuredCourses.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                {featuredCourses.slice(0, 4).map((course, index) => (
+                  <motion.div
+                    key={course.id}
+                    initial={{ y: 50, opacity: 0 }}
+                    whileInView={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                    viewport={{ once: true }}
+                    className="course-card rounded-xl overflow-hidden"
+                  >
+                    <Link to={`/courses/${course.id}`} className="block">
+                      <div className="relative">
+                        <img 
+                          className="w-full h-48 object-cover"
+                          alt={`ภาพปกคอร์ส ${course.title}`} 
+                          src={course.image_url || course.thumbnail_url || "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8"}
+                          onError={(e) => {
+                            e.target.src = "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8";
+                          }}
+                        />
+                        <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
+                          <span className="text-white text-sm font-medium">
+                            {course.level || course.difficulty_level || 'ระดับกลาง'}
+                          </span>
+                        </div>
+                        {course.is_featured && (
+                          <div className="absolute top-4 left-4 bg-yellow-500 rounded-full px-3 py-1">
+                            <Star className="w-4 h-4 text-white fill-current" />
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    
-                    <div className="p-6">
-                      <h3 className="text-xl font-bold text-black mb-3 line-clamp-2">
-                        {course.title}
-                      </h3>
-                      <p className="text-black mb-4 line-clamp-2">
-                        {course.description}
-                      </p>
                       
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-1">
-                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                          <span className="text-black font-medium">{course.rating}</span>
+                      <div className="p-6">
+                        <h3 className="text-xl font-bold text-black mb-3 line-clamp-2">
+                          {course.title}
+                        </h3>
+                        <p className="text-black mb-4 line-clamp-2">
+                          {course.description}
+                        </p>
+                        
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center space-x-1">
+                            <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                            <span className="text-black font-medium">
+                              {course.rating || '4.5'}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1 text-black">
+                            <Users className="w-4 h-4" />
+                            <span className="text-sm">
+                              {course.students?.toLocaleString() || course.enrolled_count || '0'}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-1 text-black">
-                          <Users className="w-4 h-4" />
-                          <span className="text-sm">{course.students.toLocaleString()}</span>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-1 text-black">
+                            <Clock className="w-4 h-4" />
+                            <span className="text-sm">
+                              {course.duration || `${course.duration_weeks || 8} สัปดาห์`}
+                            </span>
+                          </div>
+                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                            เรียนเลย
+                          </Button>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-1 text-black">
-                          <Clock className="w-4 h-4" />
-                          <span className="text-sm">{course.duration}</span>
-                        </div>
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                          เรียนเลย
-                        </Button>
-                      </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-12 max-w-md mx-auto border border-blue-200">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <Star className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-3">ยังไม่มีคอร์สแนะนำ</h3>
+                  <p className="text-gray-600 mb-6">ผู้ดูแลระบบยังไม่ได้เลือกคอร์สแนะนำ</p>
+                  <Button asChild variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50">
+                    <Link to="/courses">
+                      ดูคอร์สทั้งหมด
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            )}
+            
             <div className="text-center mt-12">
                 <Button asChild size="lg" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50 text-lg px-8 py-4">
                     <Link to="/courses">

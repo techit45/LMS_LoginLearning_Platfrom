@@ -40,7 +40,7 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
     cover_image_url: '',
     content_html: '',
     tags: [],
-    status: 'draft'
+    status: 'published'
   });
 
   const [errors, setErrors] = useState({});
@@ -114,8 +114,8 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
     }
 
     // Validate URLs if provided
-    if (formData.demo_url && !isValidUrl(formData.demo_url)) {
-      newErrors.demo_url = 'กรุณาระบุ URL ที่ถูกต้อง';
+    if (formData.project_url && !isValidUrl(formData.project_url)) {
+      newErrors.project_url = 'กรุณาระบุ URL ที่ถูกต้อง';
     }
 
     if (formData.github_url && !isValidUrl(formData.github_url)) {
@@ -152,6 +152,28 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
     try {
       let finalFormData = { ...formData };
       
+      // Clean up empty fields that should be null instead of empty strings
+      if (finalFormData.duration_hours === '' || finalFormData.duration_hours === '0') {
+        finalFormData.duration_hours = null;
+      } else if (finalFormData.duration_hours) {
+        finalFormData.duration_hours = parseInt(finalFormData.duration_hours);
+      }
+      
+      // Remove empty strings for optional fields
+      Object.keys(finalFormData).forEach(key => {
+        if (finalFormData[key] === '' && key !== 'title' && key !== 'description' && key !== 'category') {
+          finalFormData[key] = null;
+        }
+      });
+      
+      // Ensure arrays are properly set
+      if (!finalFormData.technologies || finalFormData.technologies.length === 0) {
+        finalFormData.technologies = [];
+      }
+      if (!finalFormData.tags || finalFormData.tags.length === 0) {
+        finalFormData.tags = [];
+      }
+      
       // Upload project image if selected
       if (projectImage) {
         setUploadingImage(true);
@@ -161,7 +183,7 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
           throw new Error(`ไม่สามารถอัปโหลดรูปภาพได้: ${uploadError.message}`);
         }
         
-        finalFormData.thumbnail_url = uploadData.publicUrl;
+        finalFormData.cover_image_url = uploadData.publicUrl;
         setUploadingImage(false);
       }
 
@@ -181,13 +203,19 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
       setFormData({
         title: '',
         description: '',
+        short_description: '',
         category: '',
-        difficulty: 'beginner',
+        difficulty_level: 'beginner',
+        duration_hours: '',
         is_featured: false,
-        technology: '',
-        demo_url: '',
+        technologies: [],
+        project_url: '',
         github_url: '',
-        thumbnail_url: ''
+        video_url: '',
+        cover_image_url: '',
+        content_html: '',
+        tags: [],
+        status: 'published'
       });
       setProjectImage(null);
       setImagePreview(null);
@@ -335,27 +363,46 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
             </div>
 
             {/* Description */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200">
-              <label className="block text-gray-800 font-semibold mb-3 flex items-center">
-                <div className="bg-green-500 p-2 rounded-lg mr-3">
-                  <FileText className="w-4 h-4 text-white" />
-                </div>
-                คำอธิบายโครงงาน *
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="อธิบายรายละเอียดโครงงาน วัตถุประสงค์ และฟีเจอร์หลัก..."
-                rows={4}
-                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-200 text-base shadow-sm resize-none"
-              />
-              {errors.description && (
-                <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
-                  <AlertCircle className="w-4 h-4 mr-2" />
-                  {errors.description}
-                </p>
-              )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200">
+                <label className="block text-gray-800 font-semibold mb-3 flex items-center">
+                  <div className="bg-green-500 p-2 rounded-lg mr-3">
+                    <FileText className="w-4 h-4 text-white" />
+                  </div>
+                  คำอธิบายโครงงาน *
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  placeholder="อธิบายรายละเอียดโครงงาน วัตถุประสงค์ และฟีเจอร์หลัก..."
+                  rows={4}
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-200 text-base shadow-sm resize-none"
+                />
+                {errors.description && (
+                  <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
+                    <AlertCircle className="w-4 h-4 mr-2" />
+                    {errors.description}
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-50 to-sky-50 p-6 rounded-xl border border-blue-200">
+                <label className="block text-gray-800 font-semibold mb-3 flex items-center">
+                  <div className="bg-blue-500 p-2 rounded-lg mr-3">
+                    <FileText className="w-4 h-4 text-white" />
+                  </div>
+                  คำอธิบายสั้น
+                </label>
+                <textarea
+                  name="short_description"
+                  value={formData.short_description}
+                  onChange={handleInputChange}
+                  placeholder="คำอธิบายสั้นๆ สำหรับแสดงในการ์ด..."
+                  rows={4}
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-base shadow-sm resize-none"
+                />
+              </div>
             </div>
 
             {/* Technologies */}
@@ -366,16 +413,77 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
                 </div>
                 เทคโนโลยีที่ใช้
               </label>
-              <Input
-                name="technology"
-                value={formData.technology}
-                onChange={handleInputChange}
-                placeholder="เช่น React, Node.js, MongoDB"
-                className="bg-white border-gray-300 text-gray-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-xl shadow-sm"
-              />
+              <div className="flex space-x-2">
+                <Input
+                  name="newTechnology"
+                  value={newTechnology}
+                  onChange={(e) => setNewTechnology(e.target.value)}
+                  placeholder="เช่น React, Node.js, MongoDB"
+                  className="bg-white border-gray-300 text-gray-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-xl shadow-sm"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTechnology())}
+                />
+                <Button type="button" onClick={addTechnology} className="px-4 py-2 bg-purple-500 text-white rounded-xl">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              {formData.technologies.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {formData.technologies.map((tech, index) => (
+                    <span key={index} className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
+                      {tech}
+                      <button
+                        type="button"
+                        onClick={() => removeTechnology(tech)}
+                        className="ml-2 text-purple-600 hover:text-purple-800"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Category and Status */}
+            {/* Tags */}
+            <div className="bg-gradient-to-br from-pink-50 to-rose-50 p-6 rounded-xl border border-pink-200">
+              <label className="block text-gray-800 font-semibold mb-4 flex items-center">
+                <div className="bg-pink-500 p-2 rounded-lg mr-3">
+                  <Tag className="w-4 h-4 text-white" />
+                </div>
+                แท็ก
+              </label>
+              <div className="flex space-x-2">
+                <Input
+                  name="newTag"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  placeholder="เช่น React, Frontend, Responsive"
+                  className="bg-white border-gray-300 text-gray-800 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 rounded-xl shadow-sm"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                />
+                <Button type="button" onClick={addTag} className="px-4 py-2 bg-pink-500 text-white rounded-xl">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              {formData.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {formData.tags.map((tag, index) => (
+                    <span key={index} className="inline-flex items-center px-3 py-1 bg-pink-100 text-pink-800 rounded-full text-sm">
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="ml-2 text-pink-600 hover:text-pink-800"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Category and Difficulty */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-6 rounded-xl border border-orange-200">
                 <label className="block text-gray-800 font-semibold mb-3 flex items-center">
@@ -411,8 +519,8 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
                   ระดับความยาก
                 </label>
                 <select
-                  name="difficulty"
-                  value={formData.difficulty}
+                  name="difficulty_level"
+                  value={formData.difficulty_level}
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 h-12 shadow-sm"
                 >
@@ -425,6 +533,25 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
               </div>
             </div>
 
+            {/* Duration */}
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-6 rounded-xl border border-indigo-200">
+              <label className="block text-gray-800 font-semibold mb-3 flex items-center">
+                <div className="bg-indigo-500 p-2 rounded-lg mr-3">
+                  <Calendar className="w-4 h-4 text-white" />
+                </div>
+                ระยะเวลาทำโครงงาน (ชั่วโมง)
+              </label>
+              <Input
+                name="duration_hours"
+                type="number"
+                value={formData.duration_hours}
+                onChange={handleInputChange}
+                placeholder="เช่น 40"
+                min="0"
+                className="bg-white border-gray-300 text-gray-800 h-12 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl shadow-sm"
+              />
+            </div>
+
             {/* URLs */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-6 rounded-xl border border-cyan-200">
@@ -432,19 +559,19 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
                   <div className="bg-cyan-500 p-2 rounded-lg mr-3">
                     <Globe className="w-4 h-4 text-white" />
                   </div>
-                  Demo URL
+                  Project URL
                 </label>
                 <Input
-                  name="demo_url"
-                  value={formData.demo_url}
+                  name="project_url"
+                  value={formData.project_url}
                   onChange={handleInputChange}
                   placeholder="https://example.com"
                   className="bg-white border-gray-300 text-gray-800 h-12 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 rounded-xl shadow-sm"
                 />
-                {errors.demo_url && (
+                {errors.project_url && (
                   <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
                     <AlertCircle className="w-4 h-4 mr-2" />
-                    {errors.demo_url}
+                    {errors.project_url}
                   </p>
                 )}
               </div>
@@ -556,6 +683,7 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
                 )}
               </div>
             </div>
+
 
             {/* Action Buttons */}
             <div className="flex justify-center space-x-4 pt-8">

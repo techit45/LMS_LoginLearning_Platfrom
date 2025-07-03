@@ -3,11 +3,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { BookOpenText, PlusCircle, Search, Edit, Trash2, Users, Eye, BarChart3, AlertTriangle, FileText, Power, PowerOff, ArrowLeft } from 'lucide-react';
+import { BookOpenText, PlusCircle, Search, Edit, Trash2, Users, Eye, BarChart3, AlertTriangle, FileText, Power, PowerOff, ArrowLeft, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/use-toast';
-import { getAllCoursesAdmin, toggleCourseStatus, getCourseStats } from '@/lib/courseService';
+import { useToast } from '@/hooks/use-toast.jsx';
+import { getAllCoursesAdmin, toggleCourseStatus, getCourseStats, toggleCourseFeatured } from '@/lib/courseService';
 import { Link } from 'react-router-dom';
 import CreateCourseForm from '@/components/CreateCourseForm';
 import EditCourseForm from '@/components/EditCourseForm';
@@ -69,6 +69,27 @@ const AdminCoursesPage = () => {
     } else {
       toast({
         title: `${action}คอร์สสำเร็จ`,
+        description: `คอร์ส "${courseTitle}" ถูก${action}แล้ว`
+      });
+      loadCourses();
+      loadStats();
+    }
+  };
+
+  const handleToggleFeatured = async (courseId, courseTitle, currentFeatured) => {
+    const newFeatured = !currentFeatured;
+    const action = newFeatured ? 'เพิ่มเป็นคอร์สแนะนำ' : 'ยกเลิกคอร์สแนะนำ';
+    
+    const { error } = await toggleCourseFeatured(courseId, newFeatured);
+    if (error) {
+      toast({
+        title: `ไม่สามารถ${action}ได้`,
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: `${action}สำเร็จ`,
         description: `คอร์ส "${courseTitle}" ถูก${action}แล้ว`
       });
       loadCourses();
@@ -236,6 +257,7 @@ const AdminCoursesPage = () => {
                 <th className="p-4">ระยะเวลา</th>
                 <th className="p-4">ราคา</th>
                 <th className="p-4">สถานะ</th>
+                <th className="p-4">แนะนำ</th>
                 <th className="p-4">วันที่สร้าง</th>
                 <th className="p-4 text-center">การดำเนินการ</th>
               </tr>
@@ -281,6 +303,18 @@ const AdminCoursesPage = () => {
                     </span>
                   </td>
                   <td className="p-4">
+                    <div className="flex items-center">
+                      <Star className={`w-4 h-4 mr-1 ${
+                        course.is_featured ? 'text-yellow-400 fill-current' : 'text-gray-400'
+                      }`} />
+                      <span className={`text-xs ${
+                        course.is_featured ? 'text-yellow-400' : 'text-gray-500'
+                      }`}>
+                        {course.is_featured ? 'แนะนำ' : 'ทั่วไป'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="p-4">
                     {new Date(course.created_at).toLocaleDateString('th-TH')}
                   </td>
                   <td className="p-4 text-center space-x-2">
@@ -302,6 +336,18 @@ const AdminCoursesPage = () => {
                       title="แก้ไขคอร์ส"
                     >
                       <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleToggleFeatured(course.id, course.title, course.is_featured)} 
+                      className={course.is_featured 
+                        ? "text-yellow-400 hover:bg-yellow-500/20" 
+                        : "text-gray-400 hover:bg-gray-500/20"
+                      }
+                      title={course.is_featured ? "ยกเลิกคอร์สแนะนำ" : "ตั้งเป็นคอร์สแนะนำ"}
+                    >
+                      <Star className={`w-4 h-4 ${course.is_featured ? 'fill-current' : ''}`} />
                     </Button>
                     <Button 
                       variant="ghost" 
