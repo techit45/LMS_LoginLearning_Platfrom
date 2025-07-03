@@ -88,7 +88,7 @@ const AboutPage = () => {
             <div>
               <img 
                 className="rounded-lg shadow-md w-full h-64 object-cover mb-4"
-                alt="ทีมงาน Login Learning กำลังสอนนักเรียน" src="https://images.unsplash.com/photo-1701229404076-5629809b331d" />
+                alt="ทีมงาน Login Learning กำลังสอนนักเรียน" src="/images/profile.jpg?v=1" />
               <div className="flex items-start space-x-3 mb-3">
                 <MapPin className="w-6 h-6 text-blue-400 mt-1 shrink-0" />
                 <p className="text-gray-800">{companyInfo.address}</p>

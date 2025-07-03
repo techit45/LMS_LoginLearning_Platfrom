@@ -186,8 +186,8 @@ const ProjectsPage = () => {
             สำรวจผลงานและโครงงานที่น่าสนใจ พร้อมเทคโนโลยีที่ทันสมัยและนวัตกรรมใหม่ๆ
           </p>
           
-          {/* Create Project Button - Show for logged in users */}
-          {user && (
+          {/* Create Project Button - Show for Admin only */}
+          {userProfile?.role === 'admin' && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -228,6 +228,9 @@ const ProjectsPage = () => {
                     project={project} 
                     featured={true}
                     onView={handleProjectView}
+                    onEdit={handleEditProject}
+                    currentUserId={user?.id}
+                    isAdmin={userProfile?.role === 'admin'}
                   />
                 </motion.div>
               ))}

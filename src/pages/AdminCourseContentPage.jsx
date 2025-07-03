@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import { 
   ArrowLeft,
   Plus,
@@ -28,6 +30,131 @@ import {
 import { getCourseContentWithProgress } from '@/lib/progressManagementService';
 import ContentEditor from '@/components/ContentEditor';
 
+// Draggable Content Item Component
+const DraggableContentItem = ({ content, index, moveContent, onEdit, onDelete, onTogglePreview, onDragEnd }) => {
+  const [{ isDragging }, drag] = useDrag({
+    type: 'content',
+    item: { id: content.id, index },
+    end: () => {
+      if (onDragEnd) {
+        onDragEnd();
+      }
+    },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  const [, drop] = useDrop({
+    accept: 'content',
+    hover: (draggedItem) => {
+      if (draggedItem.index !== index) {
+        moveContent(draggedItem.index, index);
+        draggedItem.index = index;
+      }
+    },
+  });
+
+  const getContentIcon = (type) => {
+    switch (type) {
+      case 'lesson':
+        return <PlayCircle className="w-5 h-5 text-blue-500" />;
+      case 'quiz':
+        return <CheckSquare className="w-5 h-5 text-green-500" />;
+      case 'assignment':
+        return <Trophy className="w-5 h-5 text-purple-500" />;
+      default:
+        return <FileText className="w-5 h-5 text-gray-500" />;
+    }
+  };
+
+  const getContentTypeLabel = (type) => {
+    switch (type) {
+      case 'lesson': return 'lesson';
+      case 'quiz': return 'quiz';
+      case 'assignment': return 'assignment';
+      default: return 'content';
+    }
+  };
+
+  return (
+    <motion.div
+      ref={(node) => drag(drop(node))}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className={`glass-effect p-4 rounded-xl cursor-move ${
+        isDragging ? 'opacity-50 scale-95' : ''
+      } hover:shadow-lg transition-all duration-200`}
+    >
+      <div className="flex items-center space-x-4">
+        {/* Drag Handle */}
+        <div className="cursor-move text-orange-600 hover:text-orange-500">
+          <GripVertical className="w-5 h-5" />
+        </div>
+
+        {/* Order Number */}
+        <div className="text-sm font-medium text-orange-700 w-8">
+          {content.order_index}
+        </div>
+
+        {/* Content Icon */}
+        <div className="flex-shrink-0">
+          {getContentIcon(content.content_type)}
+        </div>
+
+        {/* Content Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center space-x-3">
+            <h3 className="text-lg font-semibold text-orange-900 truncate">
+              {content.title}
+            </h3>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+              {getContentTypeLabel(content.content_type)}
+            </span>
+          </div>
+          {content.duration_minutes && (
+            <p className="text-sm text-orange-600 mt-1">
+              ระยะเวลา: {content.duration_minutes} นาที
+            </p>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onTogglePreview(content)}
+            className="text-blue-500 hover:bg-blue-50"
+            title="ดูตัวอย่าง"
+          >
+            <Eye className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onEdit(content)}
+            className="text-green-500 hover:bg-green-50"
+            title="แก้ไข"
+          >
+            <Edit3 className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(content.id)}
+            className="text-red-500 hover:bg-red-50"
+            title="ลบ"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 const AdminCourseContentPage = () => {
   const { courseId } = useParams();
   const { isAdmin } = useAuth();
@@ -43,7 +170,14 @@ const AdminCourseContentPage = () => {
   const [editingContent, setEditingContent] = useState(null);
   const [editorMode, setEditorMode] = useState('create'); // 'create' or 'edit'
   
-  // Progress requirement editor state
+  // Drag and drop functions
+  const moveContent = useCallback((dragIndex, hoverIndex) => {
+    const draggedContent = contents[dragIndex];
+    const newContents = [...contents];
+    newContents.splice(dragIndex, 1);
+    newContents.splice(hoverIndex, 0, draggedContent);
+    setContents(newContents);
+  }, [contents]);
   
   const loadCourseData = useCallback(async () => {
     setLoading(true);
@@ -74,6 +208,33 @@ const AdminCourseContentPage = () => {
       loadCourseData();
     }
   }, [isAdmin, loadCourseData]);
+
+  const handleDragEnd = useCallback(async () => {
+    // Update order_index for all items and save to database
+    const reorderedContents = contents.map((content, index) => ({
+      ...content,
+      order_index: index + 1
+    }));
+
+    try {
+      const { error } = await reorderContent(courseId, reorderedContents);
+      if (error) throw error;
+
+      toast({
+        title: "เรียงลำดับใหม่แล้ว",
+        description: "ลำดับเนื้อหาได้รับการปรับปรุงแล้ว"
+      });
+    } catch (error) {
+      console.error('Error reordering content:', error);
+      toast({
+        title: "ไม่สามารถเรียงลำดับได้",
+        description: error.message,
+        variant: "destructive"
+      });
+      // Reload to reset order
+      loadCourseData();
+    }
+  }, [contents, courseId, toast, loadCourseData]);
 
   const handleCreateContent = () => {
     setEditingContent(null);
@@ -144,40 +305,6 @@ const AdminCourseContentPage = () => {
     }
   };
 
-  const handleReorder = async (dragIndex, hoverIndex) => {
-    const newContents = [...contents];
-    const draggedContent = newContents[dragIndex];
-    
-    newContents.splice(dragIndex, 1);
-    newContents.splice(hoverIndex, 0, draggedContent);
-    
-    // Update order_index for each item
-    const reorderedContents = newContents.map((content, index) => ({
-      ...content,
-      order_index: index + 1
-    }));
-    
-    setContents(reorderedContents);
-
-    try {
-      const { error } = await reorderContent(courseId, reorderedContents);
-      if (error) throw error;
-
-      toast({
-        title: "เรียงลำดับใหม่แล้ว",
-        description: "ลำดับเนื้อหาได้รับการปรับปรุงแล้ว"
-      });
-    } catch (error) {
-      console.error('Error reordering content:', error);
-      toast({
-        title: "ไม่สามารถเรี���งลำดับได้",
-        description: error.message,
-        variant: "destructive"
-      });
-      // Reload to reset order
-      loadCourseData();
-    }
-  };
 
   const getContentIcon = (contentType) => {
     switch (contentType) {
@@ -287,127 +414,37 @@ const AdminCourseContentPage = () => {
       </div>
 
       {/* Content List */}
-      <div className="space-y-4">
-        {contents.length === 0 ? (
-          <div className="glass-effect p-12 rounded-xl text-center">
-            <FileText className="w-16 h-16 text-orange-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-orange-900 mb-2">ยังไม่มีเนื้อหา</h3>
-            <p className="text-orange-700 mb-4">เริ่มสร้างเนื้อหาแรกของคอร์สนี้</p>
-            <Button onClick={handleCreateContent}>
-              <Plus className="w-4 h-4 mr-2" />
-              เพิ่มเนื้อหาใหม่
-            </Button>
-          </div>
-        ) : (
-          contents.map((content, index) => (
-            <motion.div
-              key={content.id}
-              layout
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="glass-effect p-4 rounded-xl"
-            >
-              <div className="flex items-center space-x-4">
-                {/* Drag Handle */}
-                <div className="cursor-move text-orange-600 hover:text-orange-500">
-                  <GripVertical className="w-5 h-5" />
-                </div>
-
-                {/* Order Number */}
-                <div className="text-sm font-medium text-orange-700 w-8">
-                  {content.order_index}
-                </div>
-
-                {/* Content Icon */}
-                <div className="flex-shrink-0">
-                  {getContentIcon(content.content_type)}
-                </div>
-
-                {/* Content Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-3">
-                    <h3 className="text-lg font-semibold text-orange-900 truncate">
-                      {content.title}
-                    </h3>
-                    <span className="px-2 py-1 text-xs rounded-full bg-orange-200 text-orange-800">
-                      {getContentTypeLabel(content.content_type)}
-                    </span>
-                  </div>
-                  
-                  {content.description && (
-                    <p className="text-orange-700 text-sm mt-1 truncate">
-                      {content.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center space-x-4 mt-2 text-xs text-orange-600">
-                    {content.duration_minutes > 0 && (
-                      <span>ระยะเวลา: {content.duration_minutes} นาที</span>
-                    )}
-                    {content.is_free && (
-                      <span className="text-green-400">ฟรี</span>
-                    )}
-                    {content.completion_type && content.completion_type !== 'manual' && (
-                      <span className="px-2 py-1 rounded bg-blue-100 text-blue-700">
-                        {getCompletionTypeLabel(content.completion_type)}
-                      </span>
-                    )}
-                    {!content.is_required && (
-                      <span className="px-2 py-1 rounded bg-gray-100 text-gray-600">
-                        เสริม
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center space-x-2">
-                  <Link to={`/courses/${courseId}/learn`} target="_blank">
-                    <Button size="sm" variant="ghost" title="ดูตัวอย่าง">
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </Link>
-                  
-                  {/* Assignment Grading Button */}
-                  {content.content_type === 'assignment' && content.assignment_id && (
-                    <Link to={`/admin/assignments/${content.assignment_id}/grading`}>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="text-orange-800 hover:text-orange-700"
-                        title="ให้คะแนน"
-                      >
-                        <CheckSquare className="w-4 h-4" />
-                      </Button>
-                    </Link>
-                  )}
-                  
-                  
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => handleEditContent(content)}
-                    title="แก้ไข"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </Button>
-                  
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => handleDeleteContent(content.id)}
-                    className="text-red-800 hover:text-red-700"
-                    title="ลบ"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          ))
-        )}
-      </div>
+      <DndProvider backend={HTML5Backend}>
+        <div className="space-y-4">
+          {contents.length === 0 ? (
+            <div className="glass-effect p-12 rounded-xl text-center">
+              <FileText className="w-16 h-16 text-orange-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-orange-900 mb-2">ยังไม่มีเนื้อหา</h3>
+              <p className="text-orange-700 mb-4">เริ่มสร้างเนื้อหาแรกของคอร์สนี้</p>
+              <Button onClick={handleCreateContent}>
+                <Plus className="w-4 h-4 mr-2" />
+                เพิ่มเนื้อหาใหม่
+              </Button>
+            </div>
+          ) : (
+            contents.map((content, index) => (
+              <DraggableContentItem
+                key={content.id}
+                content={content}
+                index={index}
+                moveContent={moveContent}
+                onEdit={handleEditContent}
+                onDelete={handleDeleteContent}
+                onTogglePreview={(content) => {
+                  // Open preview in new tab
+                  window.open(`/courses/${courseId}/learn`, '_blank');
+                }}
+                onDragEnd={handleDragEnd}
+              />
+            ))
+          )}
+        </div>
+      </DndProvider>
 
       {/* Content Editor Modal */}
       <AnimatePresence>
