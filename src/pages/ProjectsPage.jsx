@@ -21,12 +21,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast.jsx';
+import { useAuth } from '@/contexts/AuthContext';
 import { getAllProjects, getFeaturedProjects } from '@/lib/projectService';
 import ProjectCard from '@/components/ProjectCard';
+import EditProjectForm from '@/components/EditProjectForm';
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, userProfile } = useAuth();
   const [projects, setProjects] = useState([]);
   const [featuredProjects, setFeaturedProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +40,8 @@ const ProjectsPage = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState(null);
 
   const loadProjects = useCallback(async () => {
     setLoading(true);
@@ -100,6 +105,26 @@ const ProjectsPage = () => {
 
   const handleProjectView = (project) => {
     navigate(`/projects/${project.id}`);
+  };
+
+  const handleEditProject = (project) => {
+    setEditingProjectId(project.id);
+    setShowEditForm(true);
+  };
+
+  const handleEditSuccess = () => {
+    loadProjects(); // Refresh the projects list
+    setShowEditForm(false);
+    setEditingProjectId(null);
+    toast({
+      title: "โครงงานถูกอัปเดตแล้ว",
+      description: "การแก้ไขโครงงานเสร็จสิ้น"
+    });
+  };
+
+  const handleCloseEditForm = () => {
+    setShowEditForm(false);
+    setEditingProjectId(null);
   };
 
   const pageVariants = {
@@ -310,6 +335,9 @@ const ProjectsPage = () => {
                   <ProjectCard 
                     project={project}
                     onView={handleProjectView}
+                    onEdit={handleEditProject}
+                    currentUserId={user?.id}
+                    isAdmin={userProfile?.role === 'admin'}
                   />
                 </motion.div>
               ))}
@@ -425,6 +453,14 @@ const ProjectsPage = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Edit Project Form Modal */}
+      <EditProjectForm
+        isOpen={showEditForm}
+        onClose={handleCloseEditForm}
+        onSuccess={handleEditSuccess}
+        projectId={editingProjectId}
+      />
     </motion.div>
   );
 };

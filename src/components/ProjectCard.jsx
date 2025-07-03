@@ -9,11 +9,12 @@ import {
   Eye,
   Code,
   Globe,
-  Heart
+  Heart,
+  Edit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const ProjectCard = ({ project, onView, featured = false }) => {
+const ProjectCard = ({ project, onView, onEdit, featured = false, currentUserId, isAdmin = false }) => {
   const cardVariants = {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
@@ -219,6 +220,22 @@ const ProjectCard = ({ project, onView, featured = false }) => {
             <Eye className="w-4 h-4 mr-2" />
             ดูรายละเอียด
           </Button>
+          
+          {/* Edit Button - Show for project owner or admin */}
+          {(isAdmin || (currentUserId && project.creator_id === currentUserId)) && onEdit && (
+            <Button
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(project);
+              }}
+              className="border-blue-300 text-blue-600 hover:bg-blue-50 rounded-xl"
+              size="sm"
+              title="แก้ไขโครงงาน"
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+          )}
           
           {(project.project_url || project.demo_url) && (
             <Button

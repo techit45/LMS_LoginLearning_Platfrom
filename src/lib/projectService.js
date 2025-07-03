@@ -67,6 +67,26 @@ export const getProjectById = async (projectId) => {
 };
 
 /**
+ * Get project by ID for editing (Admin or Owner)
+ */
+export const getProjectForEdit = async (projectId) => {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', projectId)
+      .single();
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error fetching project for edit:', error);
+    return { data: null, error };
+  }
+};
+
+/**
  * Get projects by category
  */
 export const getProjectsByCategory = async (category) => {
