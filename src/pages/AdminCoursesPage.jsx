@@ -23,6 +23,14 @@ const AdminCoursesPage = () => {
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState(null);
 
+  // Helper function to format text with line breaks (for preview)
+  const formatTextPreview = (text) => {
+    if (!text) return 'ไม่มีคำอธิบาย';
+    // For admin table, just show first line with ... if there are more lines
+    const lines = text.split('\n');
+    return lines.length > 1 ? `${lines[0]}...` : lines[0];
+  };
+
   const loadCourses = useCallback(async () => {
     setLoading(true);
     const { data, error } = await getAllCoursesAdmin();
@@ -275,7 +283,7 @@ const AdminCoursesPage = () => {
                     <div>
                       <p className="font-medium text-purple-900">{course.title}</p>
                       <p className="text-sm text-purple-700 truncate max-w-xs">
-                        {course.description || 'ไม่มีคำอธิบาย'}
+                        {formatTextPreview(course.description)}
                       </p>
                     </div>
                   </td>

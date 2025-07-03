@@ -15,6 +15,17 @@ const CoursesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
 
+  // Helper function to format text with line breaks
+  const formatTextWithLineBreaks = (text) => {
+    if (!text) return 'ไม่มีคำอธิบาย';
+    return text.split('\n').map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        {index < text.split('\n').length - 1 && <br />}
+      </React.Fragment>
+    ));
+  };
+
   const loadCourses = useCallback(async () => {
     setLoading(true);
     const { data, error } = await getAllCourses();
@@ -150,9 +161,9 @@ const CoursesPage = () => {
                         <h3 className="text-lg font-bold text-blue-900 mb-2 line-clamp-2 h-14">
                           {course.title}
                         </h3>
-                        <p className="text-sm text-blue-700 mb-3 line-clamp-3 h-[60px]">
-                          {course.description || 'ไม่มีคำอธิบาย'}
-                        </p>
+                        <div className="text-sm text-blue-700 mb-3 line-clamp-3 h-[60px]">
+                          {formatTextWithLineBreaks(course.description)}
+                        </div>
                         
                         <div className="flex items-center justify-between mb-3 text-sm">
                           <div className="flex items-center space-x-1">

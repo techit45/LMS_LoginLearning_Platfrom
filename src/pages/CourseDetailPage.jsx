@@ -19,6 +19,17 @@ const CourseDetailPage = () => {
   const { courseId } = useParams();
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Helper function to format text with line breaks
+  const formatTextWithLineBreaks = (text) => {
+    if (!text) return '';
+    return text.split('\n').map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        {index < text.split('\n').length - 1 && <br />}
+      </React.Fragment>
+    ));
+  };
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [enrollmentStatus, setEnrollmentStatus] = useState({ isEnrolled: false, status: null });
@@ -287,7 +298,9 @@ const CourseDetailPage = () => {
         >
           <div className="glass-effect p-6 sm:p-8 rounded-xl shadow-xl">
             <h1 className="text-3xl sm:text-4xl font-bold text-emerald-900 mb-4">{course.title}</h1>
-            <p className="text-emerald-800 text-lg leading-relaxed mb-6">{course.description}</p>
+            <div className="text-emerald-800 text-lg leading-relaxed mb-6">
+              {formatTextWithLineBreaks(course.description)}
+            </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mb-6">
               <div className="flex items-center space-x-2">

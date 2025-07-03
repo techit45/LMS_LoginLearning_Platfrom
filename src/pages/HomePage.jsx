@@ -14,6 +14,17 @@ const HomePage = () => {
   const [featuredCourses, setFeaturedCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Helper function to format text with line breaks
+  const formatTextWithLineBreaks = (text) => {
+    if (!text) return '';
+    return text.split('\n').map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        {index < text.split('\n').length - 1 && <br />}
+      </React.Fragment>
+    ));
+  };
+
   useEffect(() => {
     const loadFeaturedCourses = async () => {
       try {
@@ -232,9 +243,9 @@ const HomePage = () => {
                         <h3 className="text-xl font-bold text-black mb-3 line-clamp-2">
                           {course.title}
                         </h3>
-                        <p className="text-black mb-4 line-clamp-2">
-                          {course.description}
-                        </p>
+                        <div className="text-black mb-4 line-clamp-2">
+                          {formatTextWithLineBreaks(course.description)}
+                        </div>
                         
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center space-x-1">

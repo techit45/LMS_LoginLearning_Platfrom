@@ -294,7 +294,7 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
-                placeholder="อธิบายเนื้อหาและสิ่งที่นักเรียนจะได้เรียนรู้..."
+                placeholder="อธิบายเนื้อหาและสิ่งที่นักเรียนจะได้เรียนรู้...&#10;&#10;สามารถเว้นบรรทัดได้โดยการกด Enter"
                 rows={4}
                 className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-200 text-base shadow-sm resize-none"
               />
