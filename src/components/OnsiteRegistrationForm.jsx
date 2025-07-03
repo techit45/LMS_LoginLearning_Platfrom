@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, 
   MapPin, 
-  GraduationCap, 
+  GraduationCap,
+  Wrench, 
   Users, 
   FileText, 
   CheckCircle,

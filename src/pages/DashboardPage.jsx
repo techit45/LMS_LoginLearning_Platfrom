@@ -66,6 +66,14 @@ const DashboardPage = () => {
       path: "/admin/courses",
       action: "manage-courses"
     },
+        { 
+      name: "การจัดการโครงงาน", 
+      icon: Wrench, 
+      color: "Yellow", 
+      description: "สร้าง แก้ไข และจัดการโครงงานทั้งหมด", 
+      path: "/admin/projects",
+      action: "manage-projects"
+    },
     { 
       name: "จัดการผู้เรียน", 
       icon: Users, 

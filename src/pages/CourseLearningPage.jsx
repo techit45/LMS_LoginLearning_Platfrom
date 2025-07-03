@@ -22,6 +22,7 @@ import {
   Heart,
   Settings,
   Share,
+  Wrench,
   GraduationCap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

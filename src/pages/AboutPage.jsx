@@ -112,9 +112,6 @@ const AboutPage = () => {
                   เข้าร่วม Line Group ของเรา
                 </a>
               </div>
-              <img 
-                className="rounded-lg shadow-md w-full h-40 object-cover mt-4"
-                alt="บรรยากาศการเรียนการสอนที่ Login Learning" src="https://images.unsplash.com/photo-1645001399108-e5c236218018" />
             </div>
           </div>
         </div>
