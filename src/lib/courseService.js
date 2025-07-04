@@ -732,23 +732,60 @@ export const uploadCourseImages = async (courseId, formData) => {
     const fileName = `course-image-${timestamp}-${randomString}.${fileExtension}`;
     const filePath = `course-images/${courseId}/${fileName}`;
 
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    // Try different storage buckets (course-files first, then fallback)
+    let uploadData, uploadError;
+    
+    // Try course-files bucket first
+    const result1 = await supabase.storage
       .from('course-files')
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false
       });
+    
+    if (result1.error && result1.error.message.includes('Bucket not found')) {
+      // Fallback to attachments bucket or create in default
+      console.warn('course-files bucket not found, trying attachments bucket');
+      
+      const result2 = await supabase.storage
+        .from('attachments')
+        .upload(`courses/${filePath}`, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      uploadData = result2.data;
+      uploadError = result2.error;
+      
+      if (!uploadError) {
+        // Update filePath for correct URL generation
+        filePath = `courses/${filePath}`;
+      }
+    } else {
+      uploadData = result1.data;
+      uploadError = result1.error;
+    }
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
       throw new Error('เกิดข้อผิดพลาดในการอัปโหลด');
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('course-files')
-      .getPublicUrl(filePath);
+    // Get public URL from the correct bucket
+    let publicUrl;
+    if (filePath.startsWith('courses/')) {
+      // From attachments bucket
+      const { data: { publicUrl: attachmentUrl } } = supabase.storage
+        .from('attachments')
+        .getPublicUrl(filePath);
+      publicUrl = attachmentUrl;
+    } else {
+      // From course-files bucket
+      const { data: { publicUrl: courseUrl } } = supabase.storage
+        .from('course-files')
+        .getPublicUrl(filePath);
+      publicUrl = courseUrl;
+    }
 
     console.log('Course image uploaded successfully:', {
       courseId,
@@ -821,34 +858,65 @@ export const updateCourseImages = async (courseId, imageUrls, coverImageUrl = nu
       throw new Error('Course ID is required');
     }
 
-    const updateData = {
-      images: imageUrls || [],
-      updated_at: new Date().toISOString()
-    };
+    // Try to update with images column first, fallback to thumbnail_url only
+    try {
+      const updateData = {
+        images: imageUrls || [],
+        updated_at: new Date().toISOString()
+      };
 
-    // If cover image is specified, update thumbnail_url
-    if (coverImageUrl) {
-      updateData.thumbnail_url = coverImageUrl;
+      // If cover image is specified, update thumbnail_url
+      if (coverImageUrl) {
+        updateData.thumbnail_url = coverImageUrl;
+      }
+
+      const { data, error } = await supabase
+        .from('courses')
+        .update(updateData)
+        .eq('id', courseId)
+        .select();
+
+      if (error && error.code === 'PGRST204') {
+        // Images column doesn't exist, update only thumbnail_url
+        console.warn('Images column not found, updating thumbnail_url only');
+        
+        const fallbackUpdateData = {
+          updated_at: new Date().toISOString()
+        };
+        
+        if (coverImageUrl) {
+          fallbackUpdateData.thumbnail_url = coverImageUrl;
+        }
+        
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('courses')
+          .update(fallbackUpdateData)
+          .eq('id', courseId)
+          .select();
+        
+        if (fallbackError) throw fallbackError;
+        
+        console.log('Course thumbnail updated successfully (images column not available):', {
+          courseId,
+          coverImage: coverImageUrl
+        });
+        
+        return { data: fallbackData, error: null };
+      }
+      
+      if (error) throw error;
+
+      console.log('Course images updated successfully:', {
+        courseId,
+        imageCount: imageUrls?.length || 0,
+        coverImage: coverImageUrl
+      });
+
+      return { data, error: null };
+      
+    } catch (updateError) {
+      throw updateError;
     }
-
-    const { data, error } = await supabase
-      .from('courses')
-      .update(updateData)
-      .eq('id', courseId)
-      .select();
-
-    if (error) {
-      console.error('Error updating course images:', error);
-      throw error;
-    }
-
-    console.log('Course images updated successfully:', {
-      courseId,
-      imageCount: imageUrls?.length || 0,
-      coverImage: coverImageUrl
-    });
-
-    return { data, error: null };
 
   } catch (error) {
     console.error('Error updating course images:', error);
@@ -868,22 +936,75 @@ export const getCourseImages = async (courseId) => {
       throw new Error('Course ID is required');
     }
 
-    const { data, error } = await supabase
-      .from('courses')
-      .select('images, thumbnail_url')
-      .eq('id', courseId)
-      .maybeSingle();
+    // Try to get images column, fallback to thumbnail_url only if column doesn't exist
+    let selectQuery = 'thumbnail_url';
+    
+    // First try with images column
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('images, thumbnail_url')
+        .eq('id', courseId)
+        .maybeSingle();
+      
+      if (error && error.code === '42703') {
+        // Column doesn't exist, fall back to thumbnail_url only
+        console.warn('Images column not found, using thumbnail_url only');
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('courses')
+          .select('thumbnail_url')
+          .eq('id', courseId)
+          .maybeSingle();
+        
+        if (fallbackError) throw fallbackError;
+        
+        return {
+          images: fallbackData?.thumbnail_url ? [{
+            id: 'thumbnail',
+            url: fallbackData.thumbnail_url,
+            filename: 'thumbnail.jpg',
+            size: 0,
+            uploaded_at: new Date().toISOString()
+          }] : [],
+          coverImage: fallbackData?.thumbnail_url || null,
+          error: null
+        };
+      }
+      
+      if (error) throw error;
 
-    if (error) {
-      console.error('Error fetching course images:', error);
-      throw error;
+      // Format images array
+      const formattedImages = [];
+      if (data?.images && Array.isArray(data.images)) {
+        data.images.forEach((url, index) => {
+          formattedImages.push({
+            id: `img-${index}`,
+            url: url,
+            filename: `image-${index + 1}.jpg`,
+            size: 0,
+            uploaded_at: new Date().toISOString()
+          });
+        });
+      } else if (data?.thumbnail_url) {
+        // If no images array but has thumbnail, use thumbnail
+        formattedImages.push({
+          id: 'thumbnail',
+          url: data.thumbnail_url,
+          filename: 'thumbnail.jpg',
+          size: 0,
+          uploaded_at: new Date().toISOString()
+        });
+      }
+
+      return {
+        images: formattedImages,
+        coverImage: data?.thumbnail_url || null,
+        error: null
+      };
+      
+    } catch (queryError) {
+      throw queryError;
     }
-
-    return {
-      images: data?.images || [],
-      coverImage: data?.thumbnail_url || null,
-      error: null
-    };
 
   } catch (error) {
     console.error('Error getting course images:', error);
