@@ -15,13 +15,16 @@ import {
   Wrench,
   Shield,
   TestTube,
-  AlertCircle
+  AlertCircle,
+  Database,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { testStudentAccess, displayTestResults, adminTestRLSPolicies } from '@/lib/studentAccessTest';
 import { diagnoseStudentLoadingIssues } from '@/lib/quickFix';
+import { testRealDataAccess, getSQLFixCommands, displayDatabaseTestResults } from '@/lib/databaseFix';
 
 const DashboardPage = () => {
   const { user, isAdmin } = useAuth();
@@ -107,6 +110,63 @@ const DashboardPage = () => {
         variant: "destructive"
       });
     }
+  };
+
+  // ฟังก์ชันทดสอบการเข้าถึงข้อมูลจริงจาก Database
+  const handleTestRealDataAccess = async () => {
+    toast({
+      title: "🔍 กำลังทดสอบการเข้าถึงข้อมูลจริง...",
+      description: "ตรวจสอบว่า Student สามารถเข้าถึงข้อมูลจริงจาก Database ได้หรือไม่",
+    });
+
+    try {
+      const results = await testRealDataAccess();
+      displayDatabaseTestResults(results);
+      
+      const statusIcon = results.canAccessRealData ? '✅' : '❌';
+      const variant = results.canAccessRealData ? 'default' : 'destructive';
+      
+      toast({
+        title: `${statusIcon} การทดสอบข้อมูลจริงเสร็จสิ้น`,
+        description: results.canAccessRealData 
+          ? 'Student สามารถเข้าถึงข้อมูลจริงได้แล้ว'
+          : 'ต้องรัน SQL Fix Script เพื่อแก้ไขปัญหา',
+        variant: variant,
+        duration: 10000
+      });
+
+      if (results.needsSQLFix) {
+        const sqlCommands = getSQLFixCommands();
+        console.log('🔧 SQL Fix Commands Required:', sqlCommands);
+        
+        toast({
+          title: "🛠️ ต้องการ SQL Fix",
+          description: "ดู Console สำหรับ SQL commands ที่ต้องรันใน Supabase",
+          variant: "destructive",
+          duration: 15000
+        });
+      }
+      
+    } catch (error) {
+      console.error('Database test failed:', error);
+      toast({
+        title: "❌ การทดสอบล้มเหลว",
+        description: "เกิดข้อผิดพลาดในการทดสอบ Database",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // ฟังก์ชันแสดง SQL Fix Commands
+  const handleShowSQLCommands = () => {
+    const sqlCommands = getSQLFixCommands();
+    console.log('📋 Copy these SQL commands to Supabase SQL Editor:', sqlCommands);
+    
+    toast({
+      title: "📋 SQL Commands Ready",
+      description: "คำสั่ง SQL ถูกแสดงใน Console แล้ว - Copy ไปรันใน Supabase SQL Editor",
+      duration: 10000
+    });
   };
 
   // ฟังก์ชันวินิจฉัยปัญหาการโหลดสำหรับ Student
@@ -283,7 +343,7 @@ const DashboardPage = () => {
               <h2 className="text-2xl font-bold text-green-900">การทดสอบความปลอดภัย</h2>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -319,6 +379,53 @@ const DashboardPage = () => {
                   </div>
                 </div>
               </motion.div>
+              
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.5 }}
+                className="group bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-4 hover:bg-white/20 transition-all duration-300 cursor-pointer hover:scale-105"
+                onClick={handleTestRealDataAccess}
+              >
+                <div className="flex flex-col items-center text-center space-y-3">
+                  <div className="p-3 rounded-full bg-green-100 group-hover:bg-green-200 transition-colors">
+                    <Database className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-green-900 text-sm">ทดสอบข้อมูลจริง</h3>
+                    <p className="text-green-700 text-xs mt-1">ตรวจสอบว่า Student เข้าถึงข้อมูลจริงได้หรือไม่</p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+            
+            {/* Database Fix Tools Section */}
+            <div className="mt-6">
+              <div className="flex items-center mb-4">
+                <Database className="w-5 h-5 text-blue-500 mr-2" />
+                <h3 className="text-lg font-semibold text-green-900">เครื่องมือแก้ไข Database</h3>
+              </div>
+              
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.55 }}
+                className="group bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-4 hover:bg-white/20 transition-all duration-300 cursor-pointer hover:scale-105"
+                onClick={handleShowSQLCommands}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="p-3 rounded-full bg-orange-100 group-hover:bg-orange-200 transition-colors">
+                    <FileText className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-green-900 text-sm">แสดง SQL Fix Commands</h3>
+                    <p className="text-green-700 text-xs mt-1">คำสั่ง SQL สำหรับแก้ไขปัญหา RLS และ Performance</p>
+                  </div>
+                  <div className="text-orange-600">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                </div>
+              </motion.div>
             </div>
             
             {/* Emergency Diagnosis Section */}
@@ -331,7 +438,7 @@ const DashboardPage = () => {
               <motion.button
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.3, delay: 0.5 }}
+                transition={{ duration: 0.3, delay: 0.6 }}
                 onClick={handleDiagnoseLoadingIssues}
                 className="w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-medium"
               >

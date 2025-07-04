@@ -14,14 +14,29 @@ export const getAllCourses = async () => {
   
   return withCache(cacheKey, async () => {
     try {
-      // Add timeout for emergency fallback
+      // Add timeout for emergency fallback (increased for real data)
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('getAllCourses timeout')), 5000);
+        setTimeout(() => reject(new Error('getAllCourses timeout')), 15000); // 15 seconds for real data
       });
       
+      // Simplified query for better performance
       const queryPromise = supabase
         .from('courses')
-        .select('*')
+        .select(`
+          id,
+          title,
+          description,
+          category,
+          level,
+          price,
+          duration_hours,
+          thumbnail_url,
+          is_active,
+          is_featured,
+          instructor_id,
+          created_at,
+          updated_at
+        `)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
@@ -31,7 +46,8 @@ export const getAllCourses = async () => {
         console.error('Error fetching courses:', error);
         // Return emergency data instead of error
         const emergencyData = getEmergencyData();
-        console.log('🚑 Using emergency courses data in getAllCourses');
+        console.log('🚑 Database timeout - Using emergency courses data in getAllCourses');
+        console.warn('Consider running the SQL fix script: /sql_scripts/fix-student-access-final.sql');
         return { data: emergencyData.courses, error: null };
       }
 
@@ -46,7 +62,8 @@ export const getAllCourses = async () => {
       console.error('Error fetching courses:', error);
       // Return emergency data on any error
       const emergencyData = getEmergencyData();
-      console.log('🚑 Using emergency courses data after error in getAllCourses');
+      console.log('🚑 Database error - Using emergency courses data after error in getAllCourses');
+      console.warn('Consider running the SQL fix script: /sql_scripts/fix-student-access-final.sql');
       return { data: emergencyData.courses, error: null };
     }
   }, 2 * 60 * 1000); // Cache for 2 minutes
