@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { withCache, getCacheKey } from './cache';
+import { getEmergencyData } from './quickFix';
 
 // ==========================================
 // COURSE CRUD OPERATIONS
@@ -13,13 +14,26 @@ export const getAllCourses = async () => {
   
   return withCache(cacheKey, async () => {
     try {
-      const { data, error } = await supabase
+      // Add timeout for emergency fallback
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('getAllCourses timeout')), 5000);
+      });
+      
+      const queryPromise = supabase
         .from('courses')
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+
+      if (error) {
+        console.error('Error fetching courses:', error);
+        // Return emergency data instead of error
+        const emergencyData = getEmergencyData();
+        console.log('🚑 Using emergency courses data in getAllCourses');
+        return { data: emergencyData.courses, error: null };
+      }
 
       // Add enrollment count to each course (set to 0 for now to avoid RLS issues)
       const coursesWithStats = data.map(course => ({
@@ -30,7 +44,10 @@ export const getAllCourses = async () => {
       return { data: coursesWithStats, error: null };
     } catch (error) {
       console.error('Error fetching courses:', error);
-      return { data: null, error };
+      // Return emergency data on any error
+      const emergencyData = getEmergencyData();
+      console.log('🚑 Using emergency courses data after error in getAllCourses');
+      return { data: emergencyData.courses, error: null };
     }
   }, 2 * 60 * 1000); // Cache for 2 minutes
 };

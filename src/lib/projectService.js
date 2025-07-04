@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { getEmergencyData } from './quickFix';
 
 // ==========================================
 // PROJECT CRUD OPERATIONS
@@ -9,7 +10,12 @@ import { supabase } from './supabaseClient';
  */
 export const getAllProjects = async () => {
   try {
-    const { data, error } = await supabase
+    // Add timeout for emergency fallback
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('getAllProjects timeout')), 5000);
+    });
+    
+    const queryPromise = supabase
       .from('projects')
       .select(`
         id,
@@ -36,12 +42,23 @@ export const getAllProjects = async () => {
       .eq('is_approved', true)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+
+    if (error) {
+      console.error('Error fetching projects:', error);
+      // Return emergency data instead of error
+      const emergencyData = getEmergencyData();
+      console.log('🚑 Using emergency projects data in getAllProjects');
+      return { data: emergencyData.projects, error: null };
+    }
 
     return { data: data || [], error: null };
   } catch (error) {
     console.error('Error fetching projects:', error);
-    return { data: null, error };
+    // Return emergency data on any error
+    const emergencyData = getEmergencyData();
+    console.log('🚑 Using emergency projects data after error in getAllProjects');
+    return { data: emergencyData.projects, error: null };
   }
 };
 

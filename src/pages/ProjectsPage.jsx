@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast.jsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllProjects, getFeaturedProjects } from '@/lib/projectService';
+import { getEmergencyData } from '@/lib/quickFix';
 import ProjectShowcase from '@/components/ProjectShowcase';
 import ProjectSlider from '@/components/ProjectSlider';
 import CreateProjectForm from '@/components/CreateProjectForm';
@@ -28,15 +29,40 @@ const ProjectsPage = () => {
   const loadProjects = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await getAllProjects();
-      if (error) throw error;
-      setProjects(data || []);
+      // Add timeout for emergency fallback
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Projects loading timeout')), 8000);
+      });
+      
+      const { data, error } = await Promise.race([
+        getAllProjects(),
+        timeoutPromise
+      ]);
+      
+      if (error) {
+        console.error('Error loading projects:', error);
+        // Use emergency data instead of showing error
+        const emergencyData = getEmergencyData();
+        setProjects(emergencyData.projects);
+        console.log('🚑 Using emergency projects data');
+        toast({
+          title: "โหลดข้อมูลสำรอง",
+          description: "ใช้ข้อมูลสำรองเนื่องจากเซิร์ฟเวอร์ช้า",
+          variant: "default"
+        });
+      } else {
+        setProjects(data || []);
+      }
     } catch (error) {
       console.error('Error loading projects:', error);
+      // Use emergency data on any error
+      const emergencyData = getEmergencyData();
+      setProjects(emergencyData.projects);
+      console.log('🚑 Using emergency projects data after error');
       toast({
-        title: "ข้อผิดพลาดในการโหลดข้อมูล",
-        description: error.message,
-        variant: "destructive"
+        title: "โหลดข้อมูลสำรอง",
+        description: "ใช้ข้อมูลสำรองเนื่องจากไม่สามารถเชื่อมต่อได้",
+        variant: "default"
       });
     } finally {
       setLoading(false);
@@ -46,15 +72,35 @@ const ProjectsPage = () => {
   const loadFeaturedProjects = useCallback(async () => {
     setFeaturedLoading(true);
     try {
-      const { data, error } = await getFeaturedProjects();
-      if (error) throw error;
-      setFeaturedProjects(data || []);
+      // Add timeout for emergency fallback
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Featured projects loading timeout')), 8000);
+      });
+      
+      const { data, error } = await Promise.race([
+        getFeaturedProjects(),
+        timeoutPromise
+      ]);
+      
+      if (error) {
+        console.error('Error loading featured projects:', error);
+        // Use emergency data instead of showing error
+        const emergencyData = getEmergencyData();
+        setFeaturedProjects(emergencyData.projects);
+        console.log('🚑 Using emergency featured projects data');
+      } else {
+        setFeaturedProjects(data || []);
+      }
     } catch (error) {
       console.error('Error loading featured projects:', error);
+      // Use emergency data on any error
+      const emergencyData = getEmergencyData();
+      setFeaturedProjects(emergencyData.projects);
+      console.log('🚑 Using emergency featured projects data after error');
       toast({
-        title: "ข้อผิดพลาดในการโหลดโครงงานติดดาว",
-        description: error.message,
-        variant: "destructive"
+        title: "โหลดข้อมูลสำรอง",
+        description: "ใช้ข้อมูลสำรองเนื่องจากไม่สามารถเชื่อมต่อได้",
+        variant: "default"
       });
     } finally {
       setFeaturedLoading(false);

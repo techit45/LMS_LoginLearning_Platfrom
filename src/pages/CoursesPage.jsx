@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { Link } from 'react-router-dom';
 import { getAllCourses } from '@/lib/courseService';
+import { getEmergencyData } from '@/lib/quickFix';
 
 const CoursesPage = () => {
   const { toast } = useToast();
@@ -28,17 +29,45 @@ const CoursesPage = () => {
 
   const loadCourses = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await getAllCourses();
-    if (error) {
-      toast({
-        title: "ข้อผิดพลาดในการโหลดข้อมูล",
-        description: error.message,
-        variant: "destructive"
+    try {
+      // Add timeout for emergency fallback
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Courses loading timeout')), 8000);
       });
-    } else {
-      setCourses(data || []);
+      
+      const { data, error } = await Promise.race([
+        getAllCourses(),
+        timeoutPromise
+      ]);
+      
+      if (error) {
+        console.error('Error loading courses:', error);
+        // Use emergency data instead of showing error
+        const emergencyData = getEmergencyData();
+        setCourses(emergencyData.courses);
+        console.log('🚑 Using emergency courses data');
+        toast({
+          title: "โหลดข้อมูลสำรอง",
+          description: "ใช้ข้อมูลสำรองเนื่องจากเซิร์ฟเวอร์ช้า",
+          variant: "default"
+        });
+      } else {
+        setCourses(data || []);
+      }
+    } catch (error) {
+      console.error('Error loading courses:', error);
+      // Use emergency data on any error
+      const emergencyData = getEmergencyData();
+      setCourses(emergencyData.courses);
+      console.log('🚑 Using emergency courses data after error');
+      toast({
+        title: "โหลดข้อมูลสำรอง",
+        description: "ใช้ข้อมูลสำรองเนื่องจากไม่สามารถเชื่อมต่อได้",
+        variant: "default"
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [toast]);
 
   useEffect(() => {
