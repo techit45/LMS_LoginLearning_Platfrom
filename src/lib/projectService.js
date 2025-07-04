@@ -268,48 +268,6 @@ export const getFeaturedProjects = async () => {
   }
 };
 
-/**
- * Get featured projects
- */
-export const getFeaturedProjects = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select(`
-        id,
-        title,
-        description,
-        short_description,
-        category,
-        difficulty_level,
-        is_featured,
-        technologies,
-        project_url,
-        github_url,
-        cover_image_url,
-        image_url,
-        featured_image_url,
-        technology,
-        demo_url,
-        thumbnail_url,
-        creator_id,
-        created_at,
-        updated_at,
-        is_approved
-      `)
-      .eq('is_featured', true)
-      .eq('is_approved', true)
-      .order('created_at', { ascending: false })
-      .limit(6);
-
-    if (error) throw error;
-
-    return { data: data || [], error: null };
-  } catch (error) {
-    console.error('Error fetching featured projects:', error);
-    return { data: null, error };
-  }
-};
 
 // ==========================================
 // ADMIN PROJECT MANAGEMENT
