@@ -114,7 +114,12 @@ export const getFeaturedProjects = async () => {
   try {
     console.log('Fetching featured projects...');
     
-    const { data, error } = await supabase
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout')), 5000); // 5 second timeout
+    });
+    
+    const queryPromise = supabase
       .from('projects')
       .select(`
         id,
@@ -148,13 +153,15 @@ export const getFeaturedProjects = async () => {
       .order('created_at', { ascending: false })
       .limit(6);
 
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+
     if (error) throw error;
 
     // If no featured projects, get recent approved projects
     if (!data || data.length === 0) {
       console.log('No featured projects found, getting recent projects');
       
-      const { data: recentData, error: recentError } = await supabase
+      const fallbackQueryPromise = supabase
         .from('projects')
         .select(`
           id,
@@ -186,6 +193,11 @@ export const getFeaturedProjects = async () => {
         .eq('is_approved', true)
         .order('created_at', { ascending: false })
         .limit(6);
+
+      const { data: recentData, error: recentError } = await Promise.race([
+        fallbackQueryPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Fallback timeout')), 3000))
+      ]);
 
       if (recentError) throw recentError;
 

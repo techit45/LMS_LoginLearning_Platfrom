@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFeaturedCourses } from '@/lib/courseService';
 import { getFeaturedProjects } from '@/lib/projectService';
+import { getEmergencyData } from '@/lib/quickFix';
 import SEOHead from '@/components/SEOHead';
 import CourseSlider from '@/components/CourseSlider';
 import ProjectSlider from '@/components/ProjectSlider';
@@ -89,19 +90,31 @@ const HomePage = () => {
 
     const loadFeaturedProjects = async () => {
       try {
-        const { data, error } = await getFeaturedProjects();
+        // Add timeout for emergency fallback
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Projects loading timeout')), 8000);
+        });
+        
+        const { data, error } = await Promise.race([
+          getFeaturedProjects(),
+          timeoutPromise
+        ]);
+        
         if (error) {
           console.error('Error loading featured projects:', error);
-          toast({
-            title: "ไม่สามารถโหลดโครงงานติดดาวได้",
-            description: error.message,
-            variant: "destructive"
-          });
+          // Use emergency data instead of showing error
+          const emergencyData = getEmergencyData();
+          setFeaturedProjects(emergencyData.projects);
+          console.log('🚑 Using emergency projects data');
         } else {
           setFeaturedProjects(data || []);
         }
       } catch (error) {
-        console.error('Error:', error);
+        console.error('Error loading projects:', error);
+        // Use emergency data on any error
+        const emergencyData = getEmergencyData();
+        setFeaturedProjects(emergencyData.projects);
+        console.log('🚑 Using emergency projects data after error');
       } finally {
         setProjectsLoading(false);
       }

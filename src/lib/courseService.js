@@ -446,7 +446,7 @@ export const getFeaturedCourses = async () => {
       
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout')), 10000); // 10 second timeout
+        setTimeout(() => reject(new Error('Request timeout')), 5000); // 5 second timeout
       });
 
       // Enhanced query with instructor information
@@ -487,7 +487,7 @@ export const getFeaturedCourses = async () => {
 
         const { data: fallbackData, error: fallbackError } = await Promise.race([
           fallbackQueryPromise, 
-          timeoutPromise
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Fallback timeout')), 3000))
         ]);
 
         console.log('Fallback courses query result:', { fallbackData, fallbackError });

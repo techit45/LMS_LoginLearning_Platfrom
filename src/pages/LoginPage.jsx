@@ -79,7 +79,7 @@ const LoginPage = () => {
       }
     } else {
       setLoginAttempts(0);
-      toast({ title: "เข้าสู่ระบบสำเร��จ!" });
+      toast({ title: "เข้าสู่ระบบสำเร็จ!" });
       navigate('/dashboard');
     }
   };
