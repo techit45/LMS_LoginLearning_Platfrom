@@ -5,6 +5,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, A11y, Autoplay } from 'swiper/modules';
 import { Clock, Users, Star, Play, BookOpen, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ImageWithFallback from '@/components/ImageWithFallback';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
@@ -83,14 +84,13 @@ const CourseSlider = ({
               <div className="course-card rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col">
                 {/* Course Image */}
                 <div className="relative overflow-hidden h-48">
-                  <img 
-                    src={course.thumbnail_url || '/images/placeholder.png'} 
+                  <ImageWithFallback
+                    src={course.thumbnail_url || '/images/placeholder.png'}
                     alt={course.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    onError={(e) => {
-                      e.target.src = '/images/placeholder.png';
-                    }}
+                    className="w-full h-full"
+                    fallbackSrc="/images/placeholder.png"
                   />
+                  <div className="absolute inset-0 group-hover:scale-110 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   
                   {/* Course Level Badge */}

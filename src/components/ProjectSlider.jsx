@@ -5,6 +5,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, A11y, Autoplay } from 'swiper/modules';
 import { Star, Eye, Heart, ExternalLink, User, Calendar, Tag, Github, ArrowRight, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ImageWithFallback from '@/components/ImageWithFallback';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
@@ -122,14 +123,13 @@ const ProjectSlider = ({
                 
                 {/* Project Image */}
                 <div className="relative overflow-hidden h-56">
-                  <img 
-                    src={getProjectImage(project)} 
+                  <ImageWithFallback
+                    src={getProjectImage(project)}
                     alt={project.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    onError={(e) => {
-                      e.target.src = '/images/project-placeholder.svg';
-                    }}
+                    className="w-full h-full"
+                    fallbackSrc="https://via.placeholder.com/400x300/6b7280/ffffff?text=Project"
                   />
+                  <div className="absolute inset-0 group-hover:scale-110 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   
                   {/* Featured Star Badge */}
