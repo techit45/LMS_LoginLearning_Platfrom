@@ -14,9 +14,9 @@ export const getAllCourses = async () => {
   
   return withCache(cacheKey, async () => {
     try {
-      // Add timeout for emergency fallback (increased for real data)
+      // Add timeout for emergency fallback (increased for better performance)
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('getAllCourses timeout')), 15000); // 15 seconds for real data
+        setTimeout(() => reject(new Error('getAllCourses timeout')), 30000); // 30 seconds for real data
       });
       
       // Simplified query for better performance

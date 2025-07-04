@@ -30,9 +30,9 @@ const CoursesPage = () => {
   const loadCourses = useCallback(async () => {
     setLoading(true);
     try {
-      // Add timeout for emergency fallback
+      // Add timeout for emergency fallback (increased to 20 seconds)
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Courses loading timeout')), 8000);
+        setTimeout(() => reject(new Error('Courses loading timeout')), 20000);
       });
       
       const { data, error } = await Promise.race([
