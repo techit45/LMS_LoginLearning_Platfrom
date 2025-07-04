@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { withCache, getCacheKey } from './cache';
 import { getEmergencyData } from './quickFix';
+import { uploadToStorage, deleteFromStorage } from './attachmentService';
 
 // ==========================================
 // COURSE CRUD OPERATIONS
@@ -691,5 +692,205 @@ export const getCourseStats = async () => {
   } catch (error) {
     console.error('Error fetching course stats:', error);
     return { data: null, error };
+  }
+};
+
+// ==========================================
+// COURSE IMAGE MANAGEMENT
+// ==========================================
+
+/**
+ * Upload multiple images for a course
+ */
+export const uploadCourseImages = async (courseId, formData) => {
+  try {
+    if (!courseId) {
+      throw new Error('Course ID is required');
+    }
+
+    const file = formData.get('file');
+    if (!file) {
+      throw new Error('No file provided');
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('รองรับเฉพาะไฟล์ JPG, PNG, WebP เท่านั้น');
+    }
+
+    // Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new Error('ขนาดไฟล์ต้องไม่เกิน 5 MB');
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 8);
+    const fileExtension = file.name.split('.').pop();
+    const fileName = `course-image-${timestamp}-${randomString}.${fileExtension}`;
+    const filePath = `course-images/${courseId}/${fileName}`;
+
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('course-files')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      throw new Error('เกิดข้อผิดพลาดในการอัปโหลด');
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('course-files')
+      .getPublicUrl(filePath);
+
+    console.log('Course image uploaded successfully:', {
+      courseId,
+      fileName,
+      filePath,
+      publicUrl
+    });
+
+    return {
+      url: publicUrl,
+      fileName: fileName,
+      filePath: filePath,
+      error: null
+    };
+
+  } catch (error) {
+    console.error('Error uploading course image:', error);
+    return {
+      url: null,
+      error: error.message || 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ'
+    };
+  }
+};
+
+/**
+ * Delete course image from storage
+ */
+export const deleteCourseImage = async (imageUrl) => {
+  try {
+    if (!imageUrl) {
+      throw new Error('Image URL is required');
+    }
+
+    // Extract file path from URL
+    const urlParts = imageUrl.split('/storage/v1/object/public/course-files/');
+    if (urlParts.length < 2) {
+      throw new Error('Invalid image URL format');
+    }
+
+    const filePath = urlParts[1];
+
+    // Delete from Supabase Storage
+    const { error: deleteError } = await supabase.storage
+      .from('course-files')
+      .remove([filePath]);
+
+    if (deleteError) {
+      console.error('Delete error:', deleteError);
+      throw new Error('เกิดข้อผิดพลาดในการลบรูปภาพ');
+    }
+
+    console.log('Course image deleted successfully:', filePath);
+    return { success: true, error: null };
+
+  } catch (error) {
+    console.error('Error deleting course image:', error);
+    return {
+      success: false,
+      error: error.message || 'เกิดข้อผิดพลาดในการลบรูปภาพ'
+    };
+  }
+};
+
+/**
+ * Update course with multiple images
+ */
+export const updateCourseImages = async (courseId, imageUrls, coverImageUrl = null) => {
+  try {
+    if (!courseId) {
+      throw new Error('Course ID is required');
+    }
+
+    const updateData = {
+      images: imageUrls || [],
+      updated_at: new Date().toISOString()
+    };
+
+    // If cover image is specified, update thumbnail_url
+    if (coverImageUrl) {
+      updateData.thumbnail_url = coverImageUrl;
+    }
+
+    const { data, error } = await supabase
+      .from('courses')
+      .update(updateData)
+      .eq('id', courseId)
+      .select();
+
+    if (error) {
+      console.error('Error updating course images:', error);
+      throw error;
+    }
+
+    console.log('Course images updated successfully:', {
+      courseId,
+      imageCount: imageUrls?.length || 0,
+      coverImage: coverImageUrl
+    });
+
+    return { data, error: null };
+
+  } catch (error) {
+    console.error('Error updating course images:', error);
+    return {
+      data: null,
+      error: error.message || 'เกิดข้อผิดพลาดในการอัปเดตรูปภาพ'
+    };
+  }
+};
+
+/**
+ * Get course images
+ */
+export const getCourseImages = async (courseId) => {
+  try {
+    if (!courseId) {
+      throw new Error('Course ID is required');
+    }
+
+    const { data, error } = await supabase
+      .from('courses')
+      .select('images, thumbnail_url')
+      .eq('id', courseId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching course images:', error);
+      throw error;
+    }
+
+    return {
+      images: data?.images || [],
+      coverImage: data?.thumbnail_url || null,
+      error: null
+    };
+
+  } catch (error) {
+    console.error('Error getting course images:', error);
+    return {
+      images: [],
+      coverImage: null,
+      error: error.message || 'เกิดข้อผิดพลาดในการดึงรูปภาพ'
+    };
   }
 };

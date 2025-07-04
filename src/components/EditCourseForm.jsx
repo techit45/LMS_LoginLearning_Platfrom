@@ -21,8 +21,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { updateCourse, getCourseById } from '@/lib/courseService';
+import { updateCourse, getCourseById, getCourseImages, updateCourseImages } from '@/lib/courseService';
 import { uploadCourseImage } from '@/lib/attachmentService';
+import CourseImageUpload from '@/components/CourseImageUpload';
 
 const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
   const { toast } = useToast();
@@ -48,6 +49,8 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
   const [coverImage, setCoverImage] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [courseImages, setCourseImages] = useState([]);
+  const [showImageGallery, setShowImageGallery] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
   // Load course data when modal opens
@@ -104,6 +107,23 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
       // Set image preview if exists
       if (data.image_url) {
         setImagePreview(data.image_url);
+      }
+
+      // Load course images
+      try {
+        const { images, coverImage, error: imagesError } = await getCourseImages(courseId);
+        if (!imagesError && images) {
+          const formattedImages = images.map((url, index) => ({
+            id: `existing-${index}`,
+            url: url,
+            filename: `image-${index + 1}.jpg`,
+            size: 0,
+            uploaded_at: new Date().toISOString()
+          }));
+          setCourseImages(formattedImages);
+        }
+      } catch (imagesError) {
+        console.warn('Could not load course images:', imagesError);
       }
 
     } catch (error) {
@@ -208,6 +228,47 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle course images changes
+  const handleImagesChange = async (newImages) => {
+    setCourseImages(newImages);
+    
+    // Update course images in database
+    if (courseId) {
+      try {
+        const imageUrls = newImages.map(img => img.url);
+        await updateCourseImages(courseId, imageUrls, formData.image_url);
+      } catch (error) {
+        console.error('Error updating course images:', error);
+        toast({
+          title: "เกิดข้อผิดพลาด",
+          description: "ไม่สามารถอัปเดตรูปภาพได้",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  // Handle cover image change from gallery
+  const handleCoverImageChange = async (newCoverUrl) => {
+    setFormData(prev => ({ ...prev, image_url: newCoverUrl }));
+    setImagePreview(newCoverUrl);
+    
+    // Update course cover image in database
+    if (courseId) {
+      try {
+        const imageUrls = courseImages.map(img => img.url);
+        await updateCourseImages(courseId, imageUrls, newCoverUrl);
+      } catch (error) {
+        console.error('Error updating cover image:', error);
+        toast({
+          title: "เกิดข้อผิดพลาด",
+          description: "ไม่สามารถอัปเดตรูปหน้าปกได้",
+          variant: "destructive"
+        });
+      }
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -889,6 +950,44 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Course Image Gallery */}
+              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-6 rounded-xl border border-purple-200">
+                <div className="flex items-center justify-between mb-4">
+                  <label className="block text-gray-800 font-semibold flex items-center">
+                    <div className="bg-purple-500 p-2 rounded-lg mr-3">
+                      <ImageIcon className="w-4 h-4 text-white" />
+                    </div>
+                    แกลเลอรี่รูปภาพคอร์ส
+                  </label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowImageGallery(!showImageGallery)}
+                    className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                  >
+                    {showImageGallery ? 'ซ่อน' : 'แสดง'} แกลเลอรี่
+                  </Button>
+                </div>
+                
+                <div className="text-sm text-gray-600 mb-4">
+                  เพิ่มรูปภาพเพิ่มเติมเพื่อแสดงในแกลเลอรี่คอร์ส รูปแรกจะเป็นหน้าปกหลักของคอร์ส
+                </div>
+
+                {showImageGallery && (
+                  <CourseImageUpload
+                    courseId={courseId}
+                    existingImages={courseImages}
+                    onImagesChange={handleImagesChange}
+                    currentCoverImage={formData.image_url}
+                    onCoverChange={handleCoverImageChange}
+                    maxImages={8}
+                    allowCoverSelection={true}
+                    className="mt-4"
+                  />
+                )}
               </div>
 
               {/* Action Buttons */}
