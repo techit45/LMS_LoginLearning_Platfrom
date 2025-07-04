@@ -13,6 +13,7 @@ import AttachmentViewer from '@/components/AttachmentViewer';
 import ForumTopicCard from '@/components/ForumTopicCard';
 import ForumTopicDetail from '@/components/ForumTopicDetail';
 import CreateTopicModal from '@/components/CreateTopicModal';
+import ImageGallery from '@/components/ImageGallery';
 import { getCourseTopics, toggleLike, toggleTopicPin, toggleTopicLock, deleteTopic } from '@/lib/forumService';
 
 const CourseDetailPage = () => {
@@ -41,6 +42,13 @@ const CourseDetailPage = () => {
   const [selectedTopicId, setSelectedTopicId] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [forumLoading, setForumLoading] = useState(false);
+
+  const courseImages = course ? [
+    { src: course.image_url || "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8", alt: course.title },
+    { src: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97", alt: "Student learning code" },
+    { src: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158", alt: "Engineering tools" },
+    { src: "https://images.unsplash.com/photo-1618477388954-7852f32655ec", alt: "Abstract technology background" }
+  ] : [];
 
   const loadCourse = useCallback(async () => {
     setLoading(true);
@@ -323,14 +331,9 @@ const CourseDetailPage = () => {
                 <span className="text-emerald-800">ระดับ: {course.level || 'ไม่ระบุ'}</span>
               </div>
             </div>
-             <img  
-                className="w-full h-64 sm:h-96 object-cover rounded-lg mb-6 shadow-md" 
-                alt={course.title}
-                src={course.image_url || "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8"}
-                onError={(e) => {
-                  e.target.src = "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8";
-                }}
-              />
+            <div className="mb-6">
+              <ImageGallery images={courseImages} />
+            </div>
           </div>
 
           {/* Forum Section Only */}

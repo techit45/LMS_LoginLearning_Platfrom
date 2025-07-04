@@ -110,14 +110,21 @@ export const AuthProvider = ({ children }) => {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error("Error getting session:", error);
-          // If refresh token is invalid, clear the stored session and continue
-          if (error.message.includes('Invalid Refresh Token') || error.message.includes('Refresh Token Not Found')) {
+          // Handle common auth errors gracefully
+          if (error.message.includes('Invalid Refresh Token') || 
+              error.message.includes('Refresh Token Not Found') ||
+              error.message.includes('session_not_found') ||
+              error.message.includes('Load failed')) {
             await supabase.auth.signOut();
             localStorage.removeItem('sb-vuitwzisazvikrhtfthh-auth-token');
-            console.log("Cleared invalid session");
+            console.log("Cleared invalid/failed session");
+            setUser(null);
+            setIsAdmin(false);
+            setUserRole(ROLES.GUEST);
             return;
           }
-          if (toast) {
+          // Only show toast for unexpected errors
+          if (toast && !error.message.includes('session_not_found')) {
             toast({ title: "ข้อผิดพลาดในการโหลดเซสชัน", description: error.message, variant: "destructive" });
           }
         }
