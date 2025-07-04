@@ -187,8 +187,8 @@ export default defineConfig({
 	customLogger: logger,
 	base: '/',
 	define: {
-		'process.env.VITE_SUPABASE_URL': JSON.stringify('https://vuitwzisazvikrhtfthh.supabase.co'),
-		'process.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE')
+		// Environment variables are now properly handled by Vite
+		// Remove hardcoded credentials for security
 	},
 	plugins: [
 		react(),
