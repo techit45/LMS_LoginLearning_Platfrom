@@ -120,26 +120,69 @@ export const testRealDataAccess = async () => {
  */
 export const getSQLFixCommands = () => {
   return {
-    title: 'SQL Fix Commands for Database Issues',
-    description: 'Copy and run these commands in Supabase SQL Editor',
+    title: 'SQL Fix Commands for Content Visibility (All Roles)',
+    description: 'ให้ทุก Role เห็นเนื้อหาได้ แต่แค่ Admin เท่านั้นที่แก้ไข/เพิ่มได้',
     commands: [
       {
         step: 1,
-        title: 'Fix RLS Policies for Public Read Access',
-        sql: `-- Allow public read access to courses
+        title: 'Fix COURSES - ทุกคนเห็นได้ แค่ Admin แก้ไขได้',
+        sql: `-- ลบ policies เก่า
 DROP POLICY IF EXISTS "Allow public read courses" ON courses;
+DROP POLICY IF EXISTS "Allow authenticated read courses" ON courses;
+DROP POLICY IF EXISTS "Allow admin manage courses" ON courses;
+
+-- ทุกคนอ่านคอร์สที่เปิดใช้งานได้
 ALTER TABLE courses ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read courses" 
+CREATE POLICY "Everyone can read active courses"
 ON courses FOR SELECT TO public USING (is_active = true);
 
--- Allow public read access to projects  
-DROP POLICY IF EXISTS "Allow public read projects" ON projects;
-ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read projects" 
-ON projects FOR SELECT TO public USING (is_approved = true);`
+-- แค่ Admin สร้าง/แก้ไข/ลบคอร์สได้
+CREATE POLICY "Only admin can manage courses"
+ON courses FOR ALL TO authenticated
+USING (EXISTS (SELECT 1 FROM user_profiles WHERE user_id = auth.uid() AND role = 'admin'))
+WITH CHECK (EXISTS (SELECT 1 FROM user_profiles WHERE user_id = auth.uid() AND role = 'admin'));`
       },
       {
         step: 2,
+        title: 'Fix PROJECTS - ทุกคนเห็นได้ แค่ Admin แก้ไขได้',
+        sql: `-- ลบ policies เก่า
+DROP POLICY IF EXISTS "Allow public read projects" ON projects;
+DROP POLICY IF EXISTS "Allow authenticated read projects" ON projects;
+DROP POLICY IF EXISTS "Allow admin manage projects" ON projects;
+
+-- ทุกคนอ่านโครงงานที่อนุมัติแล้วได้
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Everyone can read approved projects"
+ON projects FOR SELECT TO public USING (is_approved = true);
+
+-- แค่ Admin สร้าง/แก้ไข/ลบโครงงานได้
+CREATE POLICY "Only admin can manage projects"
+ON projects FOR ALL TO authenticated
+USING (EXISTS (SELECT 1 FROM user_profiles WHERE user_id = auth.uid() AND role = 'admin'))
+WITH CHECK (EXISTS (SELECT 1 FROM user_profiles WHERE user_id = auth.uid() AND role = 'admin'));`
+      },
+      {
+        step: 3,
+        title: 'Fix COURSE_CONTENT - ทุกคนเห็นได้ แค่ Admin แก้ไขได้',
+        sql: `-- ลบ policies เก่า
+DROP POLICY IF EXISTS "Allow public read course content" ON course_content;
+DROP POLICY IF EXISTS "Allow authenticated read course content" ON course_content;
+DROP POLICY IF EXISTS "Allow admin manage course content" ON course_content;
+
+-- ทุกคนอ่านเนื้อหาของคอร์สที่เปิดใช้งานได้
+ALTER TABLE course_content ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Everyone can read course content"
+ON course_content FOR SELECT TO public
+USING (EXISTS (SELECT 1 FROM courses WHERE courses.id = course_content.course_id AND courses.is_active = true));
+
+-- แค่ Admin สร้าง/แก้ไข/ลบเนื้อหาได้
+CREATE POLICY "Only admin can manage course content"
+ON course_content FOR ALL TO authenticated
+USING (EXISTS (SELECT 1 FROM user_profiles WHERE user_id = auth.uid() AND role = 'admin'))
+WITH CHECK (EXISTS (SELECT 1 FROM user_profiles WHERE user_id = auth.uid() AND role = 'admin'));`
+      },
+      {
+        step: 4,
         title: 'Add Performance Indexes',
         sql: `-- Add indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_courses_active_featured 
@@ -148,58 +191,20 @@ ON courses(is_active, is_featured) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_projects_approved_featured 
 ON projects(is_approved, is_featured) WHERE is_approved = true;
 
-CREATE INDEX IF NOT EXISTS idx_courses_created_at_desc 
-ON courses(created_at DESC) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_course_content_course_id 
+ON course_content(course_id);
 
-CREATE INDEX IF NOT EXISTS idx_projects_created_at_desc 
-ON projects(created_at DESC) WHERE is_approved = true;`
+CREATE INDEX IF NOT EXISTS idx_user_profiles_role 
+ON user_profiles(role) WHERE role IN ('instructor', 'admin');`
       },
       {
-        step: 3,
-        title: 'Add Sample Data (if tables are empty)',
-        sql: `-- Add sample course
-INSERT INTO courses (
-  id, title, description, category, level, price, duration_hours, 
-  thumbnail_url, is_active, is_featured, instructor_id, created_at
-) VALUES (
-  gen_random_uuid(),
-  'React เบื้องต้นสำหรับมือใหม่',
-  'เรียนรู้การสร้าง Web Application ด้วย React',
-  'การเขียนโปรแกรม',
-  'beginner',
-  0,
-  15,
-  '/images/placeholder.png',
-  true,
-  true,
-  (SELECT user_id FROM user_profiles WHERE role = 'admin' LIMIT 1),
-  now()
-) ON CONFLICT (id) DO NOTHING;
-
--- Add sample project
-INSERT INTO projects (
-  id, title, description, category, difficulty_level, 
-  cover_image_url, is_approved, is_featured, creator_id, created_at
-) VALUES (
-  gen_random_uuid(),
-  'ระบบรดน้ำต้นไม้อัตโนมัติด้วย IoT',
-  'โครงงานระบบรดน้ำต้นไม้อัตโนมัติ',
-  'iot',
-  'intermediate',
-  '/images/project-iot.jpg',
-  true,
-  true,
-  (SELECT user_id FROM user_profiles WHERE role = 'admin' LIMIT 1),
-  now()
-) ON CONFLICT (id) DO NOTHING;`
-      },
-      {
-        step: 4,
+        step: 5,
         title: 'Test the Fix',
-        sql: `-- Test public access
+        sql: `-- Test public access to all content
 SET ROLE anon;
-SELECT COUNT(*) as course_count FROM courses WHERE is_active = true;
-SELECT COUNT(*) as project_count FROM projects WHERE is_approved = true;
+SELECT 'Courses' as table_name, COUNT(*) as visible_count FROM courses WHERE is_active = true;
+SELECT 'Projects' as table_name, COUNT(*) as visible_count FROM projects WHERE is_approved = true;
+SELECT 'Course Content' as table_name, COUNT(*) as visible_count FROM course_content cc JOIN courses c ON c.id = cc.course_id WHERE c.is_active = true;
 RESET ROLE;
 
 -- Refresh schema cache
@@ -207,12 +212,20 @@ NOTIFY pgrst, 'reload schema';`
       }
     ],
     instructions: [
-      '1. เปิด Supabase Dashboard',
-      '2. ไปที่ SQL Editor',
-      '3. Copy และ paste แต่ละ command ทีละขั้น',
-      '4. กด Run บน command แต่ละตัว',
-      '5. ตรวจสอบผลลัพธ์ที่ขั้นตอน Test the Fix',
-      '6. Refresh หน้าเว็บเพื่อทดสอบการโหลดข้อมูลจริง'
+      '1. เปิด Supabase Dashboard → SQL Editor',
+      '2. รัน Command ทีละขั้นตามลำดับ:',
+      '   - Step 1: Fix COURSES policies',
+      '   - Step 2: Fix PROJECTS policies', 
+      '   - Step 3: Fix COURSE_CONTENT policies',
+      '   - Step 4: Add Performance Indexes',
+      '   - Step 5: Test the Fix',
+      '3. ตรวจสอบผลลัพธ์ใน Step 5 - ควรเห็นข้อมูลทุกตาราง',
+      '4. Refresh หน้าเว็บ → Student ควรเห็นข้อมูลจริง!',
+      '',
+      'ผลลัพธ์ที่คาดหวัง:',
+      '✅ ทุก Role (รวม Student, Instructor, Admin) เห็นเนื้อหาได้',
+      '✅ แค่ Admin เท่านั้นที่สามารถสร้าง/แก้ไข/ลบเนื้อหาได้',
+      '✅ Student จะเห็นข้อมูลจริงจาก Database แทน Mock data'
     ]
   };
 };
