@@ -14,7 +14,8 @@ import {
   GraduationCap,
   Wrench,
   Shield,
-  TestTube
+  TestTube,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
