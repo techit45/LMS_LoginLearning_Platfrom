@@ -2,20 +2,23 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SEOHead from '@/components/SEOHead';
-import { Code2, Plus } from 'lucide-react';
+import { Code2, Plus, Star, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast.jsx';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllProjects } from '@/lib/projectService';
+import { getAllProjects, getFeaturedProjects } from '@/lib/projectService';
 import ProjectShowcase from '@/components/ProjectShowcase';
+import ProjectSlider from '@/components/ProjectSlider';
 import CreateProjectForm from '@/components/CreateProjectForm';
-import EditProjectForm from '@/components/EditProjectForm'; // Assuming you might need it for editing from the showcase
+import EditProjectForm from '@/components/EditProjectForm';
 
 const ProjectsPage = () => {
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const [projects, setProjects] = useState([]);
+  const [featuredProjects, setFeaturedProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   
   // You might need a way to trigger edit from the showcase, this is a placeholder
@@ -40,9 +43,28 @@ const ProjectsPage = () => {
     }
   }, [toast]);
 
+  const loadFeaturedProjects = useCallback(async () => {
+    setFeaturedLoading(true);
+    try {
+      const { data, error } = await getFeaturedProjects();
+      if (error) throw error;
+      setFeaturedProjects(data || []);
+    } catch (error) {
+      console.error('Error loading featured projects:', error);
+      toast({
+        title: "ข้อผิดพลาดในการโหลดโครงงานติดดาว",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setFeaturedLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     loadProjects();
-  }, [loadProjects]);
+    loadFeaturedProjects();
+  }, [loadProjects, loadFeaturedProjects]);
 
   const handleCreateProject = () => {
     setShowCreateForm(true);
@@ -50,6 +72,7 @@ const ProjectsPage = () => {
 
   const handleCreateSuccess = () => {
     loadProjects();
+    loadFeaturedProjects(); // Reload featured projects too
     setShowCreateForm(false);
     toast({
       title: "สร้างโครงงานสำเร็จ! 🎉",
@@ -132,13 +155,62 @@ const ProjectsPage = () => {
           )}
         </motion.div>
 
-        {/* Project Showcase */}
+        {/* Featured Projects Section */}
+        {(!featuredLoading && featuredProjects.length > 0) && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mb-16"
+          >
+            <div className="bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 rounded-3xl p-8 md:p-12 border border-yellow-200/50 shadow-xl">
+              <div className="text-center mb-10">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full mb-6 shadow-lg">
+                  <Star className="w-8 h-8 text-white fill-current" />
+                </div>
+                <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+                  <span className="bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+                    ⭐ โครงงานติดดาว
+                  </span>
+                </h2>
+                <p className="text-lg text-gray-700 max-w-2xl mx-auto">
+                  ผลงานโดดเด่นที่ได้รับการคัดสรรพิเศษ จากนักเรียนที่มีความคิดสร้างสรรค์และนวัตกรรมเป็นเลิศ
+                </p>
+              </div>
+              
+              {featuredLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+                  <p className="text-gray-600">กำลังโหลดโครงงานติดดาว...</p>
+                </div>
+              ) : (
+                <ProjectSlider 
+                  projects={featuredProjects} 
+                  autoplay={true}
+                  slidesPerView={{ mobile: 1, tablet: 2, desktop: 3 }}
+                />
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* All Projects Section */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.5 }}
           className="px-4"
         >
+          <div className="mb-8">
+            <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-3 flex items-center">
+              <Lightbulb className="w-8 h-8 text-indigo-600 mr-3" />
+              โครงงานทั้งหมด
+            </h2>
+            <p className="text-gray-600">
+              สำรวจโครงงานและผลงานจากนักเรียนทุกระดับ พร้อมเทคโนโลยีที่หลากหลาย
+            </p>
+          </div>
+          
           {loading ? (
             <div className="text-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
