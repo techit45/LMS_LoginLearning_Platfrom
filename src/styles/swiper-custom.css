@@ -173,10 +173,82 @@
   font-weight: bold;
 }
 
+/* Project card styling */
+.project-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  transition: all 0.3s ease;
+}
+
+.project-card:hover {
+  transform: translateY(-10px) scale(1.02);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 1), rgba(248, 250, 252, 0.98));
+  box-shadow: 0 30px 60px rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+/* Project slider specific styling */
+.project-slider .swiper-slide {
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.project-slider .swiper-slide > div {
+  height: 100%;
+}
+
+/* Project slider navigation */
+.project-slider .swiper-button-next,
+.project-slider .swiper-button-prev {
+  color: #6366f1 !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-radius: 50% !important;
+  width: 50px !important;
+  height: 50px !important;
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15) !important;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(99, 102, 241, 0.2) !important;
+}
+
+.project-slider .swiper-button-next:hover,
+.project-slider .swiper-button-prev:hover {
+  background: #6366f1 !important;
+  color: white !important;
+  transform: scale(1.1);
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3) !important;
+}
+
+.project-slider .swiper-button-next::after,
+.project-slider .swiper-button-prev::after {
+  font-size: 1.2rem !important;
+  font-weight: bold;
+}
+
+/* Project slider pagination */
+.project-slider .swiper-pagination-bullet {
+  background: #d1d5db !important;
+  opacity: 0.6;
+  width: 12px !important;
+  height: 12px !important;
+  transition: all 0.3s ease;
+}
+
+.project-slider .swiper-pagination-bullet-active {
+  background: #6366f1 !important;
+  opacity: 1;
+  transform: scale(1.4);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .course-card:hover {
     transform: translateY(-4px) scale(1.01);
+  }
+  
+  .project-card:hover {
+    transform: translateY(-6px) scale(1.01);
   }
   
   .course-slider .swiper-button-next,
@@ -188,6 +260,17 @@
   .course-slider .swiper-button-next::after,
   .course-slider .swiper-button-prev::after {
     font-size: 1rem !important;
+  }
+  
+  .project-slider .swiper-button-next,
+  .project-slider .swiper-button-prev {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  
+  .project-slider .swiper-button-next::after,
+  .project-slider .swiper-button-prev::after {
+    font-size: 1.1rem !important;
   }
 }
 

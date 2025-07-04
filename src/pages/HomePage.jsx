@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Users, Award, Play, Star, Clock, ChevronRight, Zap, Target, TrendingUp } from 'lucide-react';
+import { BookOpen, Users, Award, Play, Star, Clock, ChevronRight, Zap, Target, TrendingUp, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast.jsx';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFeaturedCourses } from '@/lib/courseService';
+import { getFeaturedProjects } from '@/lib/projectService';
 import SEOHead from '@/components/SEOHead';
 import CourseSlider from '@/components/CourseSlider';
+import ProjectSlider from '@/components/ProjectSlider';
 import TestimonialSlider from '@/components/TestimonialSlider';
 
 const testimonials = [
@@ -49,7 +51,9 @@ const HomePage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [featuredCourses, setFeaturedCourses] = useState([]);
+  const [featuredProjects, setFeaturedProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [projectsLoading, setProjectsLoading] = useState(true);
 
   // Helper function to format text with line breaks
   const formatTextWithLineBreaks = (text) => {
@@ -83,7 +87,28 @@ const HomePage = () => {
       }
     };
 
+    const loadFeaturedProjects = async () => {
+      try {
+        const { data, error } = await getFeaturedProjects();
+        if (error) {
+          console.error('Error loading featured projects:', error);
+          toast({
+            title: "ไม่สามารถโหลดโครงงานติดดาวได้",
+            description: error.message,
+            variant: "destructive"
+          });
+        } else {
+          setFeaturedProjects(data || []);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setProjectsLoading(false);
+      }
+    };
+
     loadFeaturedCourses();
+    loadFeaturedProjects();
   }, [toast]);
 
   const handleFeatureClick = () => {
@@ -269,6 +294,62 @@ const HomePage = () => {
                 <Button asChild size="lg" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50 text-lg px-8 py-4">
                     <Link to="/courses">
                         ดูคอร์สทั้งหมด
+                        <ChevronRight className="w-5 h-5 ml-2" />
+                    </Link>
+                </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Featured Projects Section */}
+        <section className="py-20 px-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+          <div className="max-w-7xl mx-auto">
+            <motion.div
+              initial={{ y: 50, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
+              className="text-center mb-16"
+            >
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full mb-6">
+                <Lightbulb className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-4xl lg:text-5xl font-bold text-black mb-6">
+                โครงงานติดดาว
+              </h2>
+              <p className="text-xl text-black max-w-3xl mx-auto">
+                ผลงานโดดเด่นจากน้องๆ นักเรียนที่สร้างสรรค์โครงงานสุดเจ๋ง พร้อมแรงบันดาลใจสำหรับคุณ
+              </p>
+            </motion.div>
+
+            {projectsLoading ? (
+              <div className="col-span-full text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">กำลังโหลดโครงงานติดดาว...</p>
+              </div>
+            ) : featuredProjects.length > 0 ? (
+              <ProjectSlider projects={featuredProjects} autoplay={true} />
+            ) : (
+              <div className="text-center py-16">
+                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-12 max-w-md mx-auto border border-indigo-200">
+                  <div className="w-16 h-16 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <Lightbulb className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-3">ยังไม่มีโครงงานติดดาว</h3>
+                  <p className="text-gray-600 mb-6">โครงงานเด่นจากน้องๆ จะแสดงที่นี่</p>
+                  <Button asChild variant="outline" className="border-indigo-300 text-indigo-700 hover:bg-indigo-50">
+                    <Link to="/projects">
+                      ดูโครงงานทั้งหมด
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            <div className="text-center mt-12">
+                <Button asChild size="lg" variant="outline" className="border-indigo-300 text-indigo-700 hover:bg-indigo-50 text-lg px-8 py-4">
+                    <Link to="/projects">
+                        ดูโครงงานทั้งหมด
                         <ChevronRight className="w-5 h-5 ml-2" />
                     </Link>
                 </Button>
