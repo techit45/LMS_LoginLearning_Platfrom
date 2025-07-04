@@ -77,12 +77,11 @@ export const startQuizAttempt = async (quizId) => {
     if (quizError) throw quizError;
 
     // Check existing attempts
-    const { data: existingAttempts, error: attemptsError } = await getUserQuizAttempts(quizId);
+    const { error: attemptsError } = await getUserQuizAttempts(quizId);
     
     if (attemptsError) throw attemptsError;
 
     // Use timestamp-based attempt number to avoid duplicates
-    const attemptNumber = Date.now();
 
     // Allow unlimited attempts for now
     // if (quiz.max_attempts > 0 && existingAttempts.length >= quiz.max_attempts) {
@@ -144,13 +143,9 @@ export const submitQuizAttempt = async (attemptId, answers) => {
     // Calculate score
     const scoreResult = calculateQuizScore(quiz.questions, answers);
     
-    const isPassed = scoreResult.percentage >= quiz.passing_score;
     const completedAt = new Date().toISOString();
     
     // Calculate time spent
-    const startTime = new Date(attempt.started_at);
-    const endTime = new Date(completedAt);
-    const timeSpentMinutes = Math.round((endTime - startTime) / (1000 * 60));
 
     // Update attempt
     const { data, error } = await supabase
@@ -225,15 +220,16 @@ const checkAnswer = (question, userAnswer) => {
     case 'true_false':
       return userAnswer === question.correct_answer;
     
-    case 'fill_blank':
+    case 'fill_blank': {
       const correctAnswers = Array.isArray(question.correct_answer) 
         ? question.correct_answer 
         : [question.correct_answer];
       return correctAnswers.some(correct => 
         userAnswer?.toLowerCase().trim() === correct.toLowerCase().trim()
       );
+    }
     
-    case 'multiple_select':
+    case 'multiple_select': {
       if (!Array.isArray(userAnswer) || !Array.isArray(question.correct_answer)) {
         return false;
       }
@@ -241,6 +237,7 @@ const checkAnswer = (question, userAnswer) => {
       const correctSet = new Set(question.correct_answer.sort());
       return userSet.size === correctSet.size && 
              [...userSet].every(answer => correctSet.has(answer));
+    }
     
     default:
       return false;

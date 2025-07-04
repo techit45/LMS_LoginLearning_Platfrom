@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast.jsx';
 import { createProject } from '@/lib/projectService';
 import { uploadCourseImage } from '@/lib/attachmentService';
+import { projectSchema } from '@/lib/validationSchemas';
 
 const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
   const { toast } = useToast();
@@ -97,48 +98,16 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
     }));
   };
 
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.title.trim()) {
-      newErrors.title = 'กรุณาระบุชื่อโครงงาน';
-    }
-
-    if (!formData.description.trim()) {
-      newErrors.description = 'กรุณาระบุคำอธิบายโครงงาน';
-    }
-
-    if (!formData.category.trim()) {
-      newErrors.category = 'กรุณาระบุหมวดหมู่';
-    }
-
-    // Validate URLs if provided
-    if (formData.project_url && !isValidUrl(formData.project_url)) {
-      newErrors.project_url = 'กรุณาระบุ URL ที่ถูกต้อง';
-    }
-
-    if (formData.github_url && !isValidUrl(formData.github_url)) {
-      newErrors.github_url = 'กรุณาระบุ URL ที่ถูกต้อง';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const isValidUrl = (string) => {
-    try {
-      new URL(string);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    const { error: validationError } = projectSchema.validate(formData, { abortEarly: false });
+    if (validationError) {
+      const newErrors = {};
+      validationError.details.forEach(detail => {
+        newErrors[detail.path[0]] = detail.message;
+      });
+      setErrors(newErrors);
       toast({
         title: "ข้อมูลไม่ครบถ้วน",
         description: "กรุณาตรวจสอบข้อมูลที่กรอกและลองอีกครั้ง",
@@ -148,6 +117,7 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
     }
 
     setLoading(true);
+    setErrors({});
     
     try {
       let finalFormData = { ...formData };
@@ -180,7 +150,7 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
         const { data: uploadData, error: uploadError } = await uploadCourseImage(projectImage);
         
         if (uploadError) {
-          throw new Error(`ไม่สามารถอัปโหลดรูปภาพได้: ${uploadError.message}`);
+          throw new Error(`ไม่สามารถอัปโหลดร���ปภาพได้: ${uploadError.message}`);
         }
         
         finalFormData.cover_image_url = uploadData.publicUrl;

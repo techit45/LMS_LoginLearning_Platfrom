@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import SEOHead from '@/components/SEOHead';
 import { 
   ArrowLeft, 
   ExternalLink, 
@@ -131,6 +132,13 @@ const ProjectDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <SEOHead
+        title={project.title}
+        description={project.short_description || project.description || `ชมโครงงาน ${project.title} จาก Login Learning`}
+        image={project.cover_image_url || project.featured_image_url || project.image_url || "/images/og-project-default.jpg"}
+        url={`/projects/${projectId}`}
+        type="article"
+      />
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">

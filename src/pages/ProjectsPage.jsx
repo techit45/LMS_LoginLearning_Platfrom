@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
+import SEOHead from '@/components/SEOHead';
 import { 
   Code2, 
   Search, 
@@ -162,10 +162,13 @@ const ProjectsPage = () => {
       transition={{ duration: 0.5 }}
       className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50"
     >
-      <Helmet>
-        <title>โครงงาน - Login Learning</title>
-        <meta name="description" content="ชมผลงานและโครงงานที่น่าสนใจจาก Login Learning" />
-      </Helmet>
+      <SEOHead
+        title="โครงงานและผลงาน"
+        description="ชมผลงานและโครงงานที่น่าสนใจจาก Login Learning นักเรียน สร้างสรรค์ด้วยเทคโนโลยีทันสมัยและนวัตกรรมใหม่ๆ"
+        image="/images/og-projects.jpg"
+        url="/projects"
+        type="website"
+      />
 
       <div className="container mx-auto px-4 py-12">
         {/* Header */}

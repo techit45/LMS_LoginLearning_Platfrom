@@ -28,7 +28,7 @@ export const getCourseContentWithProgress = async (courseId) => {
 /**
  * Update content completion requirements
  */
-export const updateContentCompletionRequirements = async (contentId, requirements) => {
+export const updateContentCompletionRequirements = async (contentId) => {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
@@ -230,7 +230,6 @@ export const markContentCompleted = async (enrollmentId, contentId, completionDa
           .from('enrollments')
           .update({
             progress_percentage: newProgress,
-            completed_at: newProgress >= 100 ? new Date().toISOString() : null,
             completed_at: newProgress >= 100 ? new Date().toISOString() : null
           })
           .eq('id', enrollmentId);
@@ -245,38 +244,6 @@ export const markContentCompleted = async (enrollmentId, contentId, completionDa
   } catch (error) {
     console.error('Error marking content completed:', error);
     return { data: null, error };
-  }
-};
-
-/**
- * Very simple enrollment progress update - just increment percentage
- */
-const updateEnrollmentProgressVerySimple = async (enrollmentId) => {
-  try {
-    // Just increment progress by 10% for now to avoid complex queries
-    const { data: currentEnrollment } = await supabase
-      .from('enrollments')
-      .select('progress_percentage')
-      .eq('id', enrollmentId)
-      .single();
-
-    if (!currentEnrollment) return;
-
-    const newProgress = Math.min((currentEnrollment.progress_percentage || 0) + 10, 100);
-    const status = newProgress >= 100 ? 'completed' : 'active';
-
-    await supabase
-      .from('enrollments')
-      .update({
-        progress_percentage: newProgress,
-        // status field removed - not in schema
-        completed_at: newProgress >= 100 ? new Date().toISOString() : null
-      })
-      .eq('id', enrollmentId);
-
-    console.log('Enrollment progress updated simply:', { newProgress, status });
-  } catch (error) {
-    console.error('Error updating enrollment progress:', error);
   }
 };
 
@@ -343,7 +310,6 @@ export const updateEnrollmentProgress = async (enrollmentId) => {
     const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
     // Determine completion status
-    const status = progressPercentage >= 100 ? 'completed' : 'active';
     const completedAt = progressPercentage >= 100 ? new Date().toISOString() : null;
 
     // Update enrollment

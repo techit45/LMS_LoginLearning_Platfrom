@@ -29,6 +29,45 @@ export const AuthProvider = ({ children }) => {
   const { toast } = useToast();
 
   useEffect(() => {
+    const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+    let timeoutId;
+
+    const resetTimeout = () => {
+      clearTimeout(timeoutId);
+      if (user) {
+        timeoutId = setTimeout(() => {
+          toast({
+            title: "เซสชันหมดอายุ",
+            description: "คุณไม่ได้ใช้งานเป็นเวลานาน, กรุณาเข้าสู่ระบบอีกครั้ง",
+            variant: "destructive"
+          });
+          signOut();
+        }, SESSION_TIMEOUT);
+      }
+    };
+
+    const events = ['mousemove', 'keydown', 'scroll'];
+    
+    const addEventListeners = () => {
+      events.forEach(event => window.addEventListener(event, resetTimeout));
+    };
+
+    const removeEventListeners = () => {
+      events.forEach(event => window.removeEventListener(event, resetTimeout));
+    };
+
+    if (user) {
+      addEventListeners();
+      resetTimeout();
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+      removeEventListeners();
+    };
+  }, [user, toast]);
+
+  useEffect(() => {
     const initAuth = async () => {
       try {
         if (!supabase) {

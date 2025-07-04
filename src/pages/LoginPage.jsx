@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -7,22 +7,57 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { loginSchema } from '@/lib/validationSchemas';
+
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_TIME = 60 * 1000; // 1 minute
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState({});
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [retryAfter, setRetryAfter] = useState(0);
   const { signInWithPassword, signInWithGoogle, isSupabaseConnected } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  useEffect(() => {
+    let timer;
+    if (retryAfter > 0) {
+      timer = setInterval(() => {
+        setRetryAfter(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [retryAfter]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setValidationErrors({});
+
+    if (retryAfter > 0) {
+      setError(`คุณพยายามเข้าสู่ระบบผิดพลาดหลายครั้งเกินไป โปรดลองอีกครั้งใน ${retryAfter} วินาที`);
+      return;
+    }
+
+    // Validate input
+    const { error: validationError } = loginSchema.validate({ email, password }, { abortEarly: false });
+    if (validationError) {
+      const errors = {};
+      validationError.details.forEach(detail => {
+        errors[detail.path[0]] = detail.message;
+      });
+      setValidationErrors(errors);
+      return;
+    }
+
     if (!isSupabaseConnected) {
       toast({
-        title: "⚠️ ยังไม่ได้เชื่อมต่อ Supabase",
+        title: "⚠️ ยังไม่ได้��ชื่อมต่อ Supabase",
         description: "โปรดเชื่อมต่อ Supabase ก่อนทำการเข้าสู่ระบบ",
         variant: "destructive",
       });
@@ -34,8 +69,17 @@ const LoginPage = () => {
     if (signInError) {
       setError(signInError.message);
       toast({ title: "เข้าสู่ระบบไม่สำเร็จ", description: signInError.message, variant: "destructive" });
+      
+      const newAttemptCount = loginAttempts + 1;
+      setLoginAttempts(newAttemptCount);
+      if (newAttemptCount >= MAX_ATTEMPTS) {
+        const lockoutSeconds = LOCKOUT_TIME / 1000;
+        setRetryAfter(lockoutSeconds);
+        setError(`คุณพยายามเข้าสู่ระบบผิดพลาดหลายครั้งเกินไป โปรดลองอีกครั้งใน ${lockoutSeconds} วินาที`);
+      }
     } else {
-      toast({ title: "เข้าสู่ระบบสำเร็จ!" });
+      setLoginAttempts(0);
+      toast({ title: "เข้าสู่ระบบสำเร��จ!" });
       navigate('/dashboard');
     }
   };
@@ -140,6 +184,7 @@ const LoginPage = () => {
                 />
                 <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
               </div>
+              {validationErrors.email && <p className="text-red-400 text-xs mt-1 px-1">{validationErrors.email}</p>}
             </motion.div>
             <motion.div
               initial={{ x: -20, opacity: 0 }}
@@ -161,6 +206,7 @@ const LoginPage = () => {
                 />
                 <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
               </div>
+              {validationErrors.password && <p className="text-red-400 text-xs mt-1 px-1">{validationErrors.password}</p>}
             </motion.div>
           </div>
 

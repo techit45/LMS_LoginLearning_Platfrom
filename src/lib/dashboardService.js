@@ -87,15 +87,6 @@ export const getDashboardStats = async () => {
       console.warn('Could not fetch enrollments count:', enrollmentsError);
     }
 
-    const { count: activeEnrollments, error: activeEnrollmentsError } = await supabase
-      .from('enrollments')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_active', true);
-
-    if (activeEnrollmentsError) {
-      console.warn('Could not fetch active enrollments count:', activeEnrollmentsError);
-    }
-
     // Calculate growth rate (basic calculation)
     const userGrowthRate = totalUsers > 0 ? Math.round((newUsersWeek / totalUsers) * 100) : 0;
 

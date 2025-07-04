@@ -57,8 +57,6 @@ export const createCategory = async (categoryData) => {
 export const getCourseTopics = async (courseId, options = {}) => {
   try {
     const {
-      categoryId = null,
-      topicType = null,
       search = null,
       sortBy = 'last_reply_at',
       sortOrder = 'desc',
@@ -575,7 +573,7 @@ export const toggleLike = async (targetType, targetId) => {
       return { data: { liked: false }, error: null };
     } else {
       // Add like
-      const { data, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('forum_likes')
         .insert([{
           user_id: userId,
@@ -714,7 +712,7 @@ export const getUserSubscriptions = async (topicIds) => {
  */
 export const searchForum = async (courseId, searchQuery, options = {}) => {
   try {
-    const { page = 1, limit = 20 } = options;
+    const { limit = 20 } = options;
 
     // Search topics only for now - simpler approach
     const { data: topics, error: topicsError } = await supabase

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
+import SEOHead from '@/components/SEOHead';
 import { BookOpen, Users, Clock, Search, BookOpenText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,10 +70,13 @@ const CoursesPage = () => {
 
   return (
     <motion.div initial="initial" animate="in" exit="out" variants={pageVariants} transition={pageTransition} className="pt-24 pb-16 px-6">
-      <Helmet>
-        <title>คอร์สเรียนทั้งหมด - Login Learning</title>
-        <meta name="description" content="เลือกดูคอร์สเรียนวิศวกรรมที่หลากหลายของเรา ออกแบบมาเพื่อน้องๆ มัธยมโดยเฉพาะ" />
-      </Helmet>
+      <SEOHead
+        title="คอร์สเรียนทั้งหมด"
+        description="เลือกดูคอร์สเรียนวิศวกรรมที่หลากหลายของเรา ออกแบบมาเพื่อน้องๆ มัธยมโดยเฉพาะ พร้อมพี่เลี้ยงผู้เชี่ยวชาญและโครงงานจริง"
+        image="/images/og-courses.jpg"
+        url="/courses"
+        type="website"
+      />
 
       <section className="pt-8 mb-12">
         <div className="max-w-7xl mx-auto">

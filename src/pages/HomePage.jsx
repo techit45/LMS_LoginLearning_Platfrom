@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { BookOpen, Users, Award, Play, Star, Clock, ChevronRight, Zap, Target, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { useToast } from '@/hooks/use-toast.jsx';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFeaturedCourses } from '@/lib/courseService';
+import SEOHead from '@/components/SEOHead';
 
 const HomePage = () => {
   const { toast } = useToast();
@@ -79,10 +79,13 @@ const HomePage = () => {
 
   return (
     <motion.div initial="initial" animate="in" exit="out" variants={pageVariants} transition={pageTransition}>
-      <Helmet>
-        <title>หน้าแรก - Login Learning</title>
-        <meta name="description" content="ยินดีต้อนรับสู่ Login Learning แพลตฟอร์มเรียนรู้วิศวกรรมออนไลน์ครบวงจรสำหรับน้องมัธยม" />
-      </Helmet>
+      <SEOHead
+        title="แพลตฟอร์มเรียนรู้วิศวกรรมออนไลน์สำหรับน้องมัธยม"
+        description="Login Learning ช่วยน้องมัธยมค้นพบศักยภาพและความชอบด้านวิศวกรรม เรียนรู้จากโครงงานจริง พร้อมพี่เลี้ยงผู้เชี่ยวชาญ เพื่อการตัดสินใจเลือกเส้นทางอนาคตอย่างมั่นใจ"
+        image="/images/og-homepage.jpg"
+        url="/"
+        type="website"
+      />
 
       <div className="pt-24"> {/* Adjusted padding top to account for fixed navbar */}
         {/* Hero Section */}

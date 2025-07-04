@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 
-const AssignmentEditor = ({ contentId, initialAssignment, onSave }) => {
+const AssignmentEditor = ({ initialAssignment, onSave }) => {
   const { toast } = useToast();
   const [assignmentData, setAssignmentData] = useState({
     title: initialAssignment?.title || '',

@@ -186,7 +186,7 @@ export const getCourseVideoProgress = async (courseId) => {
 /**
  * Mark content as completed
  */
-export const markContentComplete = async (contentId, contentType = 'video') => {
+export const markContentComplete = async (contentId) => {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     

@@ -1,26 +1,17 @@
 
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
+import SEOHead from '@/components/SEOHead';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   LayoutDashboard, 
   BookOpen, 
   UserCircle, 
-  Settings, 
   Bell, 
   BarChart2, 
-  Plus, 
-  Edit3, 
-  FileText, 
-  Upload, 
-  Video, 
   Users,
   Zap,
   GraduationCap,
-  PlusCircle,
-  BookPlus,
-  UserPlus,
   Wrench
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -70,7 +61,7 @@ const DashboardPage = () => {
         { 
       name: "การจัดการโครงงาน", 
       icon: Wrench, 
-      color: "Yellow", 
+      color: "red", 
       description: "สร้าง แก้ไข และจัดการโครงงานทั้งหมด", 
       path: "/admin/projects",
       action: "manage-projects"
@@ -113,10 +104,13 @@ const DashboardPage = () => {
       variants={pageVariants} 
       className="container mx-auto px-4 py-12"
     >
-      <Helmet>
-        <title>แดชบอร์ด - Login Learning</title>
-        <meta name="description" content="แดชบอร์ดส่วนตัวของคุณใน Login Learning จัดการคอร์สเรียนและโปรไฟล์" />
-      </Helmet>
+      <SEOHead
+        title="แดชบอร์ด"
+        description="แดชบอร์ดส่วนตัวของคุณใน Login Learning จัดการคอร์สเรียน โปรไฟล์ และติดตามความคืบหน้าการเรียนรู้"
+        image="/images/og-dashboard.jpg"
+        url="/dashboard"
+        type="website"
+      />
       <div className="max-w-5xl mx-auto">
         <motion.div 
           initial={{ y: -30, opacity: 0 }}

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
+import SEOHead from '@/components/SEOHead';
 import { Users, Target, Zap, Briefcase, Lightbulb, MapPin, Phone, Mail, Users as UsersIcon } from 'lucide-react';
 
 const AboutPage = () => {
@@ -55,10 +55,13 @@ const AboutPage = () => {
 
   return (
     <motion.div initial="initial" animate="in" exit="out" variants={pageVariants} transition={pageTransition} className="pt-24 pb-16 px-6">
-      <Helmet>
-        <title>เกี่ยวกับเรา - Login Learning</title>
-        <meta name="description" content={`เรียนรู้เพิ่มเติมเกี่ยวกับ ${companyInfo.name} ภารกิจของเรา และทีมงานผู้เชี่ยวชาญที่พร้อมช่วยน้องๆ ค้นหาเส้นทางวิศวะ`} />
-      </Helmet>
+      <SEOHead
+        title="เกี่ยวกับเรา"
+        description={`เรียนรู้เพิ่มเติมเกี่ยวกับ ${companyInfo.name} ภารกิจของเรา สาขาทั้ง 4 แห่ง และทีมงานผู้เชี่ยวชาญด้านวิศวกรรมที่พร้อมช่วยน้องๆ ค้นหาเส้นทางอนาคต`}
+        image="/images/og-about.jpg"
+        url="/about"
+        type="website"
+      />
 
       {/* Hero Section */}
       <section className="text-center mb-16 pt-8">

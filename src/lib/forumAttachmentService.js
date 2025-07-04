@@ -58,7 +58,6 @@ export const validateFile = (file) => {
 const generateFilePath = (userId, targetType, targetId, fileName) => {
   const timestamp = Date.now();
   const randomId = Math.random().toString(36).substring(2);
-  const extension = fileName.split('.').pop();
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
   
   return `${userId}/${targetType}/${targetId}/${timestamp}_${randomId}_${safeName}`;

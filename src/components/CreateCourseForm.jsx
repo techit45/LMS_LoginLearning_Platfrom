@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { createCourse } from '@/lib/courseService';
 import { uploadCourseImage } from '@/lib/attachmentService';
+import { courseSchema } from '@/lib/validationSchemas';
 
 const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
   const { toast } = useToast();
@@ -52,42 +53,16 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
     }
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.title.trim()) {
-      newErrors.title = 'กรุณาระบุชื่อคอร์ส';
-    }
-
-    if (!formData.description.trim()) {
-      newErrors.description = 'กรุณาระบุคำอธิบายคอร์ส';
-    }
-
-    if (!formData.category.trim()) {
-      newErrors.category = 'กรุณาระบุหมวดหมู่';
-    }
-
-
-    if (formData.duration_hours <= 0) {
-      newErrors.duration_hours = 'ระยะเวลาต้องมากกว่า 0 ชั่วโมง';
-    }
-
-    if (formData.price < 0) {
-      newErrors.price = 'ราคาต้องไม่เป็นลบ';
-    }
-
-    if (formData.max_students <= 0) {
-      newErrors.max_students = 'จำนวนนักเรียนสูงสุดต้องมากกว่า 0';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    const { error: validationError } = courseSchema.validate(formData, { abortEarly: false });
+    if (validationError) {
+      const newErrors = {};
+      validationError.details.forEach(detail => {
+        newErrors[detail.path[0]] = detail.message;
+      });
+      setErrors(newErrors);
       toast({
         title: "ข้อมูลไม่ครบถ้วน",
         description: "กรุณาตรวจสอบข้อมูลที่กรอกและลองอีกครั้ง",
@@ -97,6 +72,7 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
     }
 
     setLoading(true);
+    setErrors({});
     
     try {
       let finalFormData = { ...formData };

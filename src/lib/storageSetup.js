@@ -185,7 +185,7 @@ export const setupStorage = async () => {
 
     // Test bucket access
     console.log('🔍 Testing bucket access...');
-    const { data: files, error: accessError } = await supabase.storage
+    const { error: accessError } = await supabase.storage
       .from('course-files')
       .list('', { limit: 1 });
 
@@ -201,7 +201,7 @@ export const setupStorage = async () => {
     const testFile = new Blob(['test'], { type: 'text/plain' });
     const testPath = 'test/setup-test.txt';
     
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('course-files')
       .upload(testPath, testFile, {
         cacheControl: '3600',

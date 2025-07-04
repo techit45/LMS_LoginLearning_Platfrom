@@ -61,6 +61,53 @@ const UniversalFileUpload = ({
     return <File className="w-5 h-5 text-slate-500" />;
   };
 
+  // Sanitize file name
+  const sanitizeFileName = (fileName) => {
+    // Remove potentially malicious characters and limit length
+    const sanitized = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    return sanitized.substring(0, 100); // Limit file name length
+  };
+
+  // Validate file signature (Magic Numbers)
+  const validateFileSignature = async (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = (e) => {
+        if (e.target.readyState === FileReader.DONE) {
+          const arr = new Uint8Array(e.target.result).subarray(0, 4);
+          let header = "";
+          for (let i = 0; i < arr.length; i++) {
+            header += arr[i].toString(16);
+          }
+          
+          const fileExt = file.name.split('.').pop()?.toLowerCase();
+          let isValid = false;
+          switch (fileExt) {
+            case 'jpg':
+            case 'jpeg':
+              isValid = header.startsWith('ffd8ff');
+              break;
+            case 'png':
+              isValid = header === '89504e47';
+              break;
+            case 'gif':
+              isValid = header === '47494638';
+              break;
+            case 'pdf':
+              isValid = header === '25504446';
+              break;
+            // Add more cases for other allowed file types
+            default:
+              isValid = true; // Default to true for types not checked
+          }
+          resolve(isValid);
+        }
+      };
+      reader.onerror = () => resolve(false);
+      reader.readAsArrayBuffer(file.slice(0, 4));
+    });
+  };
+
   // Format file size
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
@@ -92,7 +139,7 @@ const UniversalFileUpload = ({
   };
 
   // Handle file selection
-  const handleFileSelect = (selectedFiles) => {
+  const handleFileSelect = async (selectedFiles) => {
     if (!selectedFiles || selectedFiles.length === 0) return;
 
     const newFiles = Array.from(selectedFiles);
@@ -110,28 +157,35 @@ const UniversalFileUpload = ({
     const validFiles = [];
     const errors = [];
 
-    newFiles.forEach(file => {
+    for (const file of newFiles) {
       const validation = validateFile(file);
-      if (validation.isValid) {
-        // Create a simple incremental ID instead of timestamp
-        const fileId = `file_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-        validFiles.push({
-          id: fileId,
-          file,
-          name: file.name,
-          size: file.size,
-          type: file.name.split('.').pop()?.toLowerCase(),
-          mimeType: file.type,
-          isUploading: false,
-          isUploaded: false,
-          progress: 0,
-          url: null,
-          path: null
-        });
-      } else {
+      if (!validation.isValid) {
         errors.push(...validation.errors);
+        continue;
       }
-    });
+
+      const isSignatureValid = await validateFileSignature(file);
+      if (!isSignatureValid) {
+        errors.push(`ไฟล์ ${file.name} มีประ���ภทไฟล์ไม่ตรงกับเนื้อหา`);
+        continue;
+      }
+
+      const sanitizedName = sanitizeFileName(file.name);
+      const fileId = `file_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+      validFiles.push({
+        id: fileId,
+        file,
+        name: sanitizedName,
+        size: file.size,
+        type: file.name.split('.').pop()?.toLowerCase(),
+        mimeType: file.type,
+        isUploading: false,
+        isUploaded: false,
+        progress: 0,
+        url: null,
+        path: null
+      });
+    }
 
     if (errors.length > 0) {
       toast({

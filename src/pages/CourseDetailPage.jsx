@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { useParams, Link } from 'react-router-dom';
+import SEOHead from '@/components/SEOHead';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -277,10 +277,13 @@ const CourseDetailPage = () => {
       transition={pageTransition}
       className="container mx-auto px-4 py-12"
     >
-      <Helmet>
-        <title>{course.title} - Login Learning</title>
-        <meta name="description" content={course.description} />
-      </Helmet>
+      <SEOHead
+        title={course.title}
+        description={course.description || `เรียนรู้ ${course.title} กับ Login Learning พร้อมพี่เลี้ยงผู้เชี่ยวชาญและโครงงานจริง`}
+        image={course.image_url || course.thumbnail_url || "/images/og-course-default.jpg"}
+        url={`/courses/${courseId}`}
+        type="article"
+      />
 
       <div className="mb-8">
         <Link to="/courses" className="flex items-center text-emerald-700 hover:text-emerald-900 transition-colors">

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { signupSchema } from '@/lib/validationSchemas';
 
 const SignupPage = () => {
   const [email, setEmail] = useState('');
@@ -15,6 +16,7 @@ const SignupPage = () => {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState({});
   const { signUpWithPassword, signInWithGoogle, isSupabaseConnected } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -22,6 +24,25 @@ const SignupPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setValidationErrors({});
+
+    if (password !== confirmPassword) {
+      const newErrors = { confirmPassword: 'รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน' };
+      setValidationErrors(newErrors);
+      toast({ title: "ข้อผิดพลาด", description: newErrors.confirmPassword, variant: "destructive" });
+      return;
+    }
+
+    const { error: validationError } = signupSchema.validate({ fullName, email, password }, { abortEarly: false });
+    if (validationError) {
+      const errors = {};
+      validationError.details.forEach(detail => {
+        errors[detail.path[0]] = detail.message;
+      });
+      setValidationErrors(errors);
+      return;
+    }
+
     if (!isSupabaseConnected) {
       toast({
         title: "⚠️ ยังไม่ได้เชื่อมต่อ Supabase",
@@ -30,11 +51,7 @@ const SignupPage = () => {
       });
       return;
     }
-    if (password !== confirmPassword) {
-      setError('รหัสผ่านไม่ตรงกัน');
-      toast({ title: "ข้อผิดพลาด", description: "รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน", variant: "destructive" });
-      return;
-    }
+    
     setLoading(true);
     const { error: signUpError } = await signUpWithPassword(email, password, fullName);
     setLoading(false);
@@ -147,6 +164,7 @@ const SignupPage = () => {
                 />
                 <User className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
               </div>
+              {validationErrors.fullName && <p className="text-red-400 text-xs mt-1 px-1">{validationErrors.fullName}</p>}
             </motion.div>
             <motion.div
               initial={{ x: -20, opacity: 0 }}
@@ -168,6 +186,7 @@ const SignupPage = () => {
                 />
                 <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
               </div>
+              {validationErrors.email && <p className="text-red-400 text-xs mt-1 px-1">{validationErrors.email}</p>}
             </motion.div>
             <motion.div
               initial={{ x: -20, opacity: 0 }}
@@ -183,12 +202,13 @@ const SignupPage = () => {
                   autoComplete="new-password"
                   required
                   className="appearance-none relative block w-full px-3 py-3 border border-gray-300 bg-gray-50 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm rounded-md"
-                  placeholder="รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)"
+                  placeholder="รหัสผ่าน"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
                 <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
               </div>
+              {validationErrors.password && <p className="text-red-400 text-xs mt-1 px-1">{validationErrors.password}</p>}
             </motion.div>
             <motion.div
               initial={{ x: -20, opacity: 0 }}
@@ -210,6 +230,7 @@ const SignupPage = () => {
                 />
                 <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
               </div>
+              {validationErrors.confirmPassword && <p className="text-red-400 text-xs mt-1 px-1">{validationErrors.confirmPassword}</p>}
             </motion.div>
           </div>
 

@@ -83,23 +83,6 @@ export const createSubmission = async (assignmentId, submissionData) => {
       throw new Error('User not authenticated');
     }
 
-    // Get assignment details
-    const { data: assignment, error: assignmentError } = await supabase
-      .from('assignments')
-      .select('*')
-      .eq('id', assignmentId)
-      .single();
-
-    if (assignmentError) throw assignmentError;
-
-    // Check existing submissions
-    const { data: existingSubmissions, error: submissionsError } = await getUserSubmissions(assignmentId);
-    
-    if (submissionsError) throw submissionsError;
-
-    // Check if assignment has due date and is late
-    const isLate = assignment.due_date ? new Date() > new Date(assignment.due_date) : false;
-
     // Create new submission
     const { data, error } = await supabase
       .from('assignment_submissions')
