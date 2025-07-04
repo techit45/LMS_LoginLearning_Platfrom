@@ -76,10 +76,30 @@ export const getAllCourses = async () => {
 export const getCourseById = async (courseId) => {
   try {
     console.log('getCourseById: Fetching course with ID:', courseId);
+    // Use specific columns to avoid issues with missing columns
     const { data, error } = await supabase
       .from('courses')
       .select(`
-        *,
+        id,
+        title,
+        description,
+        short_description,
+        category,
+        level,
+        price,
+        duration_hours,
+        instructor_id,
+        thumbnail_url,
+        video_url,
+        learning_outcomes,
+        tools_used,
+        is_active,
+        is_featured,
+        max_students,
+        created_at,
+        updated_at,
+        instructor_name,
+        instructor_email,
         course_content(*)
       `)
       .eq('id', courseId)
@@ -353,10 +373,25 @@ export const getAllCoursesAdmin = async () => {
       throw new Error('Supabase client not initialized');
     }
 
-    // Remove enrollments count to avoid RLS issues
+    // Use specific columns to avoid issues with missing columns
     const { data, error } = await supabase
       .from('courses')
-      .select('*')
+      .select(`
+        id,
+        title,
+        description,
+        category,
+        level,
+        price,
+        duration_hours,
+        thumbnail_url,
+        is_active,
+        is_featured,
+        instructor_id,
+        instructor_name,
+        created_at,
+        updated_at
+      `)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -450,9 +485,22 @@ export const deleteCourseContent = async (contentId) => {
  */
 export const getCourseContent = async (courseId) => {
   try {
+    // Use specific columns for course_content to avoid issues
     const { data, error } = await supabase
       .from('course_content')
-      .select('*')
+      .select(`
+        id,
+        course_id,
+        title,
+        description,
+        content_type,
+        content_url,
+        order_index,
+        duration_minutes,
+        is_free,
+        created_at,
+        updated_at
+      `)
       .eq('course_id', courseId)
       .order('order_index', { ascending: true });
 
@@ -508,13 +556,24 @@ export const getFeaturedCourses = async () => {
       if (!data || data.length === 0) {
         console.log('No featured courses found, getting first 6 active courses');
         
+        // Simplified fallback query without joins to avoid 400 errors
         const fallbackQueryPromise = supabase
           .from('courses')
           .select(`
-            *,
-            user_profiles!courses_instructor_id_fkey(
-              full_name
-            )
+            id,
+            title,
+            description,
+            category,
+            level,
+            price,
+            duration_hours,
+            thumbnail_url,
+            is_active,
+            is_featured,
+            instructor_id,
+            instructor_name,
+            created_at,
+            updated_at
           `)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
@@ -546,7 +605,7 @@ export const getFeaturedCourses = async () => {
 
           return {
             ...course,
-            instructor_name: course.user_profiles?.full_name || 'ไม่ระบุ',
+            instructor_name: course.instructor_name || 'ไม่ระบุ',
             enrolled_count: 0, // Will be updated asynchronously
             rating: 4.5 + Math.random() * 0.5, // Mock rating for now
           };
