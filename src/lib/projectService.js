@@ -211,9 +211,11 @@ export const getFeaturedProjects = async () => {
     return { data: projectsWithStats, error: null };
   } catch (error) {
     console.error('Error fetching featured projects:', error);
-    
-    // Return mock featured projects on error
-    const mockProjects = [
+  }
+  
+  // Always return mock data for development
+  console.log('Returning mock featured projects for development');
+  const mockProjects = [
       {
         id: 'mock-proj-1',
         title: 'ระบบรดน้ำต้นไม้อัตโนมัติด้วย IoT',
