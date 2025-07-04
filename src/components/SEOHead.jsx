@@ -9,10 +9,11 @@ const SEOHead = ({
   type = 'website',
   siteName = 'Login Learning',
   locale = 'th_TH',
-  twitterCard = 'summary_large_image'
+  twitterCard = 'summary_large_image',
+  useProfileImage = false // ใหม่: เลือกใช้ ProfileV3.png แทน Logo.png
 }) => {
-  const baseUrl = 'https://loginlearning.com';
-  const defaultImage = '/images/og-default.jpg';
+  const baseUrl = 'https://login-platform.netlify.app';
+  const defaultImage = useProfileImage ? '/images/ProfileV3.png' : '/Logo.png';
   
   const fullUrl = url ? `${baseUrl}${url}` : baseUrl;
   const ogImage = image ? `${baseUrl}${image}` : `${baseUrl}${defaultImage}`;

@@ -82,7 +82,7 @@ const HomePage = () => {
       <SEOHead
         title="แพลตฟอร์มเรียนรู้วิศวกรรมออนไลน์สำหรับน้องมัธยม"
         description="Login Learning ช่วยน้องมัธยมค้นพบศักยภาพและความชอบด้านวิศวกรรม เรียนรู้จากโครงงานจริง พร้อมพี่เลี้ยงผู้เชี่ยวชาญ เพื่อการตัดสินใจเลือกเส้นทางอนาคตอย่างมั่นใจ"
-        image="/images/og-homepage.jpg"
+        useProfileImage={true}
         url="/"
         type="website"
       />
