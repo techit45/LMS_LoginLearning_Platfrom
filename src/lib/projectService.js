@@ -266,8 +266,7 @@ export const getFeaturedProjects = async () => {
       }
     ];
 
-    return { data: mockProjects, error: null };
-  }
+  return { data: mockProjects, error: null };
 };
 
 
