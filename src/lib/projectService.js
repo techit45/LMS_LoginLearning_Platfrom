@@ -161,6 +161,8 @@ export const getFeaturedProjects = async () => {
 
       if (error) {
         console.error('Featured projects database error:', error);
+        console.error('🚨 This is likely due to missing environment variables in production');
+        console.error('Check NETLIFY_SETUP.md for configuration instructions');
         throw error;
       }
 

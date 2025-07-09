@@ -601,6 +601,8 @@ export const getFeaturedCourses = async () => {
 
         if (error) {
           console.error('Featured courses database error:', error);
+          console.error('🚨 This is likely due to missing environment variables in production');
+          console.error('Check NETLIFY_SETUP.md for configuration instructions');
           throw error;
         }
 
