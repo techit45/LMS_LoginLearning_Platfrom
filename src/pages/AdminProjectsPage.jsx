@@ -17,7 +17,8 @@ import {
   Github,
   ArrowLeft,
   Calendar,
-  Tag
+  Tag,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,9 +28,10 @@ import {
   toggleProjectApproval, 
   toggleProjectFeatured,
   deleteProject,
+  permanentlyDeleteProject,
   getProjectStats 
 } from '@/lib/projectService';
-import CreateProjectForm from '@/components/CreateProjectForm';
+import ProjectForm from '@/components/ProjectForm';
 
 const AdminProjectsPage = () => {
   const { toast } = useToast();
@@ -40,6 +42,8 @@ const AdminProjectsPage = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState(null);
 
   const loadProjects = useCallback(async () => {
     setLoading(true);
@@ -157,17 +161,69 @@ const AdminProjectsPage = () => {
     }
   };
 
+  const handlePermanentDeleteProject = async (projectId, projectTitle) => {
+    // eslint-disable-next-line no-restricted-globals
+    const firstConfirm = confirm(`⚠️ คำเตือน: คุณต้องการลบโครงงาน "${projectTitle}" ถาวรหรือไม่?\n\n⚠️ การลบถาวรจะลบโครงงานและข้อมูลที่เกี่ยวข้องทั้งหมดออกจากระบบ\n⚠️ ไม่สามารถกู้คืนได้อีก\n\nคลิก OK เพื่อดำเนินการต่อ`);
+    
+    if (!firstConfirm) {
+      return;
+    }
+
+    // Second confirmation with typing requirement
+    // eslint-disable-next-line no-restricted-globals
+    const confirmText = prompt(`เพื่อยืนยันการลบถาวร กรุณาพิมพ์ "DELETE" (ตัวพิมพ์ใหญ่) ในช่องด้านล่าง:\n\nโครงงาน: "${projectTitle}"\n⚠️ การลบนี้ไม่สามารถกู้คืนได้`);
+    
+    if (confirmText !== 'DELETE') {
+      toast({
+        title: "ยกเลิกการลบ",
+        description: "การลบถาวรถูกยกเลิก",
+        variant: "default"
+      });
+      return;
+    }
+
+    const { error } = await permanentlyDeleteProject(projectId);
+    if (error) {
+      toast({
+        title: "ไม่สามารถลบโครงงานถาวรได้",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "ลบโครงงานถาวรสำเร็จ",
+        description: `โครงงาน "${projectTitle}" ถูกลบออกจากระบบถาวรแล้ว`,
+        variant: "default"
+      });
+      loadProjects();
+      loadStats();
+    }
+  };
+
   const handleProjectCreated = () => {
     loadProjects();
     loadStats();
   };
 
-  const handleFeatureNotImplemented = (featureName) => {
+  const handleEditProject = (project) => {
+    setEditingProjectId(project.id);
+    setShowEditForm(true);
+  };
+
+  const handleEditSuccess = () => {
+    setShowEditForm(false);
+    setEditingProjectId(null);
+    loadProjects(); // Refresh the projects list
     toast({
-      title: "ฟีเจอร์ยังไม่พร้อมใช้งาน",
-      description: `${featureName} ยังอยู่ในระหว่างการพัฒนา`,
-      variant: "info"
+      title: "อัปเดตโครงงานสำเร็จ",
+      description: "ข้อมูลโครงงานได้รับการอัปเดตแล้ว",
+      variant: "default"
     });
+  };
+
+  const handleEditClose = () => {
+    setShowEditForm(false);
+    setEditingProjectId(null);
   };
 
   const formatDate = (dateString) => {
@@ -440,7 +496,7 @@ const AdminProjectsPage = () => {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={() => handleFeatureNotImplemented(`แก้ไขโครงงาน ${project.title}`)} 
+                        onClick={() => handleEditProject(project)} 
                         className="text-blue-400 hover:bg-blue-500/20"
                         title="แก้ไขโครงงาน"
                       >
@@ -463,7 +519,16 @@ const AdminProjectsPage = () => {
                         size="icon" 
                         onClick={() => handleDeleteProject(project.id, project.title)}
                         className="text-red-400 hover:bg-red-500/20"
-                        title="ลบโครงงาน"
+                        title="ลบโครงงาน (ชั่วคราว)"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handlePermanentDeleteProject(project.id, project.title)}
+                        className="text-red-600 hover:bg-red-600/20 border border-red-600/30"
+                        title="ลบโครงงานถาวร (ไม่สามารถกู้คืนได้)"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -483,11 +548,20 @@ const AdminProjectsPage = () => {
         )}
       </div>
 
-      {/* Create Project Form Modal */}
-      <CreateProjectForm
+      {/* Unified Project Form Modal */}
+      <ProjectForm
         isOpen={showCreateForm}
         onClose={() => setShowCreateForm(false)}
         onSuccess={handleProjectCreated}
+        mode="create"
+      />
+
+      <ProjectForm
+        isOpen={showEditForm}
+        onClose={handleEditClose}
+        onSuccess={handleEditSuccess}
+        projectId={editingProjectId}
+        mode="edit"
       />
     </motion.div>
   );

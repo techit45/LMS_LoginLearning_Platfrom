@@ -215,7 +215,7 @@ const CourseLearningPage = () => {
     // Check if content is accessible
     const contentIndex = course.content.findIndex(c => c.id === content.id);
     if (isContentLocked(content, contentIndex)) {
-      const accessInfo = contentAccessibility[content.id];
+      const accessInfo = contentAccessibility && contentAccessibility[content.id];
       const lockMessage = accessInfo?.reason || "กรุณาผ่านเนื้อหาก่อนหน้านี้ก่อน";
       const blockingContent = accessInfo?.blockingContent;
       
@@ -438,7 +438,7 @@ const CourseLearningPage = () => {
 
   const isContentLocked = (content, index) => {
     // Use the new accessibility data from content lock service
-    if (contentAccessibility.hasOwnProperty(content.id)) {
+    if (contentAccessibility && typeof contentAccessibility === 'object' && contentAccessibility.hasOwnProperty(content.id)) {
       const accessInfo = contentAccessibility[content.id];
       console.log('🔒 Content lock check:', { 
         contentId: content.id, 
@@ -650,9 +650,9 @@ const CourseLearningPage = () => {
                                     <span className="font-medium">เนื้อหาถูกล็อค</span>
                                   </div>
                                   <div className="mt-1 text-gray-600">
-                                    {contentAccessibility[content.id]?.reason || 'กรุณาผ่านเนื้อหาก่อนหน้าก่อน'}
+                                    {(contentAccessibility && contentAccessibility[content.id]?.reason) || 'กรุณาผ่านเนื้อหาก่อนหน้าก่อน'}
                                   </div>
-                                  {contentAccessibility[content.id]?.blockingContent && (
+                                  {contentAccessibility && contentAccessibility[content.id]?.blockingContent && (
                                     <div className="mt-1 text-blue-600">
                                       ต้องผ่าน: "{contentAccessibility[content.id].blockingContent.title}"
                                     </div>

@@ -54,9 +54,13 @@ const getYouTubeEmbedUrl = (videoId, autoplay = false) => {
     cc_load_policy: '0', // Hide captions by default
     disablekb: '1', // Disable keyboard controls
     fs: '1', // Allow fullscreen
-    playsinline: '1' // Play inline on mobile
+    playsinline: '1', // Play inline on mobile
+    controls: '1', // Show controls
+    showinfo: '0' // Hide video title and uploader info
   });
-  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+  
+  // Use youtube-nocookie.com for privacy-enhanced mode (reduces tracking)
+  return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
 };
 
 const VideoPlayer = ({ 

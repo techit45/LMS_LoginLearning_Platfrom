@@ -26,7 +26,7 @@ const ImageGallery = ({
         navigation
         thumbs={{ swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null }}
         grabCursor={true}
-        loop={true}
+        loop={images.length > 1}
         className="main-gallery"
       >
         {images.map((image, index) => (

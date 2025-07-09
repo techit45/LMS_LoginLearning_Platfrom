@@ -40,9 +40,8 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
     instructor_email: '',
     max_students: 50,
     is_active: true,
-    image_url: '',
-    learning_outcomes: [''], // สิ่งที่ได้รับ
-    tools_required: [''] // เครื่องมือที่ใช้
+    is_featured: false,
+    thumbnail_url: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -69,25 +68,6 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
         throw error;
       }
 
-      // Parse existing learning outcomes and tools if they exist
-      let learningOutcomes = [''];
-      let toolsRequired = [''];
-
-      try {
-        if (data.learning_outcomes) {
-          learningOutcomes = typeof data.learning_outcomes === 'string' 
-            ? JSON.parse(data.learning_outcomes) 
-            : data.learning_outcomes;
-        }
-        if (data.tools_required) {
-          toolsRequired = typeof data.tools_required === 'string' 
-            ? JSON.parse(data.tools_required) 
-            : data.tools_required;
-        }
-      } catch (parseError) {
-        console.warn('Error parsing course data:', parseError);
-      }
-
       setFormData({
         title: data.title || '',
         description: data.description || '',
@@ -99,28 +79,21 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
         instructor_email: data.instructor_email || '',
         max_students: data.max_students || 50,
         is_active: data.is_active !== undefined ? data.is_active : true,
-        image_url: data.image_url || '',
-        learning_outcomes: learningOutcomes,
-        tools_required: toolsRequired
+        is_featured: data.is_featured !== undefined ? data.is_featured : false,
+        thumbnail_url: data.thumbnail_url || ''
       });
 
       // Set image preview if exists
-      if (data.image_url) {
-        setImagePreview(data.image_url);
+      if (data.thumbnail_url) {
+        setImagePreview(data.thumbnail_url);
       }
 
       // Load course images
       try {
         const { images, coverImage, error: imagesError } = await getCourseImages(courseId);
         if (!imagesError && images) {
-          const formattedImages = images.map((url, index) => ({
-            id: `existing-${index}`,
-            url: url,
-            filename: `image-${index + 1}.jpg`,
-            size: 0,
-            uploaded_at: new Date().toISOString()
-          }));
-          setCourseImages(formattedImages);
+          // Images from getCourseImages are already properly formatted objects
+          setCourseImages(images);
         }
       } catch (imagesError) {
         console.warn('Could not load course images:', imagesError);
@@ -151,49 +124,6 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
     }
   };
 
-  // Handle learning outcomes
-  const addLearningOutcome = () => {
-    setFormData(prev => ({
-      ...prev,
-      learning_outcomes: [...prev.learning_outcomes, '']
-    }));
-  };
-
-  const removeLearningOutcome = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      learning_outcomes: prev.learning_outcomes.filter((_, i) => i !== index)
-    }));
-  };
-
-  const updateLearningOutcome = (index, value) => {
-    setFormData(prev => ({
-      ...prev,
-      learning_outcomes: prev.learning_outcomes.map((item, i) => i === index ? value : item)
-    }));
-  };
-
-  // Handle tools required
-  const addTool = () => {
-    setFormData(prev => ({
-      ...prev,
-      tools_required: [...prev.tools_required, '']
-    }));
-  };
-
-  const removeTool = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      tools_required: prev.tools_required.filter((_, i) => i !== index)
-    }));
-  };
-
-  const updateTool = (index, value) => {
-    setFormData(prev => ({
-      ...prev,
-      tools_required: prev.tools_required.map((item, i) => i === index ? value : item)
-    }));
-  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -238,7 +168,7 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
     if (courseId) {
       try {
         const imageUrls = newImages.map(img => img.url);
-        await updateCourseImages(courseId, imageUrls, formData.image_url);
+        await updateCourseImages(courseId, imageUrls, formData.thumbnail_url);
       } catch (error) {
         console.error('Error updating course images:', error);
         toast({
@@ -252,14 +182,27 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
 
   // Handle cover image change from gallery
   const handleCoverImageChange = async (newCoverUrl) => {
-    setFormData(prev => ({ ...prev, image_url: newCoverUrl }));
+    console.log('🖼️ Setting new cover image:', newCoverUrl);
+    setFormData(prev => ({ ...prev, thumbnail_url: newCoverUrl }));
     setImagePreview(newCoverUrl);
     
     // Update course cover image in database
     if (courseId) {
       try {
         const imageUrls = courseImages.map(img => img.url);
+        console.log('📊 Updating course images in database:', { courseId, imageUrls, newCoverUrl });
         await updateCourseImages(courseId, imageUrls, newCoverUrl);
+        console.log('✅ Cover image updated successfully');
+        
+        toast({
+          title: "อัปเดตรูปหน้าปกสำเร็จ",
+          description: "รูปหน้าปกของคอร์สถูกอัปเดตแล้ว"
+        });
+        
+        // Force component re-render by refreshing course data
+        if (onSuccess) {
+          onSuccess();
+        }
       } catch (error) {
         console.error('Error updating cover image:', error);
         toast({
@@ -297,13 +240,21 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
           throw new Error(`ไม่สามารถอัปโหลดรูปหน้าปกได้: ${uploadError.message}`);
         }
         
-        finalFormData.image_url = uploadData.publicUrl;
+        finalFormData.thumbnail_url = uploadData.publicUrl;
         setUploadingImage(false);
       }
 
-      // Filter out empty learning outcomes and tools
-      finalFormData.learning_outcomes = finalFormData.learning_outcomes.filter(item => item.trim() !== '');
-      finalFormData.tools_required = finalFormData.tools_required.filter(item => item.trim() !== '');
+      // Update thumbnail_url from gallery cover image if gallery images exist
+      if (courseImages.length > 0) {
+        // Use the current thumbnail_url if it's set, or first gallery image as fallback
+        if (!finalFormData.thumbnail_url && courseImages.length > 0) {
+          finalFormData.thumbnail_url = courseImages[0].url;
+        }
+      }
+
+      // Remove any fields that don't exist in the database schema
+      delete finalFormData.learning_outcomes;
+      delete finalFormData.tools_required;
       
       const { data, error } = await updateCourse(courseId, finalFormData);
       
@@ -368,7 +319,7 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
 
   const handleRemoveImage = () => {
     setCoverImage(null);
-    setImagePreview(formData.image_url || null);
+    setImagePreview(formData.thumbnail_url || null);
     // Reset file input
     const fileInput = document.getElementById('edit-cover-image');
     if (fileInput) {
@@ -456,35 +407,6 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
         <p className="text-xs text-slate-500 mt-4 text-center">รับประกันความพึงพอใจ คืนเงินภายใน 7 วัน</p>
       </div>
 
-      {/* Learning Outcomes */}
-      <div className="bg-white p-6 rounded-xl shadow-lg border">
-        <h3 className="text-xl font-semibold text-emerald-900 mb-3">สิ่งที่คุณจะได้รับ</h3>
-        <ul className="space-y-2 text-emerald-800 text-sm list-disc list-inside">
-          {formData.learning_outcomes && formData.learning_outcomes.length > 0 ? (
-            formData.learning_outcomes
-              .filter(outcome => outcome.trim() !== '')
-              .map((outcome, index) => (
-                <li key={index}>{outcome}</li>
-              ))
-          ) : (
-            <li className="text-gray-400">ยังไม่ได้ระบุสิ่งที่จะได้รับ</li>
-          )}
-        </ul>
-      </div>
-
-      {/* Tools Required */}
-      {formData.tools_required && formData.tools_required.some(tool => tool.trim() !== '') && (
-        <div className="bg-white p-6 rounded-xl shadow-lg border">
-          <h3 className="text-xl font-semibold text-emerald-900 mb-3">เครื่องมือที่ใช้</h3>
-          <ul className="space-y-2 text-emerald-800 text-sm list-disc list-inside">
-            {formData.tools_required
-              .filter(tool => tool.trim() !== '')
-              .map((tool, index) => (
-                <li key={index}>{tool}</li>
-              ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 
@@ -602,89 +524,6 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
                 )}
               </div>
 
-              {/* Learning Outcomes */}
-              <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-6 rounded-xl border border-purple-200">
-                <label className="block text-gray-800 font-semibold mb-4 flex items-center">
-                  <div className="bg-purple-500 p-2 rounded-lg mr-3">
-                    <Award className="w-4 h-4 text-white" />
-                  </div>
-                  สิ่งที่จะได้รับจากคอร์ส
-                </label>
-                <div className="space-y-3">
-                  {formData.learning_outcomes.map((outcome, index) => (
-                    <div key={index} className="flex items-center space-x-3">
-                      <Input
-                        value={outcome}
-                        onChange={(e) => updateLearningOutcome(index, e.target.value)}
-                        placeholder="เช่น ความรู้และทักษะทางวิศวกรรมที่แข็งแกร่ง"
-                        className="bg-white border-gray-300 text-gray-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-xl shadow-sm"
-                      />
-                      {formData.learning_outcomes.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeLearningOutcome(index)}
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addLearningOutcome}
-                    className="w-full border-dashed border-purple-300 text-purple-600 hover:bg-purple-50 rounded-xl"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    เพิ่มสิ่งที่ได้รับ
-                  </Button>
-                </div>
-              </div>
-
-              {/* Tools Required */}
-              <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-6 rounded-xl border border-orange-200">
-                <label className="block text-gray-800 font-semibold mb-4 flex items-center">
-                  <div className="bg-orange-500 p-2 rounded-lg mr-3">
-                    <Settings className="w-4 h-4 text-white" />
-                  </div>
-                  เครื่องมือที่ใช้
-                </label>
-                <div className="space-y-3">
-                  {formData.tools_required.map((tool, index) => (
-                    <div key={index} className="flex items-center space-x-3">
-                      <Input
-                        value={tool}
-                        onChange={(e) => updateTool(index, e.target.value)}
-                        placeholder="เช่น Arduino IDE, Breadboard, Jumper wires"
-                        className="bg-white border-gray-300 text-gray-800 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 rounded-xl shadow-sm"
-                      />
-                      {formData.tools_required.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeTool(index)}
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addTool}
-                    className="w-full border-dashed border-orange-300 text-orange-600 hover:bg-orange-50 rounded-xl"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    เพิ่มเครื่องมือ
-                  </Button>
-                </div>
-              </div>
 
               {/* Category and Difficulty */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -981,7 +820,7 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
                     courseId={courseId}
                     existingImages={courseImages}
                     onImagesChange={handleImagesChange}
-                    currentCoverImage={formData.image_url}
+                    currentCoverImage={formData.thumbnail_url}
                     onCoverChange={handleCoverImageChange}
                     maxImages={8}
                     allowCoverSelection={true}

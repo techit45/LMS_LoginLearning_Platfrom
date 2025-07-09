@@ -369,28 +369,6 @@ const HomePage = () => {
             </div>
           </div>
         </section>
-
-        {/* Testimonials Section */}
-        <section className="py-20 px-6 bg-gray-50">
-          <div className="max-w-7xl mx-auto">
-            <motion.div
-              initial={{ y: 50, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-              className="text-center mb-16"
-            >
-              <h2 className="text-4xl lg:text-5xl font-bold text-black mb-6">
-                เสียงตอบรับจากนักเรียนของเรา
-              </h2>
-              <p className="text-xl text-black max-w-3xl mx-auto">
-                ความสำเร็จของน้องๆ คือแรงบันดาลใจของเรา
-              </p>
-            </motion.div>
-            <TestimonialSlider testimonials={testimonials} />
-          </div>
-        </section>
-
         {/* Features Section */}
         <section className="py-20 px-6">
           <div className="max-w-7xl mx-auto">

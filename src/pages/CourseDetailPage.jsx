@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft, BookOpen, Clock, Users, Award, ShoppingCart, Star, UserCheck, AlertCircle, MessageSquare, Plus } from 'lucide-react';
-import { getCourseById } from '@/lib/courseService';
+import { getCourseById, getCourseImages } from '@/lib/courseService';
 import { enrollInCourse, isUserEnrolled } from '@/lib/enrollmentService';
 import { useAuth } from '@/contexts/AuthContext';
 import AttachmentViewer from '@/components/AttachmentViewer';
@@ -35,6 +35,7 @@ const CourseDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [enrollmentStatus, setEnrollmentStatus] = useState({ isEnrolled: false, status: null });
   const [enrolling, setEnrolling] = useState(false);
+  const [courseImages, setCourseImages] = useState([]);
   
   // Forum states  
   const [activeTab, setActiveTab] = useState('forum');
@@ -43,12 +44,41 @@ const CourseDetailPage = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [forumLoading, setForumLoading] = useState(false);
 
-  const courseImages = course ? [
-    { src: course.image_url || "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8", alt: course.title },
-    { src: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97", alt: "Student learning code" },
-    { src: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158", alt: "Engineering tools" },
-    { src: "https://images.unsplash.com/photo-1618477388954-7852f32655ec", alt: "Abstract technology background" }
-  ] : [];
+  // courseImages state is defined above
+
+  const loadCourseImages = useCallback(async (courseId, courseData) => {
+    try {
+      console.log('Loading course images for course:', courseId);
+      const { images, error } = await getCourseImages(courseId);
+      if (error) {
+        console.error('Error loading course images:', error);
+        // Fallback to default images if no gallery images
+        setCourseImages([
+          { src: courseData?.thumbnail_url || "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8", alt: courseData?.title || "Course image" }
+        ]);
+      } else if (images && images.length > 0) {
+        // Convert database images to gallery format
+        const galleryImages = images.map((img, index) => ({
+          src: img.url,
+          alt: `${courseData?.title || 'Course'} - รูปที่ ${index + 1}`
+        }));
+        console.log('Course images loaded:', galleryImages);
+        setCourseImages(galleryImages);
+      } else {
+        // No images found, use thumbnail as fallback
+        console.log('No gallery images found, using thumbnail as fallback');
+        setCourseImages([
+          { src: courseData?.thumbnail_url || "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8", alt: courseData?.title || "Course image" }
+        ]);
+      }
+    } catch (error) {
+      console.error('Exception loading course images:', error);
+      // Fallback to default image
+      setCourseImages([
+        { src: courseData?.thumbnail_url || "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8", alt: courseData?.title || "Course image" }
+      ]);
+    }
+  }, []);
 
   const loadCourse = useCallback(async () => {
     setLoading(true);
@@ -64,8 +94,33 @@ const CourseDetailPage = () => {
       });
     } else {
       setCourse(data);
+      // Load course images after loading course data
+      await loadCourseImages(courseId, data);
     }
     setLoading(false);
+  }, [courseId, toast, loadCourseImages]);
+
+  const loadForumTopics = useCallback(async () => {
+    try {
+      setForumLoading(true);
+      const { data, error } = await getCourseTopics(courseId, {
+        sortBy: 'last_reply_at',
+        sortOrder: 'desc',
+        limit: 50
+      });
+      
+      if (error) throw error;
+      setForumTopics(data || []);
+    } catch (error) {
+      console.error('Error loading forum topics:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถโหลดหัวข้อฟอรัมได้",
+        variant: "destructive"
+      });
+    } finally {
+      setForumLoading(false);
+    }
   }, [courseId, toast]);
 
   const checkEnrollmentStatus = useCallback(async () => {
@@ -92,7 +147,7 @@ const CourseDetailPage = () => {
     if (activeTab === 'forum' && enrollmentStatus.isEnrolled) {
       loadForumTopics();
     }
-  }, [activeTab, enrollmentStatus.isEnrolled]);
+  }, [activeTab, enrollmentStatus.isEnrolled, loadForumTopics]);
 
   const handleEnroll = async () => {
     if (!user) {
@@ -133,29 +188,6 @@ const CourseDetailPage = () => {
     }
     
     setEnrolling(false);
-  };
-
-  const loadForumTopics = async () => {
-    try {
-      setForumLoading(true);
-      const { data, error } = await getCourseTopics(courseId, {
-        sortBy: 'last_reply_at',
-        sortOrder: 'desc',
-        limit: 50
-      });
-      
-      if (error) throw error;
-      setForumTopics(data || []);
-    } catch (error) {
-      console.error('Error loading forum topics:', error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถโหลดหัวข้อฟอรัมได้",
-        variant: "destructive"
-      });
-    } finally {
-      setForumLoading(false);
-    }
   };
 
   const handleTopicClick = (topicId) => {
@@ -288,7 +320,7 @@ const CourseDetailPage = () => {
       <SEOHead
         title={course.title}
         description={course.description || `เรียนรู้ ${course.title} กับ Login Learning พร้อมพี่เลี้ยงผู้เชี่ยวชาญและโครงงานจริง`}
-        image={course.image_url || course.thumbnail_url || "/images/og-course-default.jpg"}
+        image={course.thumbnail_url || "/images/og-course-default.jpg"}
         url={`/courses/${courseId}`}
         type="article"
       />

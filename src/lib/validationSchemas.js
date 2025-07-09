@@ -16,7 +16,7 @@ export const loginSchema = Joi.object({
 export const signupSchema = Joi.object({
   fullName: Joi.string().trim().min(3).required().messages({
     'string.empty': 'กรุณากรอกชื่อ-นามสกุล',
-    'string.min': 'ชื่อต้องมีอย่างน้อย 3 ตัว���ักษร',
+    'string.min': 'ชื่อต้องมีอย่างน้อย 3 ตัวอักษร',
     'any.required': 'กรุณากรอกชื่อ-นามสกุล'
   }),
   email: Joi.string().email({ tlds: { allow: false } }).required().messages({
@@ -50,6 +50,34 @@ export const courseSchema = Joi.object({
   category: Joi.string().required().messages({
     'string.empty': 'กรุณาเลือกหมวดหมู่',
     'any.required': 'กรุณาเลือกหมวดหมู่'
+  }),
+  level: Joi.string().valid('beginner', 'intermediate', 'advanced').default('beginner').messages({
+    'any.only': 'ระดับความยากต้องเป็น beginner, intermediate, หรือ advanced'
+  }),
+  duration_hours: Joi.number().integer().min(1).required().messages({
+    'number.base': 'ระยะเวลาต้องเป็นตัวเลข',
+    'number.integer': 'ระยะเวลาต้องเป็นจำนวนเต็ม',
+    'number.min': 'ระยะเวลาต้องมากกว่า 0 ชั่วโมง',
+    'any.required': 'กรุณากรอกระยะเวลาของคอร์ส'
+  }),
+  price: Joi.number().min(0).default(0).messages({
+    'number.base': 'ราคาต้องเป็นตัวเลข',
+    'number.min': 'ราคาต้องไม่น้อยกว่า 0'
+  }),
+  max_students: Joi.number().integer().min(1).required().messages({
+    'number.base': 'จำนวนนักเรียนต้องเป็นตัวเลข',
+    'number.integer': 'จำนวนนักเรียนต้องเป็นจำนวนเต็ม',
+    'number.min': 'จำนวนนักเรียนต้องมากกว่า 0',
+    'any.required': 'กรุณากรอกจำนวนนักเรียนสูงสุด'
+  }),
+  is_active: Joi.boolean().default(true),
+  is_featured: Joi.boolean().default(false),
+  thumbnail_url: Joi.string().uri({ allowRelative: true }).allow('', null).messages({
+    'string.uri': 'URL รูปภาพไม่ถูกต้อง'
+  }),
+  instructor_name: Joi.string().allow('', null),
+  instructor_email: Joi.string().email({ tlds: { allow: false } }).allow('', null).messages({
+    'string.email': 'รูปแบบอีเมลผู้สอนไม่ถูกต้อง'
   })
 });
 
@@ -64,9 +92,20 @@ export const projectSchema = Joi.object({
     'string.min': 'คำอธิบายต้องมีอย่างน้อย 20 ตัวอักษร',
     'any.required': 'กรุณากรอกคำอธิบายโครงงาน'
   }),
-  project_url: Joi.string().trim().uri().required().messages({
-    'string.empty': 'กรุณากรอกลิงก์โครงงาน',
-    'string.uri': 'รูปแบบลิงก์ไม่ถูกต้���ง',
-    'any.required': 'กรุณากรอกลิงก์โครงงาน'
-  })
+  category: Joi.string().required().messages({
+    'string.empty': 'กรุณาเลือกหมวดหมู่',
+    'any.required': 'กรุณาเลือกหมวดหมู่'
+  }),
+  short_description: Joi.string().allow('', null),
+  difficulty_level: Joi.string().valid('beginner', 'intermediate', 'advanced').default('beginner'),
+  demo_url: Joi.string().trim().uri({ allowRelative: true }).allow('', null).messages({
+    'string.uri': 'รูปแบบลิงก์โครงงานไม่ถูกต้อง'
+  }),
+  github_url: Joi.string().trim().uri({ allowRelative: true }).allow('', null).messages({
+    'string.uri': 'รูปแบบลิงก์ GitHub ไม่ถูกต้อง'
+  }),
+  thumbnail_url: Joi.string().allow('', null),
+  technologies: Joi.array().items(Joi.string()).default([]),
+  tags: Joi.array().items(Joi.string()).default([]),
+  is_featured: Joi.boolean().default(false)
 });

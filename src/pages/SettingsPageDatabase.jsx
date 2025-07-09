@@ -180,6 +180,13 @@ const SettingsPageDatabase = () => {
       // ไม่เก็บ email ใน user_settings เพราะมาจาก auth
       const { email, ...profileToSave } = profileData;
       
+      // Convert numeric fields properly to avoid integer type errors
+      if (profileToSave.age !== undefined && profileToSave.age !== '') {
+        profileToSave.age = parseInt(profileToSave.age) || null;
+      } else {
+        profileToSave.age = null;
+      }
+      
       const { error } = await saveProfileSettings(profileToSave);
       if (error) throw new Error(error);
 

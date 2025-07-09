@@ -51,22 +51,49 @@ export const updateVideoProgress = async (contentId, progressData) => {
     });
     
     // Update user_progress table
-    const { data, error } = await supabase
+    // Check if progress record exists and update or insert accordingly
+    const { data: existingProgress } = await supabase
       .from('user_progress')
-      .upsert([{
-        user_id: user.id,
-        course_id: contentData.course_id,
-        content_id: contentId,
-        completion_percentage: completionPercentage,
-        is_completed: isCompleted,
-        time_spent_minutes: Math.round(watchedDuration / 60),
-        last_accessed_at: new Date().toISOString(),
-        ...(isCompleted && { completed_at: new Date().toISOString() })
-      }], {
-        onConflict: 'user_id,course_id,content_id'
-      })
-      .select()
-      .single();
+      .select('id, time_spent_minutes')
+      .eq('user_id', user.id)
+      .eq('course_id', contentData.course_id)
+      .eq('content_id', contentId)
+      .maybeSingle();
+    
+    let data, error;
+    
+    const progressData = {
+      time_spent_minutes: Math.round(watchedDuration / 60),
+      ...(isCompleted && { completed_at: new Date().toISOString() })
+    };
+    
+    if (existingProgress) {
+      // Update existing record
+      const result = await supabase
+        .from('user_progress')
+        .update(progressData)
+        .eq('id', existingProgress.id)
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    } else {
+      // Insert new record
+      const result = await supabase
+        .from('user_progress')
+        .insert([{
+          user_id: user.id,
+          course_id: contentData.course_id,
+          content_id: contentId,
+          ...progressData
+        }])
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    }
 
     if (error) throw error;
     
@@ -74,7 +101,8 @@ export const updateVideoProgress = async (contentId, progressData) => {
       data: {
         ...data,
         current_position: currentTime,
-        total_duration: totalDuration
+        total_duration: totalDuration,
+        completion_percentage: completionPercentage
       }, 
       error: null 
     };
@@ -114,7 +142,8 @@ export const getVideoProgress = async (contentId) => {
           ...data,
           current_position: 0, // We don't track current position in user_progress, only completion
           total_duration: 0,   // We don't track total duration in user_progress
-          last_position: 0     // We don't track last position in user_progress
+          last_position: 0,    // We don't track last position in user_progress
+          completion_percentage: data.completed_at ? 100 : 0  // Calculate from completion status
         }, 
         error: null 
       };
@@ -167,9 +196,9 @@ export const getCourseVideoProgress = async (courseId) => {
       progress: progressMap.get(content.id) || null,
       completion_percentage: (() => {
         const progress = progressMap.get(content.id);
-        return progress?.completion_percentage || 0;
+        return progress?.completed_at ? 100 : 0;
       })(),
-      is_completed: !!progressMap.get(content.id)?.is_completed
+      is_completed: !!progressMap.get(content.id)?.completed_at
     }));
 
     return { data: result, error: null };
@@ -207,44 +236,42 @@ export const markContentComplete = async (contentId) => {
       throw new Error('Content not found');
     }
 
-    // Update user_progress table
-    // Try to use full structure first, fallback to basic if columns don't exist
-    let data = null;
-    let error = null;
+    // Check if progress record exists and update or insert accordingly
+    const { data: existingProgress } = await supabase
+      .from('user_progress')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('course_id', contentData.course_id)
+      .eq('content_id', contentId)
+      .maybeSingle();
     
-    try {
+    let data, error;
+    
+    if (existingProgress) {
+      // Update existing record
       const result = await supabase
         .from('user_progress')
-        .upsert([{
-          user_id: user.id,
-          course_id: contentData.course_id,
-          content_id: contentId,
+        .update({
           completed_at: new Date().toISOString(),
-          is_completed: true,
-          completion_percentage: 100,
-          last_accessed_at: new Date().toISOString()
-        }], {
-          onConflict: 'user_id,course_id,content_id'
+          time_spent_minutes: 0
         })
+        .eq('id', existingProgress.id)
         .select()
         .single();
       
       data = result.data;
       error = result.error;
-    } catch (e) {
-      // If extended columns don't exist, fall back to basic structure
-      console.log('Falling back to basic user_progress structure:', e);
+    } else {
+      // Insert new record
       const result = await supabase
         .from('user_progress')
-        .upsert([{
+        .insert([{
           user_id: user.id,
           course_id: contentData.course_id,
           content_id: contentId,
           completed_at: new Date().toISOString(),
           time_spent_minutes: 0
-        }], {
-          onConflict: 'user_id,course_id,content_id'
-        })
+        }])
         .select()
         .single();
       
@@ -303,10 +330,10 @@ export const getCourseProgress = async (courseId) => {
     // Get user progress for all content
     const contentIds = allContent.map(c => c.id);
 
-    // Get progress from user_progress table
+    // Get progress from user_progress table (using only existing columns)
     const { data: userProgressData, error: progressError } = await supabase
       .from('user_progress')
-      .select('content_id, completed_at, is_completed, completion_percentage')
+      .select('content_id, completed_at, time_spent_minutes')
       .eq('user_id', user.id)
       .eq('course_id', courseId)
       .in('content_id', contentIds);
@@ -342,14 +369,14 @@ export const getCourseProgress = async (courseId) => {
       let isCompleted = false;
       
       // First check user_progress table
-      if (userProgress && userProgress.is_completed) {
+      if (userProgress && userProgress.completed_at) {
         isCompleted = true;
       } else {
         // Fallback to content-specific completion checks
         switch (content.content_type) {
           case 'video':
             // Video completion is tracked in user_progress table
-            isCompleted = !!userProgress?.is_completed;
+            isCompleted = !!userProgress?.completed_at;
             break;
           case 'quiz':
             // Check if there's a passed quiz attempt for this content
@@ -361,14 +388,14 @@ export const getCourseProgress = async (courseId) => {
             break;
           default:
             // For other content types, check user_progress
-            isCompleted = !!userProgress?.is_completed;
+            isCompleted = !!userProgress?.completed_at;
         }
       }
 
       return {
         ...content,
         is_completed: isCompleted,
-        completion_percentage: userProgress?.completion_percentage || (isCompleted ? 100 : 0),
+        completion_percentage: isCompleted ? 100 : 0,
         completed_at: userProgress?.completed_at
       };
     });

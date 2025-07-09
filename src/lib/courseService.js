@@ -15,40 +15,54 @@ export const getAllCourses = async () => {
   
   return withCache(cacheKey, async () => {
     try {
-      // Add timeout for emergency fallback (increased for better performance)
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('getAllCourses timeout')), 30000); // 30 seconds for real data
-      });
+      // Try simple database query first
+      console.log('Attempting to fetch courses from database...');
       
-      // Simplified query for better performance
-      const queryPromise = supabase
-        .from('courses')
-        .select(`
-          id,
-          title,
-          description,
-          category,
-          level,
-          price,
-          duration_hours,
-          thumbnail_url,
-          is_active,
-          is_featured,
-          instructor_id,
-          created_at,
-          updated_at
-        `)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+      try {
+        const { data, error } = await supabase
+          .from('courses')
+          .select(`
+            id,
+            title,
+            description,
+            category,
+            level,
+            price,
+            duration_hours,
+            thumbnail_url,
+            is_active,
+            is_featured,
+            instructor_id,
+            created_at,
+            updated_at
+          `)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(10);
 
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+        if (error) {
+          console.error('Database error:', error);
+          throw error;
+        }
 
-      if (error) {
-        console.error('Error fetching courses:', error);
-        // Return emergency data instead of error
+        if (data && data.length > 0) {
+          console.log('Successfully fetched courses from database:', data.length);
+          const coursesWithStats = data.map(course => ({
+            ...course,
+            enrollment_count: 0
+          }));
+          return { data: coursesWithStats, error: null };
+        }
+        
+        // If no data from database, use emergency data
+        console.log('No courses in database, using emergency data');
         const emergencyData = getEmergencyData();
-        console.log('🚑 Database timeout - Using emergency courses data in getAllCourses');
-        console.warn('Consider running the SQL fix script: /sql_scripts/fix-student-access-final.sql');
+        return { data: emergencyData.courses, error: null };
+        
+      } catch (dbError) {
+        console.error('Database connection failed:', dbError);
+        const emergencyData = getEmergencyData();
+        console.log('🚑 Using emergency courses data due to database error');
         return { data: emergencyData.courses, error: null };
       }
 
@@ -241,10 +255,10 @@ export const createCourse = async (courseData) => {
       throw new Error('User not authenticated');
     }
 
-    // Check if user profile exists
+    // Check if user profile exists and get instructor info
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('user_id')
+      .select('user_id, full_name, email, role')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -257,16 +271,50 @@ export const createCourse = async (courseData) => {
       throw new Error('ไม่พบข้อมูลผู้ใช้ กรุณาติดต่อผู้ดูแลระบบ');
     }
 
+    // Check if user has permission to create courses
+    if (!['admin', 'instructor'].includes(profile.role)) {
+      throw new Error('คุณไม่มีสิทธิ์ในการสร้างคอร์สเรียน');
+    }
+
+    // Prepare course data with instructor information
+    const courseDataWithInstructor = {
+      title: courseData.title,
+      description: courseData.description,
+      category: courseData.category,
+      level: courseData.level || 'beginner',
+      duration_hours: parseInt(courseData.duration_hours) || 0,
+      price: parseFloat(courseData.price) || 0,
+      max_students: parseInt(courseData.max_students) || 50,
+      is_active: courseData.is_active !== false,
+      is_featured: courseData.is_featured === true,
+      thumbnail_url: courseData.thumbnail_url || null,
+      instructor_id: user.id,
+      instructor_name: profile.full_name || user.email?.split('@')[0] || 'Instructor',
+      instructor_email: profile.email || user.email
+    };
+
+    console.log('Creating course with data:', courseDataWithInstructor);
+    
     const { data, error } = await supabase
       .from('courses')
-      .insert([{
-        ...courseData,
-        instructor_id: user.id
-      }])
+      .insert([courseDataWithInstructor])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database error creating course:', error);
+      
+      // Handle specific database errors
+      if (error.code === '42703') {
+        throw new Error('ฐานข้อมูลยังไม่พร้อม - กรุณารันคำสั่ง SQL setup ก่อน');
+      } else if (error.code === '23503') {
+        throw new Error('ข้อมูลผู้ใช้ไม่ถูกต้อง - กรุณาติดต่อผู้ดูแลระบบ');
+      } else if (error.message.includes('not allowed')) {
+        throw new Error('ไม่มีสิทธิ์ในการสร้างคอร์ส - ตรวจสอบ RLS policies');
+      } else {
+        throw new Error(`ไม่สามารถสร้างคอร์สได้: ${error.message} (Code: ${error.code})`);
+      }
+    }
 
     return { data, error: null };
   } catch (error) {
@@ -525,32 +573,74 @@ export const getFeaturedCourses = async () => {
   
   return withCache(cacheKey, async () => {
     try {
-      console.log('Fetching featured courses...');
+      console.log('Fetching featured courses from database...');
       
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout')), 5000); // 5 second timeout
-      });
+      try {
+        const { data, error } = await supabase
+          .from('courses')
+          .select(`
+            id,
+            title,
+            description,
+            short_description,
+            price,
+            duration_hours,
+            category,
+            level,
+            is_featured,
+            is_active,
+            cover_image_url,
+            instructor_id,
+            created_at,
+            updated_at
+          `)
+          .eq('is_active', true)
+          .eq('is_featured', true)
+          .order('created_at', { ascending: false })
+          .limit(6);
 
-      // Enhanced query with instructor information
-      const queryPromise = supabase
-        .from('courses')
-        .select(`
-          *,
-          user_profiles!courses_instructor_id_fkey(
-            full_name
-          )
-        `)
-        .eq('is_active', true)
-        .eq('is_featured', true)
-        .order('created_at', { ascending: false })
-        .limit(6);
+        if (error) {
+          console.error('Featured courses database error:', error);
+          throw error;
+        }
 
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+        if (data && data.length > 0) {
+          console.log('Successfully fetched featured courses:', data.length);
+          return { data, error: null };
+        }
+        
+        // If no featured courses, get recent active courses
+        console.log('No featured courses found, getting recent courses');
+        const { data: recentData, error: recentError } = await supabase
+          .from('courses')
+          .select(`
+            id,
+            title,
+            description,
+            short_description,
+            price,
+            duration_hours,
+            category,
+            level,
+            is_active,
+            cover_image_url,
+            instructor_id,
+            created_at,
+            updated_at
+          `)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(6);
 
-      console.log('Featured courses query result:', { data, error });
-
-      if (error) throw error;
+        if (recentError) throw recentError;
+        return { data: recentData || [], error: null };
+        
+      } catch (dbError) {
+        console.error('Featured courses database connection failed:', dbError);
+        const emergencyData = getEmergencyData();
+        console.log('🚑 Using emergency courses data for featured courses');
+        return { data: emergencyData.courses, error: null };
+      }
 
       // If no featured courses, get first 6 active courses
       if (!data || data.length === 0) {
@@ -874,19 +964,47 @@ export const uploadCourseImages = async (courseId, formData) => {
  */
 export const deleteCourseImage = async (imageUrl) => {
   try {
-    if (!imageUrl) {
-      throw new Error('Image URL is required');
+    if (!imageUrl || typeof imageUrl !== 'string') {
+      console.error('Invalid imageUrl:', imageUrl);
+      throw new Error('Image URL is required and must be a string');
     }
 
-    // Extract file path from URL
-    const urlParts = imageUrl.split('/storage/v1/object/public/course-files/');
-    if (urlParts.length < 2) {
+    // Extract file path from URL - try multiple URL patterns
+    let filePath = null;
+    
+    // Pattern 1: /storage/v1/object/public/course-files/
+    if (imageUrl.includes('/storage/v1/object/public/course-files/')) {
+      const urlParts = imageUrl.split('/storage/v1/object/public/course-files/');
+      if (urlParts.length >= 2) {
+        filePath = urlParts[1];
+      }
+    }
+    // Pattern 2: /storage/v1/object/public/attachments/
+    else if (imageUrl.includes('/storage/v1/object/public/attachments/')) {
+      const urlParts = imageUrl.split('/storage/v1/object/public/attachments/');
+      if (urlParts.length >= 2) {
+        filePath = urlParts[1];
+        // Try to delete from attachments bucket instead
+        const { error: deleteError } = await supabase.storage
+          .from('attachments')
+          .remove([filePath]);
+
+        if (deleteError) {
+          console.error('Delete error from attachments:', deleteError);
+          throw new Error('เกิดข้อผิดพลาดในการลบรูปภาพ');
+        }
+
+        console.log('Course image deleted successfully from attachments:', filePath);
+        return { success: true, error: null };
+      }
+    }
+
+    if (!filePath) {
+      console.error('Could not extract file path from URL:', imageUrl);
       throw new Error('Invalid image URL format');
     }
 
-    const filePath = urlParts[1];
-
-    // Delete from Supabase Storage
+    // Delete from Supabase Storage (course-files bucket)
     const { error: deleteError } = await supabase.storage
       .from('course-files')
       .remove([filePath]);
@@ -913,6 +1031,8 @@ export const deleteCourseImage = async (imageUrl) => {
  */
 export const updateCourseImages = async (courseId, imageUrls, coverImageUrl = null) => {
   try {
+    console.log('🎯 updateCourseImages called with:', { courseId, imageUrls, coverImageUrl });
+    
     if (!courseId) {
       throw new Error('Course ID is required');
     }
@@ -927,13 +1047,18 @@ export const updateCourseImages = async (courseId, imageUrls, coverImageUrl = nu
       // If cover image is specified, update thumbnail_url
       if (coverImageUrl) {
         updateData.thumbnail_url = coverImageUrl;
+        console.log('🖼️ Setting thumbnail_url to:', coverImageUrl);
       }
+
+      console.log('📝 Updating course with data:', updateData);
 
       const { data, error } = await supabase
         .from('courses')
         .update(updateData)
         .eq('id', courseId)
         .select();
+
+      console.log('📊 Database update result:', { data, error });
 
       if (error && error.code === 'PGRST204') {
         // Images column doesn't exist, update only thumbnail_url

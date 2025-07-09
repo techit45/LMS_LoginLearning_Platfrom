@@ -4,41 +4,6 @@ import SEOHead from '@/components/SEOHead';
 import { Users, Target, Zap, Briefcase, Lightbulb, MapPin, Phone, Mail, Users as UsersIcon } from 'lucide-react';
 import TestimonialSlider from '@/components/TestimonialSlider';
 
-const testimonials = [
-  {
-    id: 1,
-    name: "น้องเอิร์ธ",
-    avatar: "/images/profile.png",
-    rating: 5,
-    text: "คอร์สนี้สุดยอดมากครับ! ผมได้เรียนรู้เกี่ยวกับการเขียนโปรแกรมหุ่นยนต์ตั้งแต่พื้นฐานจนสร้างโปรเจกต์ของตัวเองได้เลย พี่ๆ ใจดีและสอนสนุกมากครับ",
-    course: "วิศวกรรมหุ่นยนต์เบื้องต้น"
-  },
-  {
-    id: 2,
-    name: "น้องมายด์",
-    avatar: "/images/profile.png",
-    rating: 5,
-    text: "ตอนแรกไม่คิดว่าจะชอบวิศวะโยธา แต่พอได้ลองทำโปรเจกต์สร้างสะพานจำลองแล้วสนุกกว่าที่คิดไว้เยอะเลยค่ะ ได้ความรู้ไปใช้ในห้องเรียนด้วย",
-    course: "โครงสร้างพื้นฐานสำหรับวิศวกรน้อย"
-  },
-  {
-    id: 3,
-    name: "น้องเจมส์",
-    avatar: "/images/profile.png",
-    rating: 4,
-    text: "เนื้อหาเข้มข้นดีครับ ได้เรียนรู้การใช้เครื่องมือจริงๆ ที่พี่วิศวกรเค้าใช้กัน ตอนนี้ผมรู้แล้วว่าอยากเรียนต่อวิศวะคอมฯ ครับ",
-    course: "เจาะลึก IoT"
-  },
-  {
-    id: 4,
-    name: "น้องฟ้า",
-    avatar: "/images/profile.png",
-    rating: 5,
-    text: "เป็นคอร์สที่เปิดโลกมากค่ะ ไม่เคยคิดว่าวิศวกรรมเคมีจะเกี่ยวกับเรื่องใกล้ตัวขนาดนี้ ได้ทดลองทำจริงทุกขั้นตอนเลย",
-    course: "มหัศจรรย์วิศวกรรมเคมี"
-  }
-];
-
 const AboutPage = () => {
   const companyInfo = {
     name: "LOGIN LEARNING Co.",
@@ -60,11 +25,11 @@ const AboutPage = () => {
   ];
 
   const services = [
-    { icon: Zap, title: "สอนทำโครงงานด้านวิศวกรรม", description: "���สริมสร้างทักษะการทำโครงงานจริง พร้อมพี่เลี้ยงดูแลใกล้ชิด" },
+    { icon: Zap, title: "สอนทำโครงงานด้านวิศวกรรม", description: "เสริมสร้างทักษะการทำโครงงานจริง พร้อมพี่เลี้ยงดูแลใกล้ชิด" },
     { icon: Target, title: "สอนทฤษฎีและการแข่งขัน", description: "เตรียมความพร้อมทั้งภาคทฤษฎีและสนามแข่งขัน เช่น หุ่นยนต์เดินตามเส้น, TESA Top Gun Rally" },
     { icon: Briefcase, title: "อบรม Professional Skills", description: "พัฒนาทักษะจำเป็นสำหรับวิศวกร เช่น การโปรแกรม (Python, C++), Arduino, IoT, แขนกล DOBOT, PLC" },
     { icon: Lightbulb, title: "Engineering Services", description: "บริการด้านวิศวกรรม เช่น ออกแบบชุดฝึกขนถ่ายโลหะ, เครื่องตรวจความสุกมะม่วง, เครื่องจำลองการชุบโลหะ" },
-    { icon: Users, title: "จัดค่าย��อกสถานที่", description: "เปิดประสบการณ์การเรียนรู้วิศวกรรมรูปแบบใหม่ สนุกและได้ความรู้" },
+    { icon: Users, title: "จัดค่ายนอกสถานที่", description: "เปิดประสบการณ์การเรียนรู้วิศวกรรมรูปแบบใหม่ สนุกและได้ความรู้" },
   ];
 
   const sampleProjects = [
@@ -156,14 +121,6 @@ const AboutPage = () => {
         </div>
       </section>
       
-      {/* Testimonials Section */}
-      <section className="mb-16">
-        <h2 className="text-4xl font-bold text-gray-900 mb-10 text-center">เสียงตอบรับจากนักเรียน</h2>
-        <div className="max-w-7xl mx-auto">
-          <TestimonialSlider testimonials={testimonials} />
-        </div>
-      </section>
-
       {/* Branches Section */}
       <section className="mb-16" id="branches">
         <h2 className="text-4xl font-bold text-gray-900 mb-10 text-center">สาขาของเรา</h2>

@@ -763,3 +763,138 @@ export const deleteAllContentAttachments = async (contentId) => {
     return { error };
   }
 };
+
+// ==========================================
+// GENERIC STORAGE FUNCTIONS
+// ==========================================
+
+/**
+ * Generic upload function to storage
+ * @param {File} file - The file to upload
+ * @param {string} bucketName - The storage bucket name (default: 'course-files')
+ * @param {string} folderPath - The folder path within the bucket
+ * @param {Object} options - Upload options
+ * @returns {Promise<Object>} Upload result with URL and metadata
+ */
+export const uploadToStorage = async (file, bucketName = 'course-files', folderPath = '', options = {}) => {
+  try {
+    console.log('Starting generic storage upload:', { fileName: file.name, bucketName, folderPath });
+    
+    // Check if user is authenticated
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Validate file
+    if (!file) {
+      throw new Error('No file provided');
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 8);
+    const fileExtension = file.name.split('.').pop();
+    const fileName = `${timestamp}-${randomString}.${fileExtension}`;
+    const filePath = folderPath ? `${folderPath}/${fileName}` : fileName;
+
+    console.log('Generated file path:', filePath);
+
+    // Upload file to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+        ...options
+      });
+
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError);
+      throw new Error(`File upload failed: ${uploadError.message}`);
+    }
+
+    console.log('File uploaded successfully:', uploadData);
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(filePath);
+
+    console.log('Generated public URL:', publicUrl);
+
+    return {
+      data: {
+        filePath: filePath,
+        publicUrl: publicUrl,
+        fileName: fileName,
+        originalName: file.name,
+        size: file.size,
+        type: file.type
+      },
+      error: null
+    };
+  } catch (error) {
+    console.error('Error in uploadToStorage:', error);
+    return { 
+      data: null, 
+      error: {
+        message: error.message,
+        details: error
+      }
+    };
+  }
+};
+
+/**
+ * Generic delete function from storage
+ * @param {string} filePath - The file path to delete
+ * @param {string} bucketName - The storage bucket name (default: 'course-files')
+ * @returns {Promise<Object>} Delete result
+ */
+export const deleteFromStorage = async (filePath, bucketName = 'course-files') => {
+  try {
+    console.log('Starting generic storage deletion:', { filePath, bucketName });
+    
+    // Check if user is authenticated
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    if (!filePath) {
+      throw new Error('File path is required');
+    }
+
+    // Delete from Supabase Storage
+    const { error: deleteError } = await supabase.storage
+      .from(bucketName)
+      .remove([filePath]);
+
+    if (deleteError) {
+      console.error('Storage delete error:', deleteError);
+      throw new Error(`File deletion failed: ${deleteError.message}`);
+    }
+
+    console.log('File deleted successfully from storage:', filePath);
+
+    return {
+      data: {
+        filePath: filePath,
+        deleted: true
+      },
+      error: null
+    };
+  } catch (error) {
+    console.error('Error in deleteFromStorage:', error);
+    return { 
+      data: null, 
+      error: {
+        message: error.message,
+        details: error
+      }
+    };
+  }
+};

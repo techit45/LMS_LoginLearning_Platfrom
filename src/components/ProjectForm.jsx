@@ -19,13 +19,19 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast.jsx';
-import { updateProject, getProjectForEdit } from '@/lib/projectService';
+import { createProject, updateProject, getProjectForEdit } from '@/lib/projectService';
 import { uploadCourseImage } from '@/lib/attachmentService';
 
-const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
+const ProjectForm = ({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  projectId = null, // null for create, UUID for edit
+  mode = 'create' // 'create' or 'edit'
+}) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -39,6 +45,7 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
     github_url: '',
     video_url: '',
     cover_image_url: '',
+    thumbnail_url: '',
     tags: [],
     status: 'published'
   });
@@ -50,10 +57,12 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
   const [newTechnology, setNewTechnology] = useState('');
   const [newTag, setNewTag] = useState('');
 
-  // Load project data when projectId changes
+  const isEditMode = mode === 'edit' && projectId;
+
+  // Load project data when in edit mode
   useEffect(() => {
     const loadProject = async () => {
-      if (!projectId) return;
+      if (!isEditMode || !isOpen) return;
       
       setInitialLoading(true);
       try {
@@ -78,17 +87,18 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
           duration_hours: data.duration_hours || '',
           is_featured: data.is_featured || false,
           technologies: data.technologies || [],
-          project_url: data.project_url || '',
+          project_url: data.project_url || data.demo_url || '',
           github_url: data.github_url || '',
           video_url: data.video_url || '',
-          cover_image_url: data.cover_image_url || '',
+          cover_image_url: data.cover_image_url || data.thumbnail_url || '',
+          thumbnail_url: data.thumbnail_url || data.cover_image_url || '',
           tags: data.tags || [],
           status: data.status || 'published'
         });
 
         // Set image preview if exists
-        if (data.cover_image_url) {
-          setImagePreview(data.cover_image_url);
+        if (data.cover_image_url || data.thumbnail_url) {
+          setImagePreview(data.cover_image_url || data.thumbnail_url);
         }
 
       } catch (error) {
@@ -104,10 +114,34 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
       }
     };
 
-    if (isOpen && projectId) {
-      loadProject();
+    if (isOpen) {
+      if (isEditMode) {
+        loadProject();
+      } else {
+        // Reset form for create mode
+        setFormData({
+          title: '',
+          description: '',
+          short_description: '',
+          category: '',
+          difficulty_level: 'beginner',
+          duration_hours: '',
+          is_featured: false,
+          technologies: [],
+          project_url: '',
+          github_url: '',
+          video_url: '',
+          cover_image_url: '',
+          thumbnail_url: '',
+          tags: [],
+          status: 'published'
+        });
+        setImagePreview(null);
+        setProjectImage(null);
+        setErrors({});
+      }
     }
-  }, [projectId, isOpen, toast, onClose]);
+  }, [projectId, isEditMode, isOpen, toast, onClose]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -180,6 +214,10 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
       newErrors.github_url = 'กรุณาระบุ URL ที่ถูกต้อง';
     }
 
+    if (formData.video_url && !isValidUrl(formData.video_url)) {
+      newErrors.video_url = 'กรุณาระบุ URL ที่ถูกต้อง';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -242,26 +280,37 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
         }
         
         finalFormData.cover_image_url = uploadData.publicUrl;
+        finalFormData.thumbnail_url = uploadData.publicUrl;
         setUploadingImage(false);
       }
 
-      const { data, error } = await updateProject(projectId, finalFormData);
+      // Create or update project
+      let result;
+      if (isEditMode) {
+        result = await updateProject(projectId, finalFormData);
+      } else {
+        result = await createProject(finalFormData);
+      }
+      
+      const { data, error } = result;
       
       if (error) {
         throw error;
       }
 
       toast({
-        title: "แก้ไขโครงงานสำเร็จ! 🎉",
-        description: `โครงงาน "${formData.title}" ถูกแก้ไขเรียบร้อยแล้ว`
+        title: isEditMode ? "แก้ไขโครงงานสำเร็จ! 🎉" : "สร้างโครงงานสำเร็จ! 🎉",
+        description: isEditMode 
+          ? `โครงงาน "${formData.title}" ถูกแก้ไขเรียบร้อยแล้ว`
+          : `โครงงาน "${formData.title}" ถูกสร้างเรียบร้อยแล้ว`
       });
 
       onSuccess && onSuccess(data);
       onClose();
     } catch (error) {
-      console.error('Error updating project:', error);
+      console.error('Error saving project:', error);
       toast({
-        title: "ไม่สามารถแก้ไขโครงงานได้",
+        title: isEditMode ? "ไม่สามารถแก้ไขโครงงานได้" : "ไม่สามารถสร้างโครงงานได้",
         description: error.message,
         variant: "destructive"
       });
@@ -308,9 +357,9 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
 
   const handleRemoveImage = () => {
     setProjectImage(null);
-    setImagePreview(formData.cover_image_url); // Reset to original image
+    setImagePreview(isEditMode ? formData.cover_image_url || formData.thumbnail_url : null);
     // Reset file input
-    const fileInput = document.getElementById('edit-project-image');
+    const fileInput = document.getElementById('project-image-input');
     if (fileInput) {
       fileInput.value = '';
     }
@@ -329,7 +378,7 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
 
   if (!isOpen) return null;
 
-  if (initialLoading) {
+  if (isEditMode && initialLoading) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -370,9 +419,11 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
                 </div>
                 <div>
                   <h2 className="text-3xl font-bold text-white">
-                    แก้ไขโครงงาน
+                    {isEditMode ? 'แก้ไขโครงงาน' : 'สร้างโครงงานใหม่'}
                   </h2>
-                  <p className="text-indigo-100 mt-1">อัปเดตข้อมูลโครงงานของคุณ</p>
+                  <p className="text-indigo-100 mt-1">
+                    {isEditMode ? 'อัปเดตข้อมูลโครงงานของคุณ' : 'เพิ่มโครงงานใหม่เข้าสู่ระบบ'}
+                  </p>
                 </div>
               </div>
               <Button 
@@ -610,7 +661,7 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
                   <div className="bg-cyan-500 p-2 rounded-lg mr-3">
                     <Globe className="w-4 h-4 text-white" />
                   </div>
-                  Project URL
+                  Demo URL
                 </label>
                 <Input
                   name="project_url"
@@ -648,6 +699,29 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
                   </p>
                 )}
               </div>
+            </div>
+
+            {/* Video URL */}
+            <div className="bg-gradient-to-br from-red-50 to-pink-50 p-6 rounded-xl border border-red-200">
+              <label className="block text-gray-800 font-semibold mb-3 flex items-center">
+                <div className="bg-red-500 p-2 rounded-lg mr-3">
+                  <Globe className="w-4 h-4 text-white" />
+                </div>
+                Video URL (สาธิตการใช้งาน)
+              </label>
+              <Input
+                name="video_url"
+                value={formData.video_url}
+                onChange={handleInputChange}
+                placeholder="https://youtube.com/watch?v=..."
+                className="bg-white border-gray-300 text-gray-800 h-12 focus:border-red-500 focus:ring-2 focus:ring-red-200 rounded-xl shadow-sm"
+              />
+              {errors.video_url && (
+                <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
+                  <AlertCircle className="w-4 h-4 mr-2" />
+                  {errors.video_url}
+                </p>
+              )}
             </div>
 
             {/* Featured Toggle */}
@@ -703,14 +777,14 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
                 <div className="border-2 border-dashed border-rose-300 rounded-xl p-8 text-center hover:border-rose-400 transition-colors bg-white/50">
                   <input
                     type="file"
-                    id="edit-project-image"
+                    id="project-image-input"
                     accept="image/jpeg,image/jpg,image/png,image/webp"
                     onChange={handleImageSelect}
                     className="hidden"
                     disabled={uploadingImage}
                   />
                   <label
-                    htmlFor="edit-project-image"
+                    htmlFor="project-image-input"
                     className="cursor-pointer flex flex-col items-center space-y-3"
                   >
                     <div className="w-16 h-16 bg-gradient-to-br from-rose-400 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -754,12 +828,12 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
                 {loading || uploadingImage ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                    {uploadingImage ? 'กำลังอัปโหลดรูป...' : 'กำลังอัปเดต...'}
+                    {uploadingImage ? 'กำลังอัปโหลดรูป...' : isEditMode ? 'กำลังอัปเดต...' : 'กำลังสร้าง...'}
                   </>
                 ) : (
                   <>
                     <Save className="w-5 h-5 mr-3" />
-                    บันทึกการแก้ไข
+                    {isEditMode ? 'บันทึกการแก้ไข' : 'สร้างโครงงาน'}
                   </>
                 )}
               </Button>
@@ -772,4 +846,4 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
   );
 };
 
-export default EditProjectForm;
+export default ProjectForm;

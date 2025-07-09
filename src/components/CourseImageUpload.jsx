@@ -102,8 +102,21 @@ const CourseImageUpload = ({
         const formData = new FormData();
         formData.append('file', file);
         
-        // Upload using course service
-        const result = await uploadCourseImages(courseId, formData);
+        // If courseId is null (during course creation), upload to temporary location
+        let result;
+        if (courseId) {
+          result = await uploadCourseImages(courseId, formData);
+        } else {
+          // Use attachmentService for temporary uploads
+          const { uploadCourseImage } = await import('@/lib/attachmentService');
+          result = await uploadCourseImage(file);
+          // Convert the response format to match courseService format
+          if (result.data?.publicUrl) {
+            result = { url: result.data.publicUrl, error: null };
+          } else if (result.error) {
+            result = { url: null, error: result.error.message || result.error };
+          }
+        }
         
         if (result.error) {
           throw new Error(result.error);
@@ -153,6 +166,16 @@ const CourseImageUpload = ({
   const handleDeleteImage = async (imageIndex) => {
     const imageToDelete = images[imageIndex];
     
+    if (!imageToDelete || !imageToDelete.url) {
+      console.error('Invalid image to delete:', imageToDelete);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่พบข้อมูลรูปภาพที่จะลบ",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       // Delete from storage
       await deleteCourseImage(imageToDelete.url);
@@ -185,12 +208,25 @@ const CourseImageUpload = ({
 
   // Set as cover image
   const handleSetAsCover = (imageUrl) => {
+    console.log('⭐ handleSetAsCover called with:', imageUrl);
+    console.log('⭐ onCoverChange function exists:', !!onCoverChange);
+    console.log('⭐ Previous coverImageUrl:', coverImageUrl);
+    
     setCoverImageUrl(imageUrl);
-    onCoverChange?.(imageUrl);
+    
+    if (onCoverChange) {
+      console.log('⭐ Calling onCoverChange with:', imageUrl);
+      onCoverChange(imageUrl);
+    } else {
+      console.warn('⭐ No onCoverChange function provided');
+    }
+    
     toast({
       title: "ตั้งเป็นรูปหน้าปกแล้ว",
       description: "รูปภาพนี้จะแสดงเป็นหน้าปกของคอร์ส"
     });
+    
+    console.log('⭐ New coverImageUrl set to:', imageUrl);
   };
 
   // Move image (reorder)
@@ -316,7 +352,15 @@ const CourseImageUpload = ({
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <AnimatePresence>
-              {images.map((image, index) => (
+              {images.map((image, index) => {
+                console.log(`🖼️ Rendering image ${index}:`, {
+                  imageUrl: image.url,
+                  coverImageUrl: coverImageUrl,
+                  isCurrentCover: coverImageUrl === image.url,
+                  allowCoverSelection: allowCoverSelection,
+                  showStarButton: allowCoverSelection && coverImageUrl !== image.url
+                });
+                return (
                 <motion.div
                   key={image.id || index}
                   initial={{ opacity: 0, scale: 0.8 }}
@@ -350,7 +394,11 @@ const CourseImageUpload = ({
                           type="button"
                           size="sm"
                           variant="secondary"
-                          onClick={() => setPreviewImage(image.url)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setPreviewImage(image.url);
+                          }}
                           className="p-2"
                         >
                           <Eye className="w-4 h-4" />
@@ -361,7 +409,14 @@ const CourseImageUpload = ({
                             type="button"
                             size="sm"
                             variant="secondary"
-                            onClick={() => handleSetAsCover(image.url)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('⭐ Star button clicked for image:', image.url);
+                              console.log('⭐ Current coverImageUrl:', coverImageUrl);
+                              console.log('⭐ allowCoverSelection:', allowCoverSelection);
+                              handleSetAsCover(image.url);
+                            }}
                             className="p-2"
                           >
                             <Star className="w-4 h-4" />
@@ -372,7 +427,11 @@ const CourseImageUpload = ({
                           type="button"
                           size="sm"
                           variant="destructive"
-                          onClick={() => handleDeleteImage(index)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDeleteImage(index);
+                          }}
                           className="p-2"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -390,7 +449,8 @@ const CourseImageUpload = ({
                     </p>
                   </div>
                 </motion.div>
-              ))}
+              );
+              })}
             </AnimatePresence>
           </div>
         </div>

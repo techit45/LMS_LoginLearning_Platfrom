@@ -248,7 +248,13 @@ const OnsiteRegistrationForm = ({ course, isOpen, onClose, onSuccess }) => {
 
     setLoading(true);
     try {
-      const { data, error } = await submitOnsiteRegistration(formData);
+      // Convert applicant_age to integer before submission
+      const submissionData = {
+        ...formData,
+        applicant_age: formData.applicant_age ? parseInt(formData.applicant_age) : null
+      };
+      
+      const { data, error } = await submitOnsiteRegistration(submissionData);
       
       if (error) throw error;
 

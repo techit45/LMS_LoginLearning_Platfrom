@@ -94,9 +94,15 @@ const AdminLayout = () => {
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      const { error } = await signOut();
+      
+      if (error) {
+        console.error('Logout error:', error);
+        // Still proceed with logout since local state is cleared
+      }
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('Exception during logout:', error);
+      // Local state is still cleared even on exception
     }
   };
 

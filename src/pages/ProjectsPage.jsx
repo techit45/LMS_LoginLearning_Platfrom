@@ -10,8 +10,7 @@ import { getAllProjects, getFeaturedProjects } from '@/lib/projectService';
 import { getEmergencyData } from '@/lib/quickFix';
 import ProjectShowcase from '@/components/ProjectShowcase';
 import ProjectSlider from '@/components/ProjectSlider';
-import CreateProjectForm from '@/components/CreateProjectForm';
-import EditProjectForm from '@/components/EditProjectForm';
+import ProjectForm from '@/components/ProjectForm';
 
 const ProjectsPage = () => {
   const { toast } = useToast();
@@ -268,17 +267,19 @@ const ProjectsPage = () => {
         </motion.div>
       </div>
 
-      {/* Modals */}
-      <CreateProjectForm
+      {/* Unified Project Form Modals */}
+      <ProjectForm
         isOpen={showCreateForm}
         onClose={handleCloseCreateForm}
         onSuccess={handleCreateSuccess}
+        mode="create"
       />
-      <EditProjectForm
+      <ProjectForm
         isOpen={showEditForm}
         onClose={handleCloseEditForm}
         onSuccess={handleEditSuccess}
         projectId={editingProjectId}
+        mode="edit"
       />
     </motion.div>
   );

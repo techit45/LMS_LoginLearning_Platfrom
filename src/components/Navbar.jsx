@@ -15,11 +15,17 @@ const Navbar = () => {
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      const { error } = await signOut();
+      
+      // The signOut function now always clears local state successfully
+      // So we always show success message regardless of server response
       toast({ title: "ออกจากระบบสำเร็จแล้ว" });
       navigate('/');
     } catch (error) {
-      toast({ title: "เกิดข้อผิดพลาดในการออกจากระบบ", description: error.message, variant: "destructive" });
+      console.error('Exception during logout:', error);
+      // Still show success since local logout always works
+      toast({ title: "ออกจากระบบสำเร็จแล้ว" });
+      navigate('/');
     }
   };
 

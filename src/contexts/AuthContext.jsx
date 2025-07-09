@@ -313,15 +313,53 @@ export const AuthProvider = ({ children }) => {
       toast({ title: "Supabase ยังไม่ได้เชื่อมต่อ", description: "กรุณาเชื่อมต่อ Supabase ก่อนใช้งาน", variant: "destructive" });
       return { error: { message: "Supabase client not initialized" } };
     }
+    
     setLoading(true);
-    const { error } = await supabase.auth.signOut();
-    setLoading(false);
-    if (!error) {
+    
+    try {
+      // Check if there's a valid session before attempting logout
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.log('No valid session found, clearing local state only');
+        // Clear local auth state without calling server logout
+        localStorage.removeItem('sb-vuitwzisazvikrhtfthh-auth-token');
+        setUser(null);
+        setIsAdmin(false);
+        setUserRole(ROLES.GUEST);
+        setLoading(false);
+        return { error: null }; // Successful local logout
+      }
+      
+      // Only call server logout if we have a valid session
+      const { error } = await supabase.auth.signOut();
+      
+      // Handle any logout errors
+      if (error) {
+        console.log('Server logout error (handling gracefully):', error);
+        // Still clear local state on any logout error
+        localStorage.removeItem('sb-vuitwzisazvikrhtfthh-auth-token');
+      }
+      
+      // Always clear local state regardless of server response
       setUser(null);
       setIsAdmin(false);
       setUserRole(ROLES.GUEST);
+      setLoading(false);
+      
+      // Don't propagate server logout errors as they don't affect the logout goal
+      return { error: null };
+      
+    } catch (e) {
+      console.log('Exception during logout (handling gracefully):', e);
+      // Clear local state even on exception
+      localStorage.removeItem('sb-vuitwzisazvikrhtfthh-auth-token');
+      setUser(null);
+      setIsAdmin(false);
+      setUserRole(ROLES.GUEST);
+      setLoading(false);
+      return { error: null }; // Don't propagate exceptions as errors
     }
-    return { error };
   };
   
   // Function to check if user has a specific role or higher (if hierarchy exists)

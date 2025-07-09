@@ -177,7 +177,7 @@ const CoursesPage = () => {
                         <img 
                           className="w-full h-48 object-cover"
                           alt={`ภาพปกคอร์ส ${course.title}`} 
-                          src={course.image_url || "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8"} 
+                          src={course.thumbnail_url || "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8"} 
                         />
                         <div className="absolute top-3 right-3 bg-blue-300/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white-300">
                           {course.level === 'beginner' ? 'ระดับเริ่มต้น' :

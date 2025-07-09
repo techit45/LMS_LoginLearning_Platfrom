@@ -15,10 +15,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast.jsx';
 import { createCourse } from '@/lib/courseService';
 import { uploadCourseImage } from '@/lib/attachmentService';
-import { courseSchema } from '@/lib/validationSchemas';
+import CourseImageUpload from '@/components/CourseImageUpload';
 
 const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
   const { toast } = useToast();
@@ -32,13 +32,18 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
     price: 0,
     max_students: 50,
     is_active: true,
-    thumbnail_url: ''
+    is_featured: false,
+    thumbnail_url: '',
+    instructor_name: '',
+    instructor_email: ''
   });
 
   const [errors, setErrors] = useState({});
   const [coverImage, setCoverImage] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [coverImageUrl, setCoverImageUrl] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
@@ -56,12 +61,30 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const { error: validationError } = courseSchema.validate(formData, { abortEarly: false });
-    if (validationError) {
-      const newErrors = {};
-      validationError.details.forEach(detail => {
-        newErrors[detail.path[0]] = detail.message;
-      });
+    // Basic validation instead of using Joi schema to avoid issues
+    const newErrors = {};
+    
+    if (!formData.title || formData.title.trim().length < 5) {
+      newErrors.title = 'กรุณากรอกชื่อคอร์สอย่างน้อย 5 ตัวอักษร';
+    }
+    
+    if (!formData.description || formData.description.trim().length < 20) {
+      newErrors.description = 'กรุณากรอกคำอธิบายอย่างน้อย 20 ตัวอักษร';
+    }
+    
+    if (!formData.category) {
+      newErrors.category = 'กรุณาเลือกหมวดหมู่';
+    }
+    
+    if (formData.duration_hours <= 0) {
+      newErrors.duration_hours = 'กรุณากรอกระยะเวลาที่มากกว่า 0';
+    }
+    
+    if (formData.max_students <= 0) {
+      newErrors.max_students = 'กรุณากรอกจำนวนนักเรียนที่มากกว่า 0';
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       toast({
         title: "ข้อมูลไม่ครบถ้วน",
@@ -77,24 +100,24 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
     try {
       let finalFormData = { ...formData };
       
-      // Upload cover image if selected
-      if (coverImage) {
-        setUploadingImage(true);
-        const { data: uploadData, error: uploadError } = await uploadCourseImage(coverImage);
-        
-        if (uploadError) {
-          throw new Error(`ไม่สามารถอัปโหลดรูปหน้าปกได้: ${uploadError.message}`);
-        }
-        
-        finalFormData.thumbnail_url = uploadData.publicUrl;
-        setUploadingImage(false);
+      // Use cover image from gallery if available
+      if (coverImageUrl) {
+        finalFormData.thumbnail_url = coverImageUrl;
+      } else if (galleryImages.length > 0) {
+        // Use first gallery image as cover if no specific cover selected
+        finalFormData.thumbnail_url = galleryImages[0].url;
       }
+      
+      console.log('Submitting course data:', finalFormData);
       
       const { data, error } = await createCourse(finalFormData);
       
       if (error) {
-        throw error;
+        console.error('Course creation error:', error);
+        throw new Error(error.message || 'ไม่สามารถสร้างคอร์สได้');
       }
+      
+      console.log('Course created successfully:', data);
 
       toast({
         title: "สร้างคอร์สสำเร็จ! 🎉",
@@ -115,20 +138,52 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
       });
       setCoverImage(null);
       setImagePreview(null);
+      setGalleryImages([]);
+      setCoverImageUrl('');
 
       onSuccess && onSuccess(data);
       onClose();
     } catch (error) {
       console.error('Error creating course:', error);
+      
+      let errorMessage = error.message;
+      let errorTitle = "ไม่สามารถสร้างคอร์สได้";
+      
+      // Handle specific errors
+      if (error.message.includes('not authenticated')) {
+        errorTitle = "ไม่ได้เข้าสู่ระบบ";
+        errorMessage = "กรุณาเข้าสู่ระบบก่อนสร้างคอร์ส";
+      } else if (error.message.includes('ไม่มีสิทธิ์')) {
+        errorTitle = "ไม่มีสิทธิ์";
+        errorMessage = "บัญชีของคุณไม่มีสิทธิ์สร้างคอร์ส กรุณาติดต่อผู้ดูแลระบบ";
+      } else if (error.message.includes('not allowed')) {
+        errorTitle = "ข้อผิดพลาดระบบ";
+        errorMessage = "ฐานข้อมูลยังไม่พร้อม กรุณารันคำสั่ง SQL setup";
+      }
+      
       toast({
-        title: "ไม่สามารถสร้างคอร์สได้",
-        description: error.message,
+        title: errorTitle,
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
       setLoading(false);
       setUploadingImage(false);
     }
+  };
+
+  // Handle gallery images change
+  const handleGalleryImagesChange = (images) => {
+    setGalleryImages(images);
+  };
+
+  // Handle cover image change from gallery
+  const handleCoverImageChange = (imageUrl) => {
+    setCoverImageUrl(imageUrl);
+    setFormData(prev => ({
+      ...prev,
+      thumbnail_url: imageUrl
+    }));
   };
 
   const handleImageSelect = (e) => {
@@ -419,69 +474,25 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
               )}
             </div>
 
-            {/* Course Cover Image */}
+            {/* Course Images Gallery */}
             <div className="bg-gradient-to-br from-teal-50 to-cyan-50 p-6 rounded-xl border border-teal-200">
               <label className="block text-gray-800 font-semibold mb-4 flex items-center">
                 <div className="bg-teal-500 p-2 rounded-lg mr-3">
                   <ImageIcon className="w-4 h-4 text-white" />
                 </div>
-                รูปหน้าปกคอร์ส
+                รูปภาพคอร์สเรียน
               </label>
-              <div className="space-y-4">
-                {/* Image Preview */}
-                {imagePreview && (
-                  <div className="relative inline-block">
-                    <img 
-                      src={imagePreview} 
-                      alt="Course cover preview" 
-                      className="w-48 h-32 object-cover rounded-xl border-2 border-gray-200 shadow-lg"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleRemoveImage}
-                      className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
-                
-                {/* Upload Button */}
-                {!imagePreview && (
-                  <div className="border-2 border-dashed border-teal-300 rounded-xl p-8 text-center hover:border-teal-400 transition-colors bg-white/50">
-                    <input
-                      type="file"
-                      id="cover-image"
-                      accept="image/jpeg,image/jpg,image/png,image/webp"
-                      onChange={handleImageSelect}
-                      className="hidden"
-                      disabled={uploadingImage}
-                    />
-                    <label
-                      htmlFor="cover-image"
-                      className="cursor-pointer flex flex-col items-center space-y-3"
-                    >
-                      <div className="w-16 h-16 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
-                        <ImageIcon className="w-8 h-8 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-gray-800 font-semibold text-lg">เลือกรูปหน้าปก</p>
-                        <p className="text-gray-600 text-sm mt-1">JPG, PNG, WebP ขนาดไม่เกิน 5MB</p>
-                        <p className="text-teal-600 text-xs mt-2 font-medium">คลิกเพื่ออัปโหลดไฟล์</p>
-                      </div>
-                    </label>
-                  </div>
-                )}
-                
-                {uploadingImage && (
-                  <div className="flex items-center justify-center space-x-3 bg-blue-50 p-4 rounded-xl">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                    <span className="text-blue-700 font-medium">กำลังอัปโหลดรูปภาพ...</span>
-                  </div>
-                )}
-              </div>
+              
+              <CourseImageUpload
+                courseId={null} // Will be set after course creation
+                existingImages={galleryImages}
+                onImagesChange={handleGalleryImagesChange}
+                maxImages={8}
+                allowCoverSelection={true}
+                currentCoverImage={coverImageUrl}
+                onCoverChange={handleCoverImageChange}
+                className="mt-4"
+              />
             </div>
 
             {/* Action Buttons */}
