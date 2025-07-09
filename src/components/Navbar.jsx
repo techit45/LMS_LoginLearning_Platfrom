@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, UserCircle, ShieldCheck, Home, Briefcase, Wrench, GraduationCap, Phone, LayoutDashboard, MapPin, Settings, Menu, X, ChevronDown, Code2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Navbar = () => {

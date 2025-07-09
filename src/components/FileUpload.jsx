@@ -13,7 +13,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { uploadAssignmentFile, deleteAssignmentFile, validateFile } from '@/lib/assignmentService';
 
 const FileUpload = ({ 

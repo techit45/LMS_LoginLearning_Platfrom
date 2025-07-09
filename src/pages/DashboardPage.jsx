@@ -20,11 +20,11 @@ import {
   FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { testStudentAccess, displayTestResults, adminTestRLSPolicies } from '@/lib/studentAccessTest';
+// Student access testing functions have been removed
 import { diagnoseStudentLoadingIssues } from '@/lib/quickFix';
-import { testRealDataAccess, getSQLFixCommands, displayDatabaseTestResults } from '@/lib/databaseFix';
+// Database testing functions have been removed
 
 const DashboardPage = () => {
   const { user, isAdmin } = useAuth();
@@ -120,32 +120,14 @@ const DashboardPage = () => {
     });
 
     try {
-      const results = await testRealDataAccess();
-      displayDatabaseTestResults(results);
-      
-      const statusIcon = results.canAccessRealData ? '✅' : '❌';
-      const variant = results.canAccessRealData ? 'default' : 'destructive';
-      
+      // Database testing functions have been removed
       toast({
-        title: `${statusIcon} การทดสอบข้อมูลจริงเสร็จสิ้น`,
-        description: results.canAccessRealData 
-          ? 'Student สามารถเข้าถึงข้อมูลจริงได้แล้ว'
-          : 'ต้องรัน SQL Fix Script เพื่อแก้ไขปัญหา',
-        variant: variant,
-        duration: 10000
+        title: "🔍 ฟังก์ชันถูกปิดใช้งาน",
+        description: "ฟังก์ชันทดสอบการเข้าถึงข้อมูลได้ถูกเอาออกแล้ว",
+        variant: "default"
       });
 
-      if (results.needsSQLFix) {
-        const sqlCommands = getSQLFixCommands();
-        console.log('🔧 SQL Fix Commands Required:', sqlCommands);
-        
-        toast({
-          title: "🛠️ ต้องการ SQL Fix",
-          description: "ดู Console สำหรับ SQL commands ที่ต้องรันใน Supabase",
-          variant: "destructive",
-          duration: 15000
-        });
-      }
+      // SQL fix functionality has been removed
       
     } catch (error) {
       console.error('Database test failed:', error);

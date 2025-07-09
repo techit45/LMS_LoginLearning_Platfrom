@@ -26,7 +26,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import VideoPlayer from '@/components/VideoPlayer';
 import QuizPlayer from '@/components/QuizPlayer';
 import AssignmentPlayer from '@/components/AssignmentPlayer';

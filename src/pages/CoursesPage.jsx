@@ -4,7 +4,7 @@ import SEOHead from '@/components/SEOHead';
 import { BookOpen, Users, Clock, Search, BookOpenText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
 import { getAllCourses } from '@/lib/courseService';
 import { getEmergencyData } from '@/lib/quickFix';

@@ -6,7 +6,7 @@ import { UserPlus, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { signupSchema } from '@/lib/validationSchemas';
 
 const SignupPage = () => {

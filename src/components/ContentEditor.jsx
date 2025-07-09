@@ -10,7 +10,7 @@ import {
   Paperclip
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import UniversalFileUpload from '@/components/UniversalFileUpload';
 import { getContentAttachments } from '@/lib/attachmentService';
 

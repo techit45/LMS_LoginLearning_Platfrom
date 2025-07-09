@@ -30,7 +30,7 @@ import {
   Wifi
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { getDashboardStats, getRecentActivity, getSystemHealth } from '@/lib/dashboardService';
 

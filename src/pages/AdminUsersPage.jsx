@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, UserPlus, Search, Edit, Trash2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { getAllUsersForAdmin, updateUserRole } from '@/lib/userService';
 
 const AdminUsersPage = () => {
