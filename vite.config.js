@@ -222,13 +222,16 @@ export default defineConfig({
 				manualChunks: (id) => {
 					if (id.includes('node_modules')) {
 						if (id.includes('react') || id.includes('react-dom')) {
-							return 'vendor';
+							return 'react-vendor';
 						}
 						if (id.includes('react-router-dom')) {
 							return 'router';
 						}
 						if (id.includes('lucide-react') || id.includes('framer-motion')) {
 							return 'ui';
+						}
+						if (id.includes('@supabase')) {
+							return 'supabase';
 						}
 						return 'vendor-misc';
 					}

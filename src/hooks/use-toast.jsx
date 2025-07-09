@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import * as React from 'react';
 
-const ToastContext = createContext();
+const ToastContext = React.createContext();
 
 const toastReducer = (state, action) => {
   switch (action.type) {
@@ -16,9 +16,9 @@ const toastReducer = (state, action) => {
 };
 
 export const ToastProvider = ({ children }) => {
-  const [toasts, dispatch] = useReducer(toastReducer, []);
+  const [toasts, dispatch] = React.useReducer(toastReducer, []);
 
-  const toast = useCallback(({ title, description, variant = 'default', duration = 5000 }) => {
+  const toast = React.useCallback(({ title, description, variant = 'default', duration = 5000 }) => {
     const id = Date.now() + Math.random();
     const newToast = {
       id,
@@ -36,11 +36,11 @@ export const ToastProvider = ({ children }) => {
     }, duration);
   }, []);
 
-  const removeToast = useCallback((id) => {
+  const removeToast = React.useCallback((id) => {
     dispatch({ type: 'REMOVE_TOAST', id });
   }, []);
 
-  const clearToasts = useCallback(() => {
+  const clearToasts = React.useCallback(() => {
     dispatch({ type: 'CLEAR_TOASTS' });
   }, []);
 
@@ -52,7 +52,7 @@ export const ToastProvider = ({ children }) => {
 };
 
 export const useToast = () => {
-  const context = useContext(ToastContext);
+  const context = React.useContext(ToastContext);
   if (!context) {
     throw new Error('useToast must be used within a ToastProvider');
   }

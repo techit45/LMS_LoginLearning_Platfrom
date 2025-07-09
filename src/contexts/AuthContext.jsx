@@ -1,9 +1,9 @@
 
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import * as React from 'react';
 import { supabase, ADMIN_DOMAIN } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast.jsx';
 
-const AuthContext = createContext();
+const AuthContext = React.createContext();
 
 // Define roles - these could be stored in Supabase user metadata or a separate table in a real app
 const ROLES = {
@@ -22,13 +22,13 @@ const isAdminEmail = (email) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false); // Simple admin check for now
-  const [userRole, setUserRole] = useState(ROLES.GUEST); // More granular role
+  const [user, setUser] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [isAdmin, setIsAdmin] = React.useState(false); // Simple admin check for now
+  const [userRole, setUserRole] = React.useState(ROLES.GUEST); // More granular role
   const { toast } = useToast();
 
-  useEffect(() => {
+  React.useEffect(() => {
     const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
     let timeoutId;
 
@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, [user, toast]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const initAuth = async () => {
       try {
         if (!supabase) {
@@ -390,7 +390,7 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context = React.useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
