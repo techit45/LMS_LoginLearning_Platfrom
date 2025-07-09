@@ -56,6 +56,9 @@ coverage/
 *.sql.backup
 debug-*.sql
 test-*.sql
+*_Backup.*
+*/archive/
+*/archived/
 
 # Development files
 /src/components/SystemCheck.jsx
