@@ -213,8 +213,7 @@ export const getEmergencyData = () => {
         level: "beginner",
         price: 0,
         duration_hours: 12,
-        thumbnail_url:
-          "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=300&fit=crop",
+        thumbnail_url: "/images/course-placeholder.jpg",
         instructor_name: "อาจารย์สมชาย วิศวกร",
         instructor_id: "instructor-1",
         enrollment_count: 127,
@@ -234,8 +233,7 @@ export const getEmergencyData = () => {
         level: "intermediate",
         price: 1500,
         duration_hours: 18,
-        thumbnail_url:
-          "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=300&fit=crop",
+        thumbnail_url: "/images/course-placeholder.jpg",
         instructor_name: "ดร.สุดา เคมีวิทย์",
         instructor_id: "instructor-2",
         enrollment_count: 89,
@@ -255,8 +253,7 @@ export const getEmergencyData = () => {
         level: "intermediate",
         price: 2000,
         duration_hours: 24,
-        thumbnail_url:
-          "https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=300&fit=crop",
+        thumbnail_url: "/images/project-iot.jpg",
         instructor_name: "อาจารย์วิชัย ไอโอที",
         instructor_id: "instructor-3",
         enrollment_count: 156,
@@ -276,8 +273,7 @@ export const getEmergencyData = () => {
         level: "intermediate",
         price: 2500,
         duration_hours: 20,
-        thumbnail_url:
-          "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=400&h=300&fit=crop",
+        thumbnail_url: "/images/course-placeholder.jpg",
         instructor_name: "ดร.อนุชา ข้อมูลวิทย์",
         instructor_id: "instructor-4",
         enrollment_count: 203,
@@ -297,8 +293,7 @@ export const getEmergencyData = () => {
         level: "beginner",
         price: 1800,
         duration_hours: 16,
-        thumbnail_url:
-          "https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=400&h=300&fit=crop",
+        thumbnail_url: "/images/course-placeholder.jpg",
         instructor_name: "อาจารย์ประยุทธ ออกแบบ",
         instructor_id: "instructor-5",
         enrollment_count: 94,
@@ -319,11 +314,8 @@ export const getEmergencyData = () => {
         category: "IoT",
         technology: ["Arduino", "ESP32", "React Native"],
         difficulty_level: "intermediate",
-        thumbnail_url:
-          "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=300&fit=crop",
-        images: [
-          "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&h=600&fit=crop",
-        ],
+        thumbnail_url: "/images/project-hydroponic.jpg",
+        images: ["/images/project-hydroponic.jpg"],
         demo_url: "https://example.com/demo1",
         github_url: "https://github.com/example/auto-watering",
         creator_id: "student-1",
@@ -345,11 +337,8 @@ export const getEmergencyData = () => {
         category: "AI/ML",
         technology: ["Python", "TensorFlow", "OpenCV"],
         difficulty_level: "advanced",
-        thumbnail_url:
-          "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&h=300&fit=crop",
-        images: [
-          "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=800&h=600&fit=crop",
-        ],
+        thumbnail_url: "/images/project-ai.jpg",
+        images: ["/images/project-ai.jpg"],
         demo_url: "https://example.com/demo2",
         github_url: "https://github.com/example/ai-waste-classifier",
         creator_id: "student-2",
@@ -371,11 +360,8 @@ export const getEmergencyData = () => {
         category: "Agriculture Tech",
         technology: ["Arduino", "Sensors", "React", "Node.js"],
         difficulty_level: "intermediate",
-        thumbnail_url:
-          "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=400&h=300&fit=crop",
-        images: [
-          "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=800&h=600&fit=crop",
-        ],
+        thumbnail_url: "/images/project-hydroponic.jpg",
+        images: ["/images/project-hydroponic.jpg"],
         demo_url: "https://example.com/demo3",
         github_url: "https://github.com/example/smart-hydroponic",
         creator_id: "student-3",
@@ -397,11 +383,8 @@ export const getEmergencyData = () => {
         category: "Mobile App",
         technology: ["React Native", "Firebase", "Node.js"],
         difficulty_level: "intermediate",
-        thumbnail_url:
-          "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=300&fit=crop",
-        images: [
-          "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=600&fit=crop",
-        ],
+        thumbnail_url: "/images/placeholder.png",
+        images: ["/images/placeholder.png"],
         demo_url: "https://example.com/demo4",
         github_url: "https://github.com/example/student-management-app",
         creator_id: "student-4",
@@ -423,11 +406,8 @@ export const getEmergencyData = () => {
         category: "Environmental Tech",
         technology: ["Arduino", "Sensors", "Mobile App"],
         difficulty_level: "intermediate",
-        thumbnail_url:
-          "https://images.unsplash.com/photo-1611273426858-450d8e3c9fce?w=400&h=300&fit=crop",
-        images: [
-          "https://images.unsplash.com/photo-1611273426858-450d8e3c9fce?w=800&h=600&fit=crop",
-        ],
+        thumbnail_url: "/images/project-iot.jpg",
+        images: ["/images/project-iot.jpg"],
         demo_url: "https://example.com/demo5",
         github_url: "https://github.com/example/air-quality-monitor",
         creator_id: "student-5",
@@ -458,8 +438,7 @@ export const getEmergencyData = () => {
         message:
           "คอร์สเรียนที่นี่ช่วยให้ผมเข้าใจเทคโนโลยีมากขึ้น และสามารถสร้างโครงงานได้จริง",
         rating: 5,
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+        avatar: "/images/profile.png",
       },
       {
         id: "testimonial-2",
@@ -467,8 +446,7 @@ export const getEmergencyData = () => {
         role: "นักเรียน ม.5",
         message: "ครูสอนดีมาก อธิบายง่าย ทำให้เข้าใจการเขียนโปรแกรมได้เร็ว",
         rating: 5,
-        avatar:
-          "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
+        avatar: "/images/profile.png",
       },
     ],
     categories: [

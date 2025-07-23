@@ -227,8 +227,14 @@ const SystemDiagnosticPage = () => {
   const getStatusIcon = (results) => {
     if (!results) return <Activity className="w-5 h-5 text-gray-400" />;
     
-    const hasFailures = results.tests?.some(test => test.status === 'failed') || 
-                        results.issues?.length > 0;
+    // Safely check if results.tests is an array and has failed tests
+    const hasFailedTests = Array.isArray(results.tests) && 
+                          results.tests.some(test => test.status === 'failed');
+    
+    // Safely check if results.issues exists and has items
+    const hasIssues = Array.isArray(results.issues) && results.issues.length > 0;
+    
+    const hasFailures = hasFailedTests || hasIssues;
     
     return hasFailures ? 
       <XCircle className="w-5 h-5 text-red-500" /> : 
