@@ -238,64 +238,6 @@ const DashboardPage = () => {
           </motion.div>
         )}
 
-        {/* Quick Actions Section - แสดงเฉพาะสำหรับ Admin */}
-        {isAdmin && (
-          <motion.div
-            initial={{ y: 30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.35 }}
-            className="mb-12"
-          >
-            <div className="flex items-center mb-6">
-              <Zap className="w-6 h-6 text-purple-500 mr-3" />
-              <h2 className="text-2xl font-bold text-green-900">
-                การดำเนินการด่วน
-              </h2>
-            </div>
-
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.4, delay: 0.4 }}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-6 text-white shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105"
-              onClick={handleSystemDiagnostic}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="bg-white/20 p-3 rounded-lg mr-4">
-                    <Settings className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold mb-1">🔧 ระบบตรวจสอบและวินิจฉัย</h3>
-                    <p className="text-purple-100 text-sm">
-                      เครื่องมือสำหรับตรวจสอบ ทดสอบ และแก้ไขปัญหาระบบ
-                    </p>
-                  </div>
-                </div>
-                <ArrowRight className="w-6 h-6 text-white/80" />
-              </div>
-              
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t border-white/20">
-                <div className="text-center">
-                  <Shield className="w-5 h-5 mx-auto mb-1" />
-                  <p className="text-xs text-purple-100">ทดสอบความปลอดภัย</p>
-                </div>
-                <div className="text-center">
-                  <Database className="w-5 h-5 mx-auto mb-1" />
-                  <p className="text-xs text-purple-100">ตรวจสอบฐานข้อมูล</p>
-                </div>
-                <div className="text-center">
-                  <TestTube className="w-5 h-5 mx-auto mb-1" />
-                  <p className="text-xs text-purple-100">วินิจฉัยปัญหา</p>
-                </div>
-                <div className="text-center">
-                  <FileText className="w-5 h-5 mx-auto mb-1" />
-                  <p className="text-xs text-purple-100">SQL Commands</p>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
 
         {/* Main Dashboard Items */}
         <motion.div
