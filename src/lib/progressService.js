@@ -1,572 +1,323 @@
-import { supabase } from './supabaseClient';
-
-// ==========================================
-// VIDEO PROGRESS TRACKING
-// ==========================================
+import { supabase } from "./supabaseClient";
 
 /**
- * Update video watching progress
+ * Mark content as viewed by the user
+ * @param {string} contentId - The content ID
+ * @returns {Promise<{data: Object, error: Error}>}
  */
-export const updateVideoProgress = async (contentId, progressData) => {
+export const markContentAsViewed = async (contentId) => {
   try {
-    console.log('🎯 updateVideoProgress called with:', { contentId, progressData });
-    
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      throw new Error('User not authenticated');
+    if (!contentId) {
+      return { data: null, error: new Error("Content ID is required") };
     }
 
-    console.log('✅ User authenticated:', user.id);
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) {
+      return { data: null, error: new Error("Authentication required") };
+    }
 
-    const {
-      currentTime = 0,
-      watchedDuration = 0,
-      totalDuration = 0,
-      isCompleted = false
-    } = progressData;
-    
-    // First, get the course_id for this content
-    const { data: contentData, error: contentError } = await supabase
-      .from('course_content')
-      .select('course_id')
-      .eq('id', contentId)
+    // Check if progress record exists
+    const { data: existingProgress, error: checkError } = await supabase
+      .from("user_progress")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("content_id", contentId)
       .single();
 
-    if (contentError) throw contentError;
-
-    if (!contentData) {
-      throw new Error('Content not found');
+    if (checkError && checkError.code !== "PGRST116") {
+      // PGRST116 = not found
+      return { data: null, error: checkError };
     }
 
-    const completionPercentage = totalDuration > 0 ? Math.round((currentTime / totalDuration) * 100) : 0;
-    
-    console.log('📊 Video progress data to save:', {
-      user_id: user.id,
-      course_id: contentData.course_id,
-      content_id: contentId,
-      completion_percentage: completionPercentage,
-      is_completed: isCompleted,
-      time_spent_minutes: Math.round(watchedDuration / 60)
-    });
-    
-    // Update user_progress table
-    // Check if progress record exists and update or insert accordingly
-    const { data: existingProgress } = await supabase
-      .from('user_progress')
-      .select('id, time_spent_minutes')
-      .eq('user_id', user.id)
-      .eq('course_id', contentData.course_id)
-      .eq('content_id', contentId)
-      .maybeSingle();
-    
-    let data, error;
-    
-    const progressData = {
-      time_spent_minutes: Math.round(watchedDuration / 60),
-      ...(isCompleted && { completed_at: new Date().toISOString() })
-    };
-    
+    let result;
     if (existingProgress) {
-      // Update existing record
-      const result = await supabase
-        .from('user_progress')
-        .update(progressData)
-        .eq('id', existingProgress.id)
-        .select()
-        .single();
-      
-      data = result.data;
-      error = result.error;
-    } else {
-      // Insert new record
-      const result = await supabase
-        .from('user_progress')
-        .insert([{
-          user_id: user.id,
-          course_id: contentData.course_id,
-          content_id: contentId,
-          ...progressData
-        }])
-        .select()
-        .single();
-      
-      data = result.data;
-      error = result.error;
-    }
-
-    if (error) throw error;
-    
-    return { 
-      data: {
-        ...data,
-        current_position: currentTime,
-        total_duration: totalDuration,
-        completion_percentage: completionPercentage
-      }, 
-      error: null 
-    };
-  } catch (error) {
-    console.error('Error updating video progress:', error);
-    return { data: null, error };
-  }
-};
-
-/**
- * Get video progress for user
- */
-export const getVideoProgress = async (contentId) => {
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      return { data: null, error: null }; // Return null for non-authenticated users
-    }
-
-    // Get progress from user_progress table
-    const { data, error } = await supabase
-      .from('user_progress')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('content_id', contentId)
-      .maybeSingle();
-
-    if (error) {
-      throw error;
-    }
-
-    // Transform the data to match expected video progress format
-    if (data) {
-      return { 
-        data: {
-          ...data,
-          current_position: 0, // We don't track current position in user_progress, only completion
-          total_duration: 0,   // We don't track total duration in user_progress
-          last_position: 0,    // We don't track last position in user_progress
-          completion_percentage: data.completed_at ? 100 : 0  // Calculate from completion status
-        }, 
-        error: null 
-      };
-    }
-
-    return { data: null, error: null };
-  } catch (error) {
-    console.error('Error fetching video progress:', error);
-    return { data: null, error };
-  }
-};
-
-/**
- * Get all video progress for a course
- */
-export const getCourseVideoProgress = async (courseId) => {
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      return { data: [], error: null };
-    }
-
-    // Get all video content for the course
-    const { data: courseContent, error: contentError } = await supabase
-      .from('course_content')
-      .select('id, title, content_type, duration_minutes')
-      .eq('course_id', courseId)
-      .eq('content_type', 'video');
-
-    if (contentError) throw contentError;
-
-    // Get progress for all video content from user_progress table
-    const contentIds = courseContent.map(content => content.id);
-    
-    const { data: progressData, error: progressError } = await supabase
-      .from('user_progress')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('course_id', courseId)
-      .in('content_id', contentIds);
-
-    if (progressError) throw progressError;
-
-    // Combine content info with progress
-    const progressMap = new Map((progressData || []).map(p => [p.content_id, p]));
-    
-    const result = courseContent.map(content => ({
-      ...content,
-      progress: progressMap.get(content.id) || null,
-      completion_percentage: (() => {
-        const progress = progressMap.get(content.id);
-        return progress?.completed_at ? 100 : 0;
-      })(),
-      is_completed: !!progressMap.get(content.id)?.completed_at
-    }));
-
-    return { data: result, error: null };
-  } catch (error) {
-    console.error('Error fetching course video progress:', error);
-    return { data: [], error };
-  }
-};
-
-// ==========================================
-// GENERAL CONTENT PROGRESS
-// ==========================================
-
-/**
- * Mark content as completed
- */
-export const markContentComplete = async (contentId) => {
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      throw new Error('User not authenticated');
-    }
-
-    // First, get the course_id for this content
-    const { data: contentData, error: contentError } = await supabase
-      .from('course_content')
-      .select('course_id')
-      .eq('id', contentId)
-      .single();
-
-    if (contentError) throw contentError;
-
-    if (!contentData) {
-      throw new Error('Content not found');
-    }
-
-    // Check if progress record exists and update or insert accordingly
-    const { data: existingProgress } = await supabase
-      .from('user_progress')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('course_id', contentData.course_id)
-      .eq('content_id', contentId)
-      .maybeSingle();
-    
-    let data, error;
-    
-    if (existingProgress) {
-      // Update existing record
-      const result = await supabase
-        .from('user_progress')
+      // Update existing progress
+      const { data, error } = await supabase
+        .from("user_progress")
         .update({
-          completed_at: new Date().toISOString(),
-          time_spent_minutes: 0
+          viewed: true,
+          view_count: (existingProgress.view_count || 0) + 1,
+          last_viewed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', existingProgress.id)
+        .eq("id", existingProgress.id)
         .select()
         .single();
-      
-      data = result.data;
-      error = result.error;
+
+      result = { data, error };
     } else {
-      // Insert new record
-      const result = await supabase
-        .from('user_progress')
-        .insert([{
+      // Create new progress record
+      const { data, error } = await supabase
+        .from("user_progress")
+        .insert({
           user_id: user.id,
-          course_id: contentData.course_id,
           content_id: contentId,
-          completed_at: new Date().toISOString(),
-          time_spent_minutes: 0
-        }])
+          viewed: true,
+          view_count: 1,
+          last_viewed_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
         .select()
         .single();
-      
-      data = result.data;
-      error = result.error;
+
+      result = { data, error };
     }
 
-    if (error) throw error;
-
-    // For videos, the video progress is already updated via user_progress table
-    // No need for additional video_progress update since we're using unified progress tracking
-
-    return { data, error: null };
+    return result;
   } catch (error) {
-    console.error('Error marking content complete:', error);
+    console.error("Error in markContentAsViewed:", error);
     return { data: null, error };
   }
 };
 
 /**
- * Get overall course progress
+ * Get user's progress for a specific course
+ * @param {string} courseId - The course ID
+ * @returns {Promise<{data: Object, error: Error}>}
  */
-export const getCourseProgress = async (courseId) => {
+export const getUserCourseProgress = async (courseId) => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      return { data: null, error: null };
+    if (!courseId) {
+      return { data: null, error: new Error("Course ID is required") };
     }
 
-    // Get enrollment
-    const { data: enrollment, error: enrollmentError } = await supabase
-      .from('enrollments')
-      .select('id, progress_percentage, completed_at, is_active')
-      .eq('user_id', user.id)
-      .eq('course_id', courseId)
-      .maybeSingle();
-
-    if (enrollmentError) {
-      throw enrollmentError;
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) {
+      return { data: null, error: new Error("Authentication required") };
     }
 
-    if (!enrollment) {
-      return { data: { enrolled: false }, error: null };
+    // Get all content items for the course
+    const { data: contentItems, error: contentError } = await supabase
+      .from("course_content")
+      .select("id, title, content_type")
+      .eq("course_id", courseId)
+      .order("order_index", { ascending: true });
+
+    if (contentError) {
+      return { data: null, error: contentError };
     }
 
-    // Get all course content
-    const { data: allContent, error: contentError } = await supabase
-      .from('course_content')
-      .select('id, title, content_type, order_index')
-      .eq('course_id', courseId)
-      .order('order_index');
+    // Get user progress for all content items
+    const { data: progressData, error: progressError } = await supabase
+      .from("user_progress")
+      .select("*")
+      .eq("user_id", user.id)
+      .in(
+        "content_id",
+        contentItems.map((item) => item.id)
+      );
 
-    if (contentError) throw contentError;
-
-    // Get user progress for all content
-    const contentIds = allContent.map(c => c.id);
-
-    // Get progress from user_progress table (using only existing columns)
-    const { data: userProgressData, error: progressError } = await supabase
-      .from('user_progress')
-      .select('content_id, completed_at, time_spent_minutes')
-      .eq('user_id', user.id)
-      .eq('course_id', courseId)
-      .in('content_id', contentIds);
-
-    if (progressError) throw progressError;
-
-    // Video progress is handled by user_progress table, so no separate video_progress query needed
-
-    // Quiz attempts
-    const { data: quizAttempts, error: quizError } = await supabase
-      .from('quiz_attempts')
-      .select('quiz_id, is_passed, completed_at')
-      .eq('user_id', user.id);
-
-    if (quizError) console.warn('Quiz attempts table not available:', quizError);
-
-    // Assignment submissions
-    const { data: assignments, error: assignmentError } = await supabase
-      .from('assignment_submissions')
-      .select('assignment_id, submitted_at, score, graded_at')
-      .eq('user_id', user.id);
-
-    if (assignmentError) console.warn('Assignment submissions table not available:', assignmentError);
-
-    // Create completion map from user_progress data
-    const userProgressMap = new Map(
-      (userProgressData || []).map(up => [up.content_id, up])
-    );
-
-    // Calculate progress
-    const contentProgress = allContent.map(content => {
-      const userProgress = userProgressMap.get(content.id);
-      let isCompleted = false;
-      
-      // First check user_progress table
-      if (userProgress && userProgress.completed_at) {
-        isCompleted = true;
-      } else {
-        // Fallback to content-specific completion checks
-        switch (content.content_type) {
-          case 'video':
-            // Video completion is tracked in user_progress table
-            isCompleted = !!userProgress?.completed_at;
-            break;
-          case 'quiz':
-            // Check if there's a passed quiz attempt for this content
-            isCompleted = (quizAttempts || []).some(qa => qa.is_passed);
-            break;
-          case 'assignment':
-            // Check if assignment is submitted (submitted_at is not null)
-            isCompleted = (assignments || []).some(a => a.submitted_at !== null);
-            break;
-          default:
-            // For other content types, check user_progress
-            isCompleted = !!userProgress?.completed_at;
-        }
-      }
-
-      return {
-        ...content,
-        is_completed: isCompleted,
-        completion_percentage: isCompleted ? 100 : 0,
-        completed_at: userProgress?.completed_at
-      };
-    });
-
-    const completedCount = contentProgress.filter(cp => cp.is_completed).length;
-    const totalCount = contentProgress.length;
-    const calculatedProgress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-
-    return {
-      data: {
-        enrolled: true,
-        enrollment,
-        content_progress: contentProgress,
-        completed_count: completedCount,
-        total_count: totalCount,
-        progress_percentage: calculatedProgress,
-        calculated_progress: calculatedProgress
-      },
-      error: null
-    };
-  } catch (error) {
-    console.error('Error fetching course progress:', error);
-    return { data: null, error };
-  }
-};
-
-/**
- * Update enrollment progress percentage
- */
-export const updateEnrollmentProgress = async (courseId) => {
-  try {
-    const { data: progressData, error: progressError } = await getCourseProgress(courseId);
-    
-    if (progressError || !progressData?.enrolled) {
+    if (progressError) {
       return { data: null, error: progressError };
     }
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      throw new Error('User not authenticated');
-    }
+    // Create a map of content ID to progress
+    const progressMap = {};
+    progressData?.forEach((progress) => {
+      progressMap[progress.content_id] = progress;
+    });
 
-    // Update enrollment with calculated progress
-    const { data, error } = await supabase
-      .from('enrollments')
-      .update({
-        progress_percentage: progressData.calculated_progress,
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', user.id)
-      .eq('course_id', courseId)
-      .select()
-      .single();
+    // Calculate overall progress
+    const totalItems = contentItems.length;
+    const viewedItems = progressData?.filter((p) => p.viewed).length || 0;
+    const completedItems = progressData?.filter((p) => p.completed).length || 0;
 
-    if (error) throw error;
+    // Calculate percentage
+    const viewPercentage =
+      totalItems > 0 ? Math.round((viewedItems / totalItems) * 100) : 0;
+    const completionPercentage =
+      totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
-    return { data, error: null };
-  } catch (error) {
-    console.error('Error updating enrollment progress:', error);
-    return { data: null, error };
-  }
-};
+    // Create detailed progress data
+    const detailedProgress = contentItems.map((item) => ({
+      content_id: item.id,
+      title: item.title,
+      content_type: item.content_type,
+      viewed: !!progressMap[item.id]?.viewed,
+      completed: !!progressMap[item.id]?.completed,
+      score: progressMap[item.id]?.score || null,
+      total_score: progressMap[item.id]?.total_score || null,
+      last_viewed_at: progressMap[item.id]?.last_viewed_at || null,
+    }));
 
-// ==========================================
-// LEARNING ANALYTICS
-// ==========================================
-
-/**
- * Track learning session
- */
-export const trackLearningSession = async (courseId, contentId, sessionData) => {
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      return { data: null, error: null };
-    }
-
-    const { data, error } = await supabase
-      .from('learning_sessions')
-      .insert([{
-        user_id: user.id,
+    return {
+      data: {
         course_id: courseId,
-        content_id: contentId,
-        ...sessionData
-      }])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return { data, error: null };
+        total_items: totalItems,
+        viewed_items: viewedItems,
+        completed_items: completedItems,
+        view_percentage: viewPercentage,
+        completion_percentage: completionPercentage,
+        detailed_progress: detailedProgress,
+      },
+      error: null,
+    };
   } catch (error) {
-    console.error('Error tracking learning session:', error);
+    console.error("Error in getUserCourseProgress:", error);
     return { data: null, error };
   }
 };
 
 /**
- * Get user learning analytics
+ * Update user's progress for a specific content item
+ * @param {string} contentId - The content ID
+ * @param {Object} progressData - The progress data
+ * @returns {Promise<{data: Object, error: Error}>}
  */
-export const getUserLearningAnalytics = async (timeframe = '30days') => {
+export const updateContentProgress = async (contentId, progressData) => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      throw new Error('User not authenticated');
+    if (!contentId) {
+      return { data: null, error: new Error("Content ID is required") };
     }
 
-    const timeframeDays = timeframe === '7days' ? 7 : timeframe === '30days' ? 30 : 90;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - timeframeDays);
-
-    const { data, error } = await supabase
-      .from('learning_sessions')
-      .select(`
-        *,
-        courses(title),
-        course_content(title, content_type)
-      `)
-      .eq('user_id', user.id)
-      .gte('started_at', startDate.toISOString())
-      .order('started_at', { ascending: false });
-
-    if (error) throw error;
-
-    // Process analytics
-    const analytics = {
-      total_sessions: data.length,
-      total_time_minutes: data.reduce((sum, session) => sum + (session.duration_minutes || 0), 0),
-      by_content_type: {},
-      by_day: {},
-      most_active_day: null,
-      average_session_length: 0
-    };
-
-    // Group by content type
-    data.forEach(session => {
-      const type = session.course_content?.content_type || 'unknown';
-      if (!analytics.by_content_type[type]) {
-        analytics.by_content_type[type] = { count: 0, duration: 0 };
-      }
-      analytics.by_content_type[type].count++;
-      analytics.by_content_type[type].duration += session.duration_minutes || 0;
-    });
-
-    // Group by day
-    data.forEach(session => {
-      const day = new Date(session.started_at).toDateString();
-      if (!analytics.by_day[day]) {
-        analytics.by_day[day] = { count: 0, duration: 0 };
-      }
-      analytics.by_day[day].count++;
-      analytics.by_day[day].duration += session.duration_minutes || 0;
-    });
-
-    // Calculate averages
-    if (analytics.total_sessions > 0) {
-      analytics.average_session_length = Math.round(analytics.total_time_minutes / analytics.total_sessions);
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) {
+      return { data: null, error: new Error("Authentication required") };
     }
 
-    // Find most active day
-    const mostActiveDay = Object.entries(analytics.by_day)
-      .reduce((max, [day, data]) => data.duration > (max.data?.duration || 0) ? { day, data } : max, {});
-    
-    analytics.most_active_day = mostActiveDay.day || null;
+    // Check if progress record exists
+    const { data: existingProgress, error: checkError } = await supabase
+      .from("user_progress")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("content_id", contentId)
+      .single();
 
-    return { data: analytics, error: null };
+    if (checkError && checkError.code !== "PGRST116") {
+      // PGRST116 = not found
+      return { data: null, error: checkError };
+    }
+
+    let result;
+    if (existingProgress) {
+      // Update existing progress
+      const { data, error } = await supabase
+        .from("user_progress")
+        .update({
+          ...progressData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingProgress.id)
+        .select()
+        .single();
+
+      result = { data, error };
+    } else {
+      // Create new progress record
+      const { data, error } = await supabase
+        .from("user_progress")
+        .insert({
+          user_id: user.id,
+          content_id: contentId,
+          ...progressData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      result = { data, error };
+    }
+
+    // If this content is marked as completed, update course completion status
+    if (progressData.completed) {
+      // Get the course ID for this content
+      const { data: contentData } = await supabase
+        .from("course_content")
+        .select("course_id")
+        .eq("id", contentId)
+        .single();
+
+      if (contentData?.course_id) {
+        // Update course completion status
+        await updateCourseCompletionStatus(contentData.course_id);
+      }
+    }
+
+    return result;
   } catch (error) {
-    console.error('Error fetching learning analytics:', error);
+    console.error("Error in updateContentProgress:", error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Update course completion status based on content progress
+ * @param {string} courseId - The course ID
+ * @returns {Promise<{data: Object, error: Error}>}
+ */
+const updateCourseCompletionStatus = async (courseId) => {
+  try {
+    if (!courseId) {
+      return { data: null, error: new Error("Course ID is required") };
+    }
+
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) {
+      return { data: null, error: new Error("Authentication required") };
+    }
+
+    // Get course progress
+    const { data: progressData, error: progressError } =
+      await getUserCourseProgress(courseId);
+    if (progressError) {
+      return { data: null, error: progressError };
+    }
+
+    // Check if all required items are completed
+    const isCompleted = progressData.completion_percentage >= 100;
+
+    // Update enrollment record
+    const { data: enrollmentData, error: enrollmentError } = await supabase
+      .from("course_enrollments")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("course_id", courseId)
+      .single();
+
+    if (enrollmentError && enrollmentError.code !== "PGRST116") {
+      return { data: null, error: enrollmentError };
+    }
+
+    let result;
+    if (enrollmentData) {
+      // Update existing enrollment
+      const { data, error } = await supabase
+        .from("course_enrollments")
+        .update({
+          completed: isCompleted,
+          completion_percentage: progressData.completion_percentage,
+          completed_at: isCompleted ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", enrollmentData.id)
+        .select()
+        .single();
+
+      result = { data, error };
+    } else {
+      // Create new enrollment record
+      const { data, error } = await supabase
+        .from("course_enrollments")
+        .insert({
+          user_id: user.id,
+          course_id: courseId,
+          completed: isCompleted,
+          completion_percentage: progressData.completion_percentage,
+          completed_at: isCompleted ? new Date().toISOString() : null,
+          enrolled_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      result = { data, error };
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error in updateCourseCompletionStatus:", error);
     return { data: null, error };
   }
 };

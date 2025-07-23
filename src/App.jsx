@@ -28,6 +28,7 @@ const UserProfilePage = React.lazy(() => import('@/pages/UserProfilePage'));
 const SettingsPageDatabase = React.lazy(() => import('@/pages/SettingsPageDatabase'));
 const ProjectsPage = React.lazy(() => import('@/pages/ProjectsPage'));
 const ProjectDetailPage = React.lazy(() => import('@/pages/ProjectDetailPage'));
+const SystemDiagnosticPage = React.lazy(() => import('@/pages/SystemDiagnosticPage'));
 
 // Admin components (lazy loaded)
 const AdminLayout = React.lazy(() => import('@/components/AdminLayout'));
@@ -108,6 +109,15 @@ function App() {
                     <ProtectedRoute>
                       <SettingsPageDatabase />
                     </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/system-diagnostic" 
+                  element={
+                    <AdminRoute>
+                      <SystemDiagnosticPage />
+                    </AdminRoute>
                   } 
                 />
                 

@@ -1,17 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { BookOpen, Users, Award, Play, Star, Clock, ChevronRight, Zap, Target, TrendingUp, Lightbulb } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast.jsx';
-import { Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { getFeaturedCourses } from '@/lib/courseService';
-import { getFeaturedProjects } from '@/lib/projectService';
-import { getEmergencyData } from '@/lib/quickFix';
-import SEOHead from '@/components/SEOHead';
-import CourseSlider from '@/components/CourseSlider';
-import ProjectSlider from '@/components/ProjectSlider';
-import TestimonialSlider from '@/components/TestimonialSlider';
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import {
+  BookOpen,
+  Users,
+  Award,
+  Play,
+  Star,
+  Clock,
+  ChevronRight,
+  Zap,
+  Target,
+  TrendingUp,
+  Lightbulb,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast.jsx";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { getFeaturedCourses } from "@/lib/courseService";
+import { getFeaturedProjects } from "@/lib/projectService";
+import { getEmergencyData } from "@/lib/quickFix";
+import SEOHead from "@/components/SEOHead";
+import CourseSlider from "@/components/CourseSlider";
+import ProjectSlider from "@/components/ProjectSlider";
+import TestimonialSlider from "@/components/TestimonialSlider";
 
 const testimonials = [
   {
@@ -20,7 +32,7 @@ const testimonials = [
     avatar: "/images/profile.png",
     rating: 5,
     text: "คอร์สนี้สุดยอดมากครับ! ผมได้เรียนรู้เกี่ยวกับการเขียนโปรแกรมหุ่นยนต์ตั้งแต่พื้นฐานจนสร้างโปรเจกต์ของตัวเองได้เลย พี่ๆ ใจดีและสอนสนุกมากครับ",
-    course: "วิศวกรรมหุ่นยนต์เบื้องต้น"
+    course: "วิศวกรรมหุ่นยนต์เบื้องต้น",
   },
   {
     id: 2,
@@ -28,7 +40,7 @@ const testimonials = [
     avatar: "/images/profile.png",
     rating: 5,
     text: "ตอนแรกไม่คิดว่าจะชอบวิศวะโยธา แต่พอได้ลองทำโปรเจกต์สร้างสะพานจำลองแล้วสนุกกว่าที่คิดไว้เยอะเลยค่ะ ได้ความรู้ไปใช้ในห้องเรียนด้วย",
-    course: "โครงสร้างพื้นฐานสำหรับวิศวกรน้อย"
+    course: "โครงสร้างพื้นฐานสำหรับวิศวกรน้อย",
   },
   {
     id: 3,
@@ -36,7 +48,7 @@ const testimonials = [
     avatar: "/images/profile.png",
     rating: 4,
     text: "เนื้อหาเข้มข้นดีครับ ได้เรียนรู้การใช้เครื่องมือจริงๆ ที่พี่วิศวกรเค้าใช้กัน ตอนนี้ผมรู้แล้วว่าอยากเรียนต่อวิศวะคอมฯ ครับ",
-    course: "เจาะลึก IoT"
+    course: "เจาะลึก IoT",
   },
   {
     id: 4,
@@ -44,8 +56,8 @@ const testimonials = [
     avatar: "/images/profile.png",
     rating: 5,
     text: "เป็นคอร์สที่เปิดโลกมากค่ะ ไม่เคยคิดว่าวิศวกรรมเคมีจะเกี่ยวกับเรื่องใกล้ตัวขนาดนี้ ได้ทดลองทำจริงทุกขั้นตอนเลย",
-    course: "มหัศจรรย์วิศวกรรมเคมี"
-  }
+    course: "มหัศจรรย์วิศวกรรมเคมี",
+  },
 ];
 
 const HomePage = () => {
@@ -58,11 +70,11 @@ const HomePage = () => {
 
   // Helper function to format text with line breaks
   const formatTextWithLineBreaks = (text) => {
-    if (!text) return '';
-    return text.split('\n').map((line, index) => (
+    if (!text) return "";
+    return text.split("\n").map((line, index) => (
       <React.Fragment key={index}>
         {line}
-        {index < text.split('\n').length - 1 && <br />}
+        {index < text.split("\n").length - 1 && <br />}
       </React.Fragment>
     ));
   };
@@ -72,17 +84,17 @@ const HomePage = () => {
       try {
         const { data, error } = await getFeaturedCourses();
         if (error) {
-          console.error('Error loading featured courses:', error);
+          console.error("Error loading featured courses:", error);
           toast({
             title: "ไม่สามารถโหลดคอร์สแนะนำได้",
             description: error.message,
-            variant: "destructive"
+            variant: "destructive",
           });
         } else {
           setFeaturedCourses(data || []);
         }
       } catch (error) {
-        console.error('Error:', error);
+        console.error("Error:", error);
       } finally {
         setLoading(false);
       }
@@ -92,29 +104,29 @@ const HomePage = () => {
       try {
         // Add timeout for emergency fallback
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Projects loading timeout')), 8000);
+          setTimeout(() => reject(new Error("Projects loading timeout")), 8000);
         });
-        
+
         const { data, error } = await Promise.race([
           getFeaturedProjects(),
-          timeoutPromise
+          timeoutPromise,
         ]);
-        
+
         if (error) {
-          console.error('Error loading featured projects:', error);
+          console.error("Error loading featured projects:", error);
           // Use emergency data instead of showing error
           const emergencyData = getEmergencyData();
           setFeaturedProjects(emergencyData.projects);
-          console.log('🚑 Using emergency projects data');
+          console.log("🚑 Using emergency projects data");
         } else {
           setFeaturedProjects(data || []);
         }
       } catch (error) {
-        console.error('Error loading projects:', error);
+        console.error("Error loading projects:", error);
         // Use emergency data on any error
         const emergencyData = getEmergencyData();
         setFeaturedProjects(emergencyData.projects);
-        console.log('🚑 Using emergency projects data after error');
+        console.log("🚑 Using emergency projects data after error");
       } finally {
         setProjectsLoading(false);
       }
@@ -124,21 +136,33 @@ const HomePage = () => {
     loadFeaturedProjects();
   }, [toast]);
 
-  const handleFeatureClick = () => {
+  const handleFeatureClick = (featureName = "ฟีเจอร์นี้") => {
+    const encouragingMessages = [
+      "แต่ไม่ต้องกังวล! เรากำลังทำงานหนักเพื่อนำเสนอฟีเจอร์ที่ดีที่สุดให้คุณ",
+      "ขณะนี้เรากำลังพัฒนาฟีเจอร์นี้ให้มีประสิทธิภาพสูงสุด",
+      "เรากำลังเตรียมฟีเจอร์นี้ให้พร้อมใช้งานในเร็วๆ นี้",
+      "ทีมพัฒนากำลังทำงานเพื่อให้ฟีเจอร์นี้สมบูรณ์แบบ",
+    ];
+
+    const randomMessage =
+      encouragingMessages[
+        Math.floor(Math.random() * encouragingMessages.length)
+      ];
+
     toast({
-      title: "🚧 ฟีเจอร์นี้ยังไม่พร้อมใช้งาน",
-      description: "แต่ไม่ต้องกังวล! คุณสามารถขอให้เพิ่มฟีเจอร์นี้ในข้อความถัดไปได้! 🚀",
+      title: `🚧 ${featureName}ยังไม่พร้อมใช้งาน`,
+      description: `${randomMessage} 🚀\n\nคุณสามารถติดต่อเราได้ที่หน้า "ติดต่อเรา" หากต้องการข้อมูลเพิ่มเติม`,
+      duration: 5000,
     });
   };
-
 
   const stats = [
     { icon: Users, value: "100+", label: "นักเรียน" },
     { icon: BookOpen, value: "10+", label: "คอร์สเรียน" },
     { icon: Award, value: "90%", label: "อัตราสำเร็จ" },
-    { icon: Star, value: "4.8", label: "คะแนนเฉลี่ย" }
+    { icon: Star, value: "4.8", label: "คะแนนเฉลี่ย" },
   ];
-  
+
   const pageVariants = {
     initial: { opacity: 0, y: 20 },
     in: { opacity: 1, y: 0 },
@@ -151,9 +175,14 @@ const HomePage = () => {
     duration: 0.5,
   };
 
-
   return (
-    <motion.div initial="initial" animate="in" exit="out" variants={pageVariants} transition={pageTransition}>
+    <motion.div
+      initial="initial"
+      animate="in"
+      exit="out"
+      variants={pageVariants}
+      transition={pageTransition}
+    >
       <SEOHead
         title="แพลตฟอร์มเรียนรู้วิศวกรรมออนไลน์สำหรับน้องมัธยม"
         description="Login Learning ช่วยน้องมัธยมค้นพบศักยภาพและความชอบด้านวิศวกรรม เรียนรู้จากโครงงานจริง พร้อมพี่เลี้ยงผู้เชี่ยวชาญ เพื่อการตัดสินใจเลือกเส้นทางอนาคตอย่างมั่นใจ"
@@ -162,7 +191,9 @@ const HomePage = () => {
         type="website"
       />
 
-      <div className="pt-24"> {/* Adjusted padding top to account for fixed navbar */}
+      <div className="pt-24">
+        {" "}
+        {/* Adjusted padding top to account for fixed navbar */}
         {/* Hero Section */}
         <section className="pt-16 pb-20 px-6">
           <div className="max-w-7xl mx-auto">
@@ -213,9 +244,11 @@ const HomePage = () => {
                 className="relative"
               >
                 <div className="floating-animation">
-                  <img 
+                  <img
                     className="rounded-2xl shadow-2xl w-full"
-                    alt="นักเรียนมัธยมกำลังเรียนรู้เกี่ยวกับโครงงานวิศวกรรมอย่างสนุกสนาน" src="https://images.unsplash.com/photo-1596496181861-5fc5346995ba" />
+                    alt="นักเรียนมัธยมกำลังเรียนรู้เกี่ยวกับโครงงานวิศวกรรมอย่างสนุกสนาน"
+                    src="https://images.unsplash.com/photo-1596496181861-5fc5346995ba"
+                  />
                 </div>
                 <div className="absolute -bottom-6 -left-6 glass-effect rounded-xl p-4 shadow-lg">
                   <div className="flex items-center space-x-3">
@@ -223,8 +256,12 @@ const HomePage = () => {
                       <Zap className="w-6 h-6 text-blue-800" />
                     </div>
                     <div>
-                      <p className="text-black font-semibold">โครงงานสร้างสรรค์</p>
-                      <p className="text-black opacity-70">จากผู้เชี่ยวชาญด้านวิศวกรรม</p>
+                      <p className="text-black font-semibold">
+                        โครงงานสร้างสรรค์
+                      </p>
+                      <p className="text-black opacity-70">
+                        จากผู้เชี่ยวชาญด้านวิศวกรรม
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -232,7 +269,6 @@ const HomePage = () => {
             </div>
           </div>
         </section>
-
         {/* Stats Section */}
         <section className="py-16 px-6">
           <div className="max-w-7xl mx-auto">
@@ -253,14 +289,15 @@ const HomePage = () => {
                   className="glass-effect rounded-xl p-6 text-center hover:scale-105 transition-transform"
                 >
                   <stat.icon className="w-8 h-8 text-blue-600 mx-auto mb-4" />
-                  <h3 className="text-3xl font-bold text-black mb-2">{stat.value}</h3>
+                  <h3 className="text-3xl font-bold text-black mb-2">
+                    {stat.value}
+                  </h3>
                   <p className="text-black">{stat.label}</p>
                 </motion.div>
               ))}
             </motion.div>
           </div>
         </section>
-
         {/* Featured Courses */}
         <section className="py-20 px-6">
           <div className="max-w-7xl mx-auto">
@@ -292,28 +329,38 @@ const HomePage = () => {
                   <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
                     <Star className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-3">ยังไม่มีคอร์สแนะนำ</h3>
-                  <p className="text-gray-600 mb-6">ผู้ดูแลระบบยังไม่ได้เลือกคอร์สแนะนำ</p>
-                  <Button asChild variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50">
-                    <Link to="/courses">
-                      ดูคอร์สทั้งหมด
-                    </Link>
+                  <h3 className="text-xl font-bold text-gray-800 mb-3">
+                    ยังไม่มีคอร์สแนะนำ
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    ผู้ดูแลระบบยังไม่ได้เลือกคอร์สแนะนำ
+                  </p>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                  >
+                    <Link to="/courses">ดูคอร์สทั้งหมด</Link>
                   </Button>
                 </div>
               </div>
             )}
-            
+
             <div className="text-center mt-12">
-                <Button asChild size="lg" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50 text-lg px-8 py-4">
-                    <Link to="/courses">
-                        ดูคอร์สทั้งหมด
-                        <ChevronRight className="w-5 h-5 ml-2" />
-                    </Link>
-                </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-blue-300 text-blue-700 hover:bg-blue-50 text-lg px-8 py-4"
+              >
+                <Link to="/courses">
+                  ดูคอร์สทั้งหมด
+                  <ChevronRight className="w-5 h-5 ml-2" />
+                </Link>
+              </Button>
             </div>
           </div>
         </section>
-
         {/* Featured Projects Section */}
         <section className="py-20 px-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
           <div className="max-w-7xl mx-auto">
@@ -331,7 +378,8 @@ const HomePage = () => {
                 โครงงานติดดาว
               </h2>
               <p className="text-xl text-black max-w-3xl mx-auto">
-                ผลงานโดดเด่นจากน้องๆ นักเรียนที่สร้างสรรค์โครงงานสุดเจ๋ง พร้อมแรงบันดาลใจสำหรับคุณ
+                ผลงานโดดเด่นจากน้องๆ นักเรียนที่สร้างสรรค์โครงงานสุดเจ๋ง
+                พร้อมแรงบันดาลใจสำหรับคุณ
               </p>
             </motion.div>
 
@@ -348,24 +396,35 @@ const HomePage = () => {
                   <div className="w-16 h-16 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
                     <Lightbulb className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-3">ยังไม่มีโครงงานติดดาว</h3>
-                  <p className="text-gray-600 mb-6">โครงงานเด่นจากน้องๆ จะแสดงที่นี่</p>
-                  <Button asChild variant="outline" className="border-indigo-300 text-indigo-700 hover:bg-indigo-50">
-                    <Link to="/projects">
-                      ดูโครงงานทั้งหมด
-                    </Link>
+                  <h3 className="text-xl font-bold text-gray-800 mb-3">
+                    ยังไม่มีโครงงานติดดาว
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    โครงงานเด่นจากน้องๆ จะแสดงที่นี่
+                  </p>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                  >
+                    <Link to="/projects">ดูโครงงานทั้งหมด</Link>
                   </Button>
                 </div>
               </div>
             )}
-            
+
             <div className="text-center mt-12">
-                <Button asChild size="lg" variant="outline" className="border-indigo-300 text-indigo-700 hover:bg-indigo-50 text-lg px-8 py-4">
-                    <Link to="/projects">
-                        ดูโครงงานทั้งหมด
-                        <ChevronRight className="w-5 h-5 ml-2" />
-                    </Link>
-                </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-indigo-300 text-indigo-700 hover:bg-indigo-50 text-lg px-8 py-4"
+              >
+                <Link to="/projects">
+                  ดูโครงงานทั้งหมด
+                  <ChevronRight className="w-5 h-5 ml-2" />
+                </Link>
+              </Button>
             </div>
           </div>
         </section>
@@ -383,7 +442,8 @@ const HomePage = () => {
                 ทำไมต้องเลือก Login Learning?
               </h2>
               <p className="text-xl text-black max-w-3xl mx-auto">
-                เราให้มากกว่าการเรียนรู้ เราสร้างวิศวกรรุ่นใหม่ที่พร้อมสำหรับอนาคต
+                เราให้มากกว่าการเรียนรู้
+                เราสร้างวิศวกรรุ่นใหม่ที่พร้อมสำหรับอนาคต
               </p>
             </motion.div>
 
@@ -392,18 +452,21 @@ const HomePage = () => {
                 {
                   icon: Target,
                   title: "เรียนรู้จากโปรเจกต์จริง",
-                  description: "ฝึกฝนกับโครงงานที่ใช้งานได้จริงในอุตสาหกรรมและมหาวิทยาลัย"
+                  description:
+                    "ฝึกฝนกับโครงงานที่ใช้งานได้จริงในอุตสาหกรรมและมหาวิทยาลัย",
                 },
                 {
                   icon: Users,
                   title: "พี่เลี้ยงผู้เชี่ยวชาญ",
-                  description: "เรียนกับพี่วิศวกรและผู้มีประสบการณ์ตรง คอยให้คำแนะนำใกล้ชิด"
+                  description:
+                    "เรียนกับพี่วิศวกรและผู้มีประสบการณ์ตรง คอยให้คำแนะนำใกล้ชิด",
                 },
                 {
                   icon: TrendingUp,
                   title: "ค้นพบตัวเองและวางแผน",
-                  description: "ช่วยน้องๆ ค้นหาความถนัดและวางแผนเส้นทางสู่วิศวะฯ อย่างชัดเจน"
-                }
+                  description:
+                    "ช่วยน้องๆ ค้นหาความถนัดและวางแผนเส้นทางสู่วิศวะฯ อย่างชัดเจน",
+                },
               ].map((feature, index) => (
                 <motion.div
                   key={index}
@@ -417,14 +480,17 @@ const HomePage = () => {
                   <div className="w-16 h-16 bg-gradient-to-r from-blue-700 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
                     <feature.icon className="w-8 h-8 text-blue-800" />
                   </div>
-                  <h3 className="text-2xl font-bold text-black mb-4">{feature.title}</h3>
-                  <p className="text-black leading-relaxed">{feature.description}</p>
+                  <h3 className="text-2xl font-bold text-black mb-4">
+                    {feature.title}
+                  </h3>
+                  <p className="text-black leading-relaxed">
+                    {feature.description}
+                  </p>
                 </motion.div>
               ))}
             </div>
           </div>
         </section>
-
         {/* CTA Section */}
         <section className="py-20 px-6">
           <div className="max-w-4xl mx-auto text-center">
@@ -457,9 +523,7 @@ const HomePage = () => {
                   variant="outline"
                   className="border-blue-300 text-blue-700 hover:bg-blue-50 text-lg px-8 py-6"
                 >
-                  <Link to="/contact">
-                    ปรึกษาพี่ๆ ผู้เชี่ยวชาญ
-                  </Link>
+                  <Link to="/contact">ปรึกษาพี่ๆ ผู้เชี่ยวชาญ</Link>
                 </Button>
               </div>
             </motion.div>
