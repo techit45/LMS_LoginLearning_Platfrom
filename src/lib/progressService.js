@@ -1,11 +1,15 @@
 import { supabase } from "./supabaseClient";
 
-/**
- * Mark content as viewed by the user
- * @param {string} contentId - The content ID
- * @returns {Promise<{data: Object, error: Error}>}
- */
+// ตัดฟังก์ชัน progress tracking ออกไปก่อน - ไม่ต้องใช้งาน
+// /**
+//  * Mark content as viewed by the user
+//  * @param {string} contentId - The content ID
+//  * @returns {Promise<{data: Object, error: Error}>}
+//  */
 export const markContentAsViewed = async (contentId) => {
+  // ส่งคืนค่าเพื่อไม่ให้ระบบเสีย แต่ไม่ทำอะไร
+  return { data: { disabled: true }, error: null };
+  /*
   try {
     if (!contentId) {
       return { data: null, error: new Error("Content ID is required") };
@@ -77,6 +81,9 @@ export const markContentAsViewed = async (contentId) => {
  * @returns {Promise<{data: Object, error: Error}>}
  */
 export const getUserCourseProgress = async (courseId) => {
+  // ตัดฟังก์ชัน progress tracking ออกไปก่อน - ไม่ต้องใช้งาน
+  return { data: { disabled: true, completion_percentage: 0, completed: false }, error: null };
+  /*
   try {
     if (!courseId) {
       return { data: null, error: new Error("Course ID is required") };
@@ -166,6 +173,9 @@ export const getUserCourseProgress = async (courseId) => {
  * @returns {Promise<{data: Object, error: Error}>}
  */
 export const updateContentProgress = async (contentId, progressData) => {
+  // ตัดฟังก์ชัน progress tracking ออกไปก่อน - ไม่ต้องใช้งาน
+  return { data: { disabled: true }, error: null };
+  /*
   try {
     if (!contentId) {
       return { data: null, error: new Error("Content ID is required") };
@@ -320,4 +330,7 @@ const updateCourseCompletionStatus = async (courseId) => {
     console.error("Error in updateCourseCompletionStatus:", error);
     return { data: null, error };
   }
+  */
+  // ตัดฟังก์ชัน progress tracking ออกไปก่อน - ไม่ต้องใช้งาน
+  return { data: { disabled: true, completed: false, completion_percentage: 0 }, error: null };
 };

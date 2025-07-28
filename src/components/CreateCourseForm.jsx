@@ -29,7 +29,7 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
     category: '',
     level: 'beginner',
     duration_hours: 0,
-    price: 0,
+    // price: 0, // ตัดฟังก์ชันเงินออกไปก่อน
     max_students: 50,
     is_active: true,
     is_featured: false,
@@ -131,7 +131,7 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
         category: '',
         level: 'beginner',
         duration_hours: 0,
-        price: 0,
+        // price: 0, // ตัดฟังก์ชันเงินออกไปก่อน
         max_students: 50,
         is_active: true,
         thumbnail_url: ''
@@ -416,6 +416,8 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
                 )}
               </div>
 
+              {/* Price - ตัดออกไปก่อน */}
+              {/*
               <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-6 rounded-xl border border-emerald-200">
                 <label className="block text-gray-800 font-semibold mb-3 flex items-center">
                   <div className="bg-emerald-500 p-2 rounded-lg mr-3">
@@ -443,6 +445,7 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
                   </p>
                 )}
               </div>
+              */}
             </div>
 
 

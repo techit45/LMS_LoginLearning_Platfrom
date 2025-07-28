@@ -35,7 +35,7 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
     category: '',
     level: 'beginner',
     duration_hours: 0,
-    price: 0,
+    // price: 0, // ตัดฟังก์ชันเงินออกไปก่อน
     instructor_name: '',
     instructor_email: '',
     max_students: 50,
@@ -74,7 +74,7 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
         category: data.category || '',
         level: data.level || 'beginner',
         duration_hours: data.duration_hours || 0,
-        price: data.price || 0,
+        // price: data.price || 0, // ตัดฟังก์ชันเงินออกไปก่อน
         instructor_name: data.instructor_name || '',
         instructor_email: data.instructor_email || '',
         max_students: data.max_students || 50,
@@ -148,9 +148,10 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
       newErrors.duration_hours = 'ระยะเวลาต้องมากกว่า 0 ชั่วโมง';
     }
 
-    if (formData.price < 0) {
-      newErrors.price = 'ราคาต้องไม่เป็นลบ';
-    }
+    // ตัดการตรวจสอบราคาออกไปก่อน
+    // if (formData.price < 0) {
+    //   newErrors.price = 'ราคาต้องไม่เป็นลบ';
+    // }
 
     if (formData.max_students <= 0) {
       newErrors.max_students = 'จำนวนนักเรียนสูงสุดต้องมากกว่า 0';
@@ -382,11 +383,11 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
         )}
       </div>
 
-      {/* Pricing Section */}
+      {/* Course Info Section - ตัดส่วนราคาออกไปก่อน */}
       <div className="bg-white p-6 rounded-xl shadow-lg border">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-3xl font-bold text-emerald-900">
-            ฿{formData.price?.toLocaleString() || '0'}
+            คอร์สฟรี
           </h2>
           <div className="flex items-center">
             {[...Array(5)].map((_, i) => (
@@ -395,7 +396,7 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
             <span className="ml-2 text-sm text-emerald-800">(5.0)</span>
           </div>
         </div>
-        <p className="text-sm text-emerald-700 mb-6">ราคาพิเศษสำหรับนักเรียน Login Learning</p>
+        <p className="text-sm text-emerald-700 mb-6">คอร์สเรียนฟรีสำหรับนักเรียน Login Learning</p>
         
         <Button 
           size="lg" 
@@ -604,6 +605,8 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
                   )}
                 </div>
 
+                {/* Price - ตัดออกไปก่อน */}
+                {/*
                 <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-6 rounded-xl border border-emerald-200">
                   <label className="block text-gray-800 font-semibold mb-3 flex items-center">
                     <div className="bg-emerald-500 p-2 rounded-lg mr-3">
@@ -631,6 +634,7 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
                     </p>
                   )}
                 </div>
+                */}
               </div>
 
               {/* Instructor Info */}

@@ -214,7 +214,7 @@ const CoursesPage = () => {
                             <span>{course.duration_hours || 0} ชั่วโมง</span>
                           </div>
                           <div className="text-blue-900 font-bold">
-                            {course.price > 0 ? `฿${course.price.toLocaleString()}` : 'ฟรี'}
+                            ฟรี
                           </div>
                         </div>
                         
