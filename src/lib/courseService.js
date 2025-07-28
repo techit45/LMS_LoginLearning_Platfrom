@@ -386,26 +386,72 @@ export const toggleCourseStatus = async (courseId, isActive) => {
  */
 export const deleteCourseCompletely = async (courseId) => {
   try {
-    // First delete all course content
+    console.log(`🗑️ Starting permanent deletion of course: ${courseId}`);
+
+    // Get current user for logging
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('ต้องเข้าสู่ระบบก่อนใช้งาน');
+    }
+
+    // 1. Delete all enrollments first
+    console.log('🧹 Deleting enrollments...');
+    const { error: enrollmentError } = await supabase
+      .from('enrollments')
+      .delete()
+      .eq('course_id', courseId);
+
+    if (enrollmentError) {
+      console.log('⚠️ Enrollment deletion error (may not exist):', enrollmentError);
+      // Don't throw - enrollments table might not exist
+    }
+
+    // 2. Delete all user progress
+    console.log('🧹 Deleting user progress...');
+    const { error: progressError } = await supabase
+      .from('user_progress')
+      .delete()
+      .eq('course_id', courseId);
+
+    if (progressError) {
+      console.log('⚠️ Progress deletion error (may not exist):', progressError);
+      // Don't throw - progress might not exist
+    }
+
+    // 3. Delete all course content
+    console.log('🧹 Deleting course content...');
     const { error: contentError } = await supabase
       .from('course_content')
       .delete()
       .eq('course_id', courseId);
 
-    if (contentError) throw contentError;
+    if (contentError) {
+      console.log('⚠️ Content deletion error (may not exist):', contentError);
+      // Don't throw - content might not exist
+    }
 
-    // Then delete the course itself
-    const { error } = await supabase
+    // 4. Finally delete the course itself
+    console.log('🧹 Deleting course record...');
+    const { error: courseError } = await supabase
       .from('courses')
       .delete()
       .eq('id', courseId);
 
-    if (error) throw error;
+    if (courseError) {
+      console.error('❌ Failed to delete course:', courseError);
+      throw courseError;
+    }
 
+    console.log('✅ Course permanently deleted successfully');
     return { error: null };
   } catch (error) {
-    console.error('Error permanently deleting course:', error);
-    return { error };
+    console.error('💥 Error permanently deleting course:', error);
+    return { 
+      error: {
+        message: error.message || 'เกิดข้อผิดพลาดในการลบคอร์ส',
+        details: error
+      }
+    };
   }
 };
 

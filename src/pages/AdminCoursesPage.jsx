@@ -7,7 +7,7 @@ import { BookOpenText, PlusCircle, Search, Edit, Trash2, Users, Eye, BarChart3, 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast.jsx';
-import { getAllCoursesAdmin, toggleCourseStatus, getCourseStats, toggleCourseFeatured } from '@/lib/courseService';
+import { getAllCoursesAdmin, toggleCourseStatus, getCourseStats, toggleCourseFeatured, deleteCourseCompletely } from '@/lib/courseService';
 import { Link } from 'react-router-dom';
 import CreateCourseForm from '@/components/CreateCourseForm';
 import EditCourseForm from '@/components/EditCourseForm';
@@ -22,6 +22,9 @@ const AdminCoursesPage = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingCourseId, setDeletingCourseId] = useState(null);
+  const [deletingCourseName, setDeletingCourseName] = useState('');
 
   // Helper function to format text with line breaks (for preview)
   const formatTextPreview = (text) => {
@@ -82,6 +85,38 @@ const AdminCoursesPage = () => {
       loadCourses();
       loadStats();
     }
+  };
+
+  const handleDeletePermanently = async (courseId, courseName) => {
+    setDeletingCourseId(courseId);
+    setDeletingCourseName(courseName);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeletePermanently = async () => {
+    if (!deletingCourseId) return;
+
+    const { error } = await deleteCourseCompletely(deletingCourseId);
+    if (error) {
+      toast({
+        title: "ไม่สามารถลบคอร์สได้",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "ลบคอร์สถาวรสำเร็จ",
+        description: `คอร์ส "${deletingCourseName}" ถูกลบออกจากระบบแล้ว`,
+        variant: "default"
+      });
+      loadCourses();
+      loadStats();
+    }
+
+    // Reset delete dialog
+    setShowDeleteDialog(false);
+    setDeletingCourseId(null);
+    setDeletingCourseName('');
   };
 
   const handleToggleFeatured = async (courseId, courseTitle, currentFeatured) => {
@@ -373,9 +408,9 @@ const AdminCoursesPage = () => {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={() => handleFeatureNotImplemented(`ลบถาวรคอร์ส ${course.title}`)}
+                        onClick={() => handleDeletePermanently(course.id, course.title)}
                         className="text-red-400 hover:bg-red-500/20"
-                        title="ลบถาวร"
+                        title="ลบถาวร (ไม่สามารถกู้คืนได้)"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -409,6 +444,54 @@ const AdminCoursesPage = () => {
         onSuccess={handleCourseUpdated}
         courseId={editingCourseId}
       />
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white rounded-xl p-6 shadow-2xl border max-w-md w-full mx-4"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">ลบคอร์สถาวร</h3>
+                <p className="text-sm text-gray-600">การดำเนินการนี้ไม่สามารถยกเลิกได้</p>
+              </div>
+            </div>
+
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <p className="text-red-800 font-medium mb-2">
+                ⚠️ คำเตือน: การลบถาวร
+              </p>
+              <p className="text-red-700 text-sm leading-relaxed">
+                คุณกำลังจะลบคอร์ส <strong>"{deletingCourseName}"</strong> ออกจากระบบอย่างถาวร
+                รวมถึงเนื้อหาทั้งหมดในคอร์ส การดำเนินการนี้<strong>ไม่สามารถกู้คืนได้</strong>
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setShowDeleteDialog(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                ยกเลิก
+              </Button>
+              <Button
+                onClick={confirmDeletePermanently}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              >
+                ลบถาวร
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 };
