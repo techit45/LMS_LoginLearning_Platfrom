@@ -64,7 +64,24 @@ test-*.sql
 /src/components/SystemCheck.jsx
 /src/components/DatabaseHealthCheck.jsx
 /src/components/EnrollmentDebugger.jsx
+development/
+/development
 .vercel
 
 # Local Netlify folder
 .netlify
+
+# Security - Additional protection for sensitive files
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.pfx
+secrets/
+.secrets/
+
+# Backup files
+*.backup
+*.bak
+*.orig

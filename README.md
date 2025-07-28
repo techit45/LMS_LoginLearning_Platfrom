@@ -59,8 +59,10 @@ A comprehensive Learning Management System built with React, Vite, and Supabase,
    - `supabase_setup/01_master_schema.sql` - Main database schema
    - `supabase_setup/02_security_policies.sql` - Row Level Security policies
    - `supabase_setup/03_storage_setup_fixed.sql` - Storage bucket policies
-   - `TEACHING_COURSES_SETUP.sql` - Teaching schedule system
+   - `database/migrations/TEACHING_COURSES_SETUP.sql` - Teaching schedule system
    - `supabase_setup/04_initial_data_fixed.sql` - Sample data (optional)
+   
+   See `database/README.md` for detailed setup instructions.
 
 5. **Start development server**
    ```bash
@@ -142,9 +144,12 @@ For detailed instructions, see `DEPLOYMENT_INSTRUCTIONS.md`
 
 ## 📚 Documentation
 
-- `CLAUDE.md` - Comprehensive system architecture documentation
-- `DEPLOYMENT_INSTRUCTIONS.md` - Detailed deployment guide
-- `TEACHING_SCHEDULE_SYSTEM_DOCUMENTATION.md` - Teaching schedule feature guide
+- `docs/` - Comprehensive documentation directory
+  - `docs/CLAUDE.md` - System architecture documentation
+  - `docs/DEPLOYMENT_INSTRUCTIONS.md` - Detailed deployment guide
+  - `docs/TEACHING_SCHEDULE_SYSTEM_DOCUMENTATION.md` - Teaching schedule feature guide
+- `database/` - Database schemas and migration files
+- `development/` - Development and testing files (git ignored)
 
 ## 🤝 Contributing
 
