@@ -1,26 +1,27 @@
-# Learning Management System (LMS)
+# Learning Management System (LMS) with Teaching Schedule
 
-A comprehensive Learning Management System built with React, Vite, and Supabase.
+A comprehensive Learning Management System built with React, Vite, and Supabase, featuring an advanced Teaching Schedule Management System.
 
-## Features
+## 🎯 Features
 
 - 🎓 **Course Management** - Create and manage courses with content
 - 📝 **Quiz & Assignments** - Interactive quizzes and assignment submissions
 - 👥 **User Roles** - Student, Instructor, and Admin roles
 - 💬 **Forum System** - Discussion forums for courses
+- 🗓️ **Teaching Schedule** - Advanced drag-and-drop schedule management with real-time coordination
 - 📊 **Progress Tracking** - Track learning progress and achievements
 - 🎨 **Modern UI** - Built with Tailwind CSS and Framer Motion
 - 🔐 **Authentication** - Secure user authentication with Supabase
 
-## Tech Stack
+## 🏗️ Tech Stack
 
 - **Frontend:** React 18, Vite, Tailwind CSS
 - **Backend:** Supabase (PostgreSQL, Auth, Storage)
 - **UI Components:** Radix UI, Lucide React
-- **Animations:** Framer Motion
+- **Animations:** Framer Motion, React-DnD
 - **Routing:** React Router DOM
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
@@ -32,8 +33,8 @@ A comprehensive Learning Management System built with React, Vite, and Supabase.
 
 1. **Clone the repository**
    ```bash
-   git clone <your-repo-url>
-   cd learning-management-system
+   git clone https://github.com/techit45/LMS_LoginLearning_Platfrom.git
+   cd LMS_LoginLearning_Platfrom
    ```
 
 2. **Install dependencies**
@@ -55,11 +56,11 @@ A comprehensive Learning Management System built with React, Vite, and Supabase.
 4. **Database Setup**
    
    Run these SQL files in your Supabase SQL Editor in order:
-   - `complete-database-schema.sql` - Main database schema
-   - `rls-policies.sql` - Row Level Security policies
-   - `setup-storage-policies.sql` - Storage bucket policies
-   - `05-sample-data.sql` - Sample data (optional)
-   - `06-create-admin-user.sql` - Create admin user
+   - `supabase_setup/01_master_schema.sql` - Main database schema
+   - `supabase_setup/02_security_policies.sql` - Row Level Security policies
+   - `supabase_setup/03_storage_setup_fixed.sql` - Storage bucket policies
+   - `TEACHING_COURSES_SETUP.sql` - Teaching schedule system
+   - `supabase_setup/04_initial_data_fixed.sql` - Sample data (optional)
 
 5. **Start development server**
    ```bash
@@ -71,17 +72,58 @@ A comprehensive Learning Management System built with React, Vite, and Supabase.
    npm run build
    ```
 
-## Database Setup
+## 📋 Project Structure
 
-The system requires several database tables and policies. Run the SQL files in this order:
+```
+src/
+├── components/          # Reusable UI components
+│   ├── draggable/      # Drag & drop components
+│   ├── forms/          # Form components
+│   ├── schedule/       # Teaching schedule components
+│   └── ui/             # Base UI components
+├── contexts/           # React contexts (Auth, etc.)
+├── lib/               # Services and utilities
+├── pages/             # Page components
+└── main.jsx           # App entry point
+```
 
-1. **Schema:** `complete-database-schema.sql`
-2. **Security:** `rls-policies.sql` 
-3. **Storage:** `setup-storage-policies.sql`
-4. **Sample Data:** `05-sample-data.sql`
-5. **Admin User:** `06-create-admin-user.sql`
+## 🎯 Key Features
 
-## Deployment
+### Teaching Schedule System
+- 📅 **Drag & Drop Interface** - Intuitive course scheduling
+- 🗓️ **Week Navigation** - Calendar-based week picker
+- 👨‍🏫 **Instructor Management** - Assign instructors to courses
+- 🎨 **Color Coding** - Visual course organization
+- ⏰ **Conflict Detection** - Prevent scheduling conflicts
+
+### Course Management
+- Create courses with multiple content types
+- Video lessons, quizzes, assignments
+- Progress tracking and completion
+
+### User Roles
+- **Students:** Enroll in courses, take quizzes, submit assignments
+- **Instructors:** Create courses, grade assignments, manage content
+- **Admins:** Full system management
+
+## 🚀 Deployment
+
+### Deploy to Netlify (Recommended)
+
+The project is pre-configured for Netlify deployment:
+
+1. **Push to GitHub** (already done)
+2. **Connect to Netlify:**
+   - Go to [Netlify](https://netlify.com)
+   - Click "New site from Git"
+   - Select this repository
+   - Build settings are auto-configured
+
+3. **Set Environment Variables in Netlify:**
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+
+For detailed instructions, see `DEPLOYMENT_INSTRUCTIONS.md`
 
 ### Deploy to Vercel
 
@@ -96,58 +138,25 @@ The system requires several database tables and policies. Run the SQL files in t
    ```
 
 3. **Set Environment Variables**
-   In Vercel Dashboard → Settings → Environment Variables:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
+   In Vercel Dashboard → Settings → Environment Variables
 
-### Deploy to Netlify
+## 📚 Documentation
 
-1. **Build the project**
-   ```bash
-   npm run build
-   ```
+- `CLAUDE.md` - Comprehensive system architecture documentation
+- `DEPLOYMENT_INSTRUCTIONS.md` - Detailed deployment guide
+- `TEACHING_SCHEDULE_SYSTEM_DOCUMENTATION.md` - Teaching schedule feature guide
 
-2. **Deploy the `dist` folder to Netlify**
-
-## Project Structure
-
-```
-src/
-├── components/          # Reusable UI components
-├── contexts/           # React contexts (Auth, etc.)
-├── lib/               # Services and utilities
-├── pages/             # Page components
-└── main.jsx           # App entry point
-```
-
-## Key Features
-
-### Course Management
-- Create courses with multiple content types
-- Video lessons, quizzes, assignments
-- Progress tracking and completion
-
-### User Roles
-- **Students:** Enroll in courses, take quizzes, submit assignments
-- **Instructors:** Create courses, grade assignments, manage content
-- **Admins:** Full system management
-
-### Forum System
-- Course-specific forums
-- Topic creation and replies
-- File attachments support
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
 4. Submit a pull request
 
-## License
+## 📄 License
 
 This project is for educational purposes.
 
-## Support
+## 🆘 Support
 
-For support, please contact the development team or create an issue in the repository.
+For support, please create an issue in the repository or contact the development team.
