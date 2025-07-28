@@ -1,0 +1,146 @@
+// Data Migration and Backward Compatibility Fix for TeachingSchedulePage.jsx
+
+// ADD this migration function after the getWeekKey function (around line 53)
+const migrateOldData = (currentWeek, type) => {
+  // Old week key format
+  const getWeekKeyOld = (date, keyType) => {
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+    const weekId = startOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD format
+    return `${keyType}_${weekId}`;
+  };
+  
+  const oldKey = getWeekKeyOld(currentWeek, type);
+  const newKey = getWeekKey(currentWeek, type);
+  
+  // Check if data exists in old format but not in new format
+  const oldData = localStorage.getItem(oldKey);
+  const newData = localStorage.getItem(newKey);
+  
+  if (oldData && !newData) {
+    console.log(`🔄 Migrating data from ${oldKey} to ${newKey}`);
+    localStorage.setItem(newKey, oldData);
+    return JSON.parse(oldData);
+  }
+  
+  return null;
+};
+
+// ADD this function to load data with backward compatibility
+const loadDataWithBackwardCompatibility = (currentWeek, type) => {
+  const newKey = getWeekKey(currentWeek, type);
+  let saved = localStorage.getItem(newKey);
+  
+  if (!saved) {
+    // Try to migrate from old format
+    const migratedData = migrateOldData(currentWeek, type);
+    if (migratedData) {
+      return migratedData;
+    }
+  }
+  
+  return saved ? JSON.parse(saved) : null;
+};
+
+// REPLACE the load schedules useEffect (around line 340)
+React.useEffect(() => {
+  // Clear data immediately when week changes
+  if (isTransitioning) {
+    console.log('🧹 Clearing data during transition...');
+    setSchedules([]);
+    setCreatedCourses([]);
+    setCreatedInstructors([]);
+    setDayInstructors({});
+    return;
+  }
+
+  console.log('📅 Loading week data with backward compatibility...');
+  
+  const schedulesData = loadDataWithBackwardCompatibility(currentWeek, `teachingSchedules_${selectedScheduleType}`);
+  if (schedulesData) {
+    console.log('📦 Found schedules data, count:', schedulesData.length);
+    setSchedules(schedulesData);
+  } else {
+    console.log('🆕 New week - starting with empty schedule');
+    setSchedules([]);
+  }
+}, [selectedScheduleType, currentWeek, isTransitioning]);
+
+// REPLACE the load created courses useEffect
+React.useEffect(() => {
+  if (!isTransitioning) {
+    const coursesData = loadDataWithBackwardCompatibility(currentWeek, `createdCourses_${selectedScheduleType}`);
+    if (coursesData) {
+      setCreatedCourses(coursesData);
+    } else {
+      setCreatedCourses([]);
+    }
+  }
+}, [selectedScheduleType, currentWeek, isTransitioning]);
+
+// REPLACE the load created instructors useEffect
+React.useEffect(() => {
+  if (!isTransitioning) {
+    const instructorsData = loadDataWithBackwardCompatibility(currentWeek, `createdInstructors_${selectedScheduleType}`);
+    if (instructorsData) {
+      setCreatedInstructors(instructorsData);
+    } else {
+      setCreatedInstructors([]);
+    }
+  }
+}, [selectedScheduleType, currentWeek, isTransitioning]);
+
+// REPLACE the load day instructors useEffect
+React.useEffect(() => {
+  if (!isTransitioning) {
+    const dayInstructorsData = loadDataWithBackwardCompatibility(currentWeek, `dayInstructors_${selectedScheduleType}`);
+    if (dayInstructorsData) {
+      setDayInstructors(dayInstructorsData);
+    } else {
+      setDayInstructors({});
+    }
+  }
+}, [selectedScheduleType, currentWeek, isTransitioning]);
+
+// ADD a bulk migration function (optional - for manual migration)
+const migrateBulkData = () => {
+  console.log('🚀 Starting bulk data migration...');
+  let migratedCount = 0;
+  
+  // Get all localStorage keys
+  const allKeys = Object.keys(localStorage);
+  const oldKeys = allKeys.filter(key => 
+    (key.includes('teachingSchedules_') || 
+     key.includes('createdCourses_') || 
+     key.includes('createdInstructors_') || 
+     key.includes('dayInstructors_')) &&
+    !key.includes('_W') // Not already in new format
+  );
+  
+  oldKeys.forEach(oldKey => {
+    try {
+      // Parse the old key to get date and type
+      const parts = oldKey.split('_');
+      const dateStr = parts[parts.length - 1];
+      const type = parts.slice(0, -1).join('_');
+      
+      if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const date = new Date(dateStr);
+        const newKey = getWeekKey(date, type);
+        
+        // Check if new key doesn't exist
+        if (!localStorage.getItem(newKey)) {
+          const data = localStorage.getItem(oldKey);
+          localStorage.setItem(newKey, data);
+          console.log(`✅ Migrated: ${oldKey} -> ${newKey}`);
+          migratedCount++;
+        }
+      }
+    } catch (error) {
+      console.error(`❌ Migration failed for ${oldKey}:`, error);
+    }
+  });
+  
+  console.log(`🎉 Migration complete! Migrated ${migratedCount} items.`);
+  alert(`Migration complete! Migrated ${migratedCount} data items to new format.`);
+};

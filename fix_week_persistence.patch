@@ -1,0 +1,182 @@
+// Fix for TeachingSchedulePage.jsx - Week Data Persistence Issue
+// Replace the existing useEffect blocks and week navigation functions
+
+// ADD this state near the top with other useState declarations (around line 36)
+const [isTransitioning, setIsTransitioning] = React.useState(false);
+
+// REPLACE the existing getWeekKey function (around line 39)
+const getWeekKey = (date, type) => {
+  // Use ISO week to prevent weekend data mixing
+  const year = date.getFullYear();
+  const week = getISOWeek(date);
+  return `${type}_${year}_W${week.toString().padStart(2, '0')}`;
+};
+
+// ADD this helper function for ISO week calculation
+function getISOWeek(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+
+// REPLACE the save schedules useEffect (around line 322)
+React.useEffect(() => {
+  // Don't save during week transitions to prevent data mixing
+  if (!isTransitioning && schedules.length >= 0) {
+    const key = getWeekKey(currentWeek, `teachingSchedules_${selectedScheduleType}`);
+    localStorage.setItem(key, JSON.stringify(schedules));
+    console.log('💾 Saved schedules for key:', key, 'count:', schedules.length);
+  }
+}, [schedules, selectedScheduleType, currentWeek, isTransitioning]);
+
+// REPLACE the load schedules useEffect (around line 328)
+React.useEffect(() => {
+  // Clear data immediately when week changes
+  if (isTransitioning) {
+    console.log('🧹 Clearing data during transition...');
+    setSchedules([]);
+    setCreatedCourses([]);
+    setCreatedInstructors([]);
+    setDayInstructors({});
+    return;
+  }
+
+  const key = getWeekKey(currentWeek, `teachingSchedules_${selectedScheduleType}`);
+  const saved = localStorage.getItem(key);
+  
+  console.log('📅 Loading week data for key:', key);
+  
+  if (saved) {
+    const data = JSON.parse(saved);
+    console.log('📦 Found saved data, count:', data.length);
+    setSchedules(data);
+  } else {
+    console.log('🆕 New week - starting with empty schedule');
+    setSchedules([]);
+  }
+}, [selectedScheduleType, currentWeek, isTransitioning]);
+
+// REPLACE the other useEffect blocks for courses, instructors, and dayInstructors
+// (Similar pattern - check !isTransitioning before saving, clear during transition)
+
+React.useEffect(() => {
+  if (!isTransitioning && createdCourses.length >= 0) {
+    const key = getWeekKey(currentWeek, `createdCourses_${selectedScheduleType}`);
+    localStorage.setItem(key, JSON.stringify(createdCourses));
+  }
+}, [createdCourses, selectedScheduleType, currentWeek, isTransitioning]);
+
+React.useEffect(() => {
+  if (!isTransitioning) {
+    const key = getWeekKey(currentWeek, `createdCourses_${selectedScheduleType}`);
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      setCreatedCourses(JSON.parse(saved));
+    } else {
+      setCreatedCourses([]);
+    }
+  }
+}, [selectedScheduleType, currentWeek, isTransitioning]);
+
+React.useEffect(() => {
+  if (!isTransitioning && createdInstructors.length >= 0) {
+    const key = getWeekKey(currentWeek, `createdInstructors_${selectedScheduleType}`);
+    localStorage.setItem(key, JSON.stringify(createdInstructors));
+  }
+}, [createdInstructors, selectedScheduleType, currentWeek, isTransitioning]);
+
+React.useEffect(() => {
+  if (!isTransitioning) {
+    const key = getWeekKey(currentWeek, `createdInstructors_${selectedScheduleType}`);
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      setCreatedInstructors(JSON.parse(saved));
+    } else {
+      setCreatedInstructors([]);
+    }
+  }
+}, [selectedScheduleType, currentWeek, isTransitioning]);
+
+React.useEffect(() => {
+  if (!isTransitioning && Object.keys(dayInstructors).length >= 0) {
+    const key = getWeekKey(currentWeek, `dayInstructors_${selectedScheduleType}`);
+    localStorage.setItem(key, JSON.stringify(dayInstructors));
+  }
+}, [dayInstructors, selectedScheduleType, currentWeek, isTransitioning]);
+
+React.useEffect(() => {
+  if (!isTransitioning) {
+    const key = getWeekKey(currentWeek, `dayInstructors_${selectedScheduleType}`);
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      setDayInstructors(JSON.parse(saved));
+    } else {
+      setDayInstructors({});
+    }
+  }
+}, [selectedScheduleType, currentWeek, isTransitioning]);
+
+// REPLACE the week navigation functions (around line 697)
+const handlePrevWeek = () => {
+  const prevWeek = new Date(currentWeek);
+  prevWeek.setDate(currentWeek.getDate() - 7);
+  console.log('🔙 Previous week:', currentWeek.toISOString().split('T')[0], '->', prevWeek.toISOString().split('T')[0]);
+  
+  // Set transitioning flag and clear data
+  setIsTransitioning(true);
+  
+  // Clear all current data immediately
+  setSchedules([]);
+  setCreatedCourses([]);
+  setCreatedInstructors([]);
+  setDayInstructors({});
+  
+  // Update week and clear transitioning flag
+  setTimeout(() => {
+    setCurrentWeek(prevWeek);
+    setIsTransitioning(false);
+  }, 50); // Small delay to ensure clearing happens first
+};
+
+const handleNextWeek = () => {
+  const nextWeek = new Date(currentWeek);
+  nextWeek.setDate(currentWeek.getDate() + 7);
+  console.log('🔜 Next week:', currentWeek.toISOString().split('T')[0], '->', nextWeek.toISOString().split('T')[0]);
+  
+  // Set transitioning flag and clear data
+  setIsTransitioning(true);
+  
+  // Clear all current data immediately
+  setSchedules([]);
+  setCreatedCourses([]);
+  setCreatedInstructors([]);
+  setDayInstructors({});
+  
+  // Update week and clear transitioning flag
+  setTimeout(() => {
+    setCurrentWeek(nextWeek);
+    setIsTransitioning(false);
+  }, 50); // Small delay to ensure clearing happens first
+};
+
+const handleToday = () => {
+  const today = new Date();
+  console.log('📅 Going to current week:', today.toISOString().split('T')[0]);
+  
+  // Set transitioning flag and clear data
+  setIsTransitioning(true);
+  
+  // Clear all current data immediately
+  setSchedules([]);
+  setCreatedCourses([]);
+  setCreatedInstructors([]);
+  setDayInstructors({});
+  
+  // Update week and clear transitioning flag
+  setTimeout(() => {
+    setCurrentWeek(today);
+    setIsTransitioning(false);
+  }, 50); // Small delay to ensure clearing happens first
+};

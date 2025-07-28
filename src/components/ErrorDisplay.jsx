@@ -50,9 +50,19 @@ const ErrorDisplay = ({
     if (onRetry) {
       onRetry();
     } else if (isPermissionError(error)) {
-      window.location.href = "/login";
+      // Don't redirect to login if we're on reset-password page
+      if (window.location.pathname === '/reset-password') {
+        window.location.reload();
+      } else {
+        window.location.href = "/login";
+      }
     } else if (isNotFoundError(error)) {
-      window.location.href = "/";
+      // Don't redirect to home if we're on reset-password page
+      if (window.location.pathname === '/reset-password') {
+        window.location.reload();
+      } else {
+        window.location.href = "/";
+      }
     } else {
       window.location.reload();
     }
@@ -221,7 +231,14 @@ export const EmptyStateWithError = ({
   title = "ไม่พบข้อมูล",
   message = "ไม่พบข้อมูลที่คุณกำลังค้นหา",
   actionText = "กลับไปหน้าหลัก",
-  onAction = () => (window.location.href = "/"),
+  onAction = () => {
+    // Don't redirect to home if we're on reset-password page
+    if (window.location.pathname === '/reset-password') {
+      window.location.reload();
+    } else {
+      window.location.href = "/";
+    }
+  },
 }) => {
   return (
     <div className="text-center p-8">

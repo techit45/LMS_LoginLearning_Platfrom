@@ -58,10 +58,6 @@ const DashboardPage = () => {
     }
   };
 
-  // ฟังก์ชันนำทางไปยังระบบตรวจสอบ
-  const handleSystemDiagnostic = () => {
-    navigate("/system-diagnostic");
-  };
 
   const pageVariants = {
     initial: { opacity: 0, y: 20 },
@@ -102,6 +98,14 @@ const DashboardPage = () => {
       description: "ดูและจัดการข้อมูลผู้เรียน",
       path: "/admin/users",
       action: "manage-users",
+    },
+    {
+      name: "ระบบตรวจสอบและวินิจฉัย",
+      icon: TestTube,
+      color: "purple",
+      description: "เครื่องมือตรวจสอบ วินิจฉัย และแก้ไขปัญหาระบบ",
+      path: "/system-diagnostic",
+      action: "system-diagnostic",
     },
   ];
 
@@ -205,7 +209,7 @@ const DashboardPage = () => {
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {quickActions.map((action, index) => (
                 <motion.div
                   key={action.name}

@@ -18,7 +18,10 @@ import {
   MessageSquare,
   Camera,
   Settings as SettingsIcon,
-  Loader2
+  Loader2,
+  KeyRound,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -35,6 +38,8 @@ import {
   deleteAllUserSettings
 } from '@/lib/userService';
 import { uploadProfileImage, deleteProfileImage } from '@/lib/attachmentService';
+import { supabase } from '@/lib/supabaseClient';
+import { Input } from '@/components/ui/input';
 
 const SettingsPageDatabase = () => {
   const { user } = useAuth();
@@ -75,6 +80,19 @@ const SettingsPageDatabase = () => {
     sound_enabled: true
   });
 
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
   // Load profile settings from database
   useEffect(() => {
     const loadProfileSettings = async () => {
@@ -107,13 +125,8 @@ const SettingsPageDatabase = () => {
           }));
         }
 
-        // แจ้งเตือนเฉพาะเมื่อมีข้อมูลจริงๆ ในฐานข้อมูล
-        if (profileResult.data && Object.keys(profileResult.data).length > 0) {
-          toast({
-            title: "โหลดการตั้งค่าสำเร็จ",
-            description: "ข้อมูลโปรไฟล์ของคุณถูกโหลดจากฐานข้อมูล"
-          });
-        }
+        // เงียบๆ โหลดข้อมูลโดยไม่แสดง toast เพื่อหลีกเลี่ยงการแสดงซ้ำ
+        // (ปัญหาเดิม: toast แสดงซ้ำหลายครั้งเมื่อ component re-render)
 
       } catch (error) {
         console.error('Error loading settings:', error);
@@ -281,8 +294,88 @@ const SettingsPageDatabase = () => {
     }
   };
 
+  // Password change handler
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    
+    // Validation
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      toast({
+        title: "กรุณากรอกข้อมูลให้ครบถ้วน",
+        description: "กรุณากรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (passwordData.newPassword.length < 8) {
+      toast({
+        title: "รหัสผ่านไม่ถูกต้อง",
+        description: "รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: "รหัสผ่านไม่ตรงกัน",
+        description: "กรุณายืนยันรหัสผ่านใหม่ให้ถูกต้อง",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setPasswordLoading(true);
+      
+      // Sign in with current password to verify
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: passwordData.currentPassword,
+      });
+      
+      if (signInError) {
+        throw new Error("รหัสผ่านปัจจุบันไม่ถูกต้อง");
+      }
+      
+      // Update password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwordData.newPassword,
+      });
+      
+      if (updateError) {
+        throw updateError;
+      }
+      
+      toast({
+        title: "🎉 เปลี่ยนรหัสผ่านสำเร็จ!",
+        description: "รหัสผ่านของคุณได้รับการอัปเดตแล้ว",
+        duration: 4000,
+      });
+      
+      // Reset form
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+      
+    } catch (error) {
+      console.error('Password change error:', error);
+      toast({
+        title: "ไม่สามารถเปลี่ยนรหัสผ่านได้",
+        description: error.message || "เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน",
+        variant: "destructive",
+      });
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   const tabs = [
-    { id: 'profile', label: 'ข้อมูลส่วนตัว', icon: User }
+    { id: 'profile', label: 'ข้อมูลส่วนตัว', icon: User },
+    { id: 'security', label: 'ความปลอดภัย', icon: KeyRound }
   ];
 
   // แสดง loading ระหว่างโหลดข้อมูลครั้งแรก
@@ -615,8 +708,165 @@ const SettingsPageDatabase = () => {
     </div>
   );
 
+  const renderSecuritySettings = () => (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <KeyRound className="w-5 h-5 mr-2 text-blue-600" />
+          เปลี่ยนรหัสผ่าน
+        </h3>
+        
+        <form onSubmit={handleChangePassword} className="space-y-4">
+          {/* Current Password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              รหัสผ่านปัจจุบัน *
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Input
+                type={showPasswords.current ? "text" : "password"}
+                value={passwordData.currentPassword}
+                onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                placeholder="กรอกรหัสผ่านปัจจุบัน"
+                className="pl-10 pr-10"
+                disabled={passwordLoading}
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                onClick={() => setShowPasswords({...showPasswords, current: !showPasswords.current})}
+                disabled={passwordLoading}
+              >
+                {showPasswords.current ? (
+                  <EyeOff className="w-5 h-5 text-gray-400" />
+                ) : (
+                  <Eye className="w-5 h-5 text-gray-400" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* New Password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              รหัสผ่านใหม่ *
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Input
+                type={showPasswords.new ? "text" : "password"}
+                value={passwordData.newPassword}
+                onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                placeholder="อย่างน้อย 8 ตัวอักษร"
+                className="pl-10 pr-10"
+                disabled={passwordLoading}
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                onClick={() => setShowPasswords({...showPasswords, new: !showPasswords.new})}
+                disabled={passwordLoading}
+              >
+                {showPasswords.new ? (
+                  <EyeOff className="w-5 h-5 text-gray-400" />
+                ) : (
+                  <Eye className="w-5 h-5 text-gray-400" />
+                )}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร
+            </p>
+          </div>
+
+          {/* Confirm New Password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              ยืนยันรหัสผ่านใหม่ *
+            </label>
+            <div className="relative">
+              <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Input
+                type={showPasswords.confirm ? "text" : "password"}
+                value={passwordData.confirmPassword}
+                onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
+                className="pl-10 pr-10"
+                disabled={passwordLoading}
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                onClick={() => setShowPasswords({...showPasswords, confirm: !showPasswords.confirm})}
+                disabled={passwordLoading}
+              >
+                {showPasswords.confirm ? (
+                  <EyeOff className="w-5 h-5 text-gray-400" />
+                ) : (
+                  <Eye className="w-5 h-5 text-gray-400" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="pt-4">
+            <Button
+              type="submit"
+              disabled={passwordLoading}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+            >
+              {passwordLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  กำลังเปลี่ยน...
+                </>
+              ) : (
+                "บันทึกรหัสผ่านใหม่"
+              )}
+            </Button>
+          </div>
+        </form>
+      </div>
+
+      {/* Security Tips */}
+      <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+        <h4 className="text-lg font-semibold text-blue-900 mb-3 flex items-center">
+          <Shield className="w-5 h-5 mr-2" />
+          เคล็ดลับความปลอดภัย
+        </h4>
+        <ul className="space-y-2 text-sm text-blue-800">
+          <li className="flex items-start">
+            <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+            ใช้รหัสผ่านที่มีความยาวอย่างน้อย 8 ตัวอักษร
+          </li>
+          <li className="flex items-start">
+            <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+            ผสมผสานตัวพิมพ์เล็ก พิมพ์ใหญ่ ตัวเลข และสัญลักษณ์
+          </li>
+          <li className="flex items-start">
+            <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+            หลีกเลี่ยงการใช้ข้อมูลส่วนตัวที่เดาได้ง่าย
+          </li>
+          <li className="flex items-start">
+            <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+            เปลี่ยนรหัสผ่านเป็นประจำเพื่อความปลอดภัย
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
-    return renderProfileSettings();
+    switch (activeTab) {
+      case 'profile':
+        return renderProfileSettings();
+      case 'security':
+        return renderSecuritySettings();
+      default:
+        return renderProfileSettings();
+    }
   };
 
   return (
@@ -644,6 +894,28 @@ const SettingsPageDatabase = () => {
                 'ล้างข้อมูลโปรไฟล์'
               )}
             </Button>
+          </div>
+        </div>
+
+        {/* Tabs Navigation */}
+        <div className="max-w-4xl mx-auto mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-1">
+            <div className="flex space-x-1">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 flex items-center justify-center px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${
+                    activeTab === tab.id
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4 mr-2" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

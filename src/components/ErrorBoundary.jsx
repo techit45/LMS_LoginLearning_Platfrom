@@ -27,7 +27,12 @@ class ErrorBoundary extends React.Component {
   };
 
   handleGoHome = () => {
-    window.location.href = '/';
+    // Don't redirect to home if we're on reset-password page
+    if (window.location.pathname === '/reset-password') {
+      window.location.reload();
+    } else {
+      window.location.href = '/';
+    }
   };
 
   render() {

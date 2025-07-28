@@ -11,12 +11,17 @@ import {
   BarChart2,
   Phone,
   FileText,
+  Lock,
+  Eye,
+  EyeOff,
+  KeyRound,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfile } from "@/lib/userService";
+import { supabase } from "@/lib/supabaseClient";
 
 const UserProfilePage = () => {
   const { user, isAdmin } = useAuth();
@@ -35,6 +40,16 @@ const UserProfilePage = () => {
   const [grade, setGrade] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [bio, setBio] = React.useState("");
+  
+  // Password change state
+  const [isChangingPassword, setIsChangingPassword] = React.useState(false);
+  const [currentPassword, setCurrentPassword] = React.useState("");
+  const [newPassword, setNewPassword] = React.useState("");
+  const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
+  const [showNewPassword, setShowNewPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const [passwordLoading, setPasswordLoading] = React.useState(false);
 
   const handleSaveProfile = async () => {
     try {
@@ -67,6 +82,83 @@ const UserProfilePage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast({
+        title: "กรุณากรอกข้อมูลให้ครบถ้วน",
+        description: "กรุณากรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (newPassword.length < 8) {
+      toast({
+        title: "รหัสผ่านไม่ถูกต้อง",
+        description: "รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "รหัสผ่านไม่ตรงกัน",
+        description: "กรุณายืนยันรหัสผ่านใหม่ให้ถูกต้อง",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setPasswordLoading(true);
+      
+      // Sign in with current password to verify
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+      
+      if (signInError) {
+        throw new Error("รหัสผ่านปัจจุบันไม่ถูกต้อง");
+      }
+      
+      // Update password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      
+      if (updateError) {
+        throw updateError;
+      }
+      
+      toast({
+        title: "🎉 เปลี่ยนรหัสผ่านสำเร็จ!",
+        description: "รหัสผ่านของคุณได้รับการอัปเดตแล้ว",
+        duration: 4000,
+      });
+      
+      // Reset form
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setIsChangingPassword(false);
+      
+    } catch (error) {
+      console.error('Password change error:', error);
+      toast({
+        title: "ไม่สามารถเปลี่ยนรหัสผ่านได้",
+        description: error.message || "เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน",
+        variant: "destructive",
+      });
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -322,6 +414,161 @@ const UserProfilePage = () => {
               <Shield className="w-5 h-5 mr-3 text-[#667eea]" />
               <span className="text-gray-800">สถานะบัญชี: ยืนยันแล้ว</span>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Change Password Section */}
+      <div className="max-w-2xl mx-auto mt-8 bg-white rounded-xl shadow-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <KeyRound className="w-6 h-6 mr-3 text-blue-600" />
+            <h2 className="text-xl font-bold text-gray-900">เปลี่ยนรหัสผ่าน</h2>
+          </div>
+          {!isChangingPassword && (
+            <Button
+              onClick={() => setIsChangingPassword(true)}
+              variant="outline"
+              className="flex items-center"
+            >
+              <Lock className="w-4 h-4 mr-2" />
+              เปลี่ยนรหัสผ่าน
+            </Button>
+          )}
+        </div>
+
+        {isChangingPassword ? (
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            {/* Current Password */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                รหัสผ่านปัจจุบัน *
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="กรอกรหัสผ่านปัจจุบัน"
+                  className="pl-10 pr-10"
+                  disabled={passwordLoading}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  disabled={passwordLoading}
+                >
+                  {showCurrentPassword ? (
+                    <EyeOff className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <Eye className="w-5 h-5 text-gray-400" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* New Password */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                รหัสผ่านใหม่ *
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="อย่างน้อย 8 ตัวอักษร"
+                  className="pl-10 pr-10"
+                  disabled={passwordLoading}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  disabled={passwordLoading}
+                >
+                  {showNewPassword ? (
+                    <EyeOff className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <Eye className="w-5 h-5 text-gray-400" />
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร
+              </p>
+            </div>
+
+            {/* Confirm New Password */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ยืนยันรหัสผ่านใหม่ *
+              </label>
+              <div className="relative">
+                <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
+                  className="pl-10 pr-10"
+                  disabled={passwordLoading}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={passwordLoading}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <Eye className="w-5 h-5 text-gray-400" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-3 pt-4">
+              <Button
+                type="submit"
+                disabled={passwordLoading}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              >
+                {passwordLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    กำลังเปลี่ยน...
+                  </>
+                ) : (
+                  "บันทึกรหัสผ่านใหม่"
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsChangingPassword(false);
+                  setCurrentPassword("");
+                  setNewPassword("");
+                  setConfirmPassword("");
+                }}
+                disabled={passwordLoading}
+                className="flex-1"
+              >
+                ยกเลิก
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-gray-600">
+              คลิกปุ่ม "เปลี่ยนรหัสผ่าน" เพื่อเปลี่ยนรหัสผ่านของคุณ
+            </p>
           </div>
         )}
       </div>

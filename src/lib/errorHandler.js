@@ -234,7 +234,14 @@ export const getErrorAction = (error) => {
   if (isNotFoundError(error)) {
     return {
       actionText: "กลับไปหน้าหลัก",
-      actionFn: () => (window.location.href = "/"),
+      actionFn: () => {
+        // Don't redirect to home if we're on reset-password page
+        if (window.location.pathname === '/reset-password') {
+          window.location.reload();
+        } else {
+          window.location.href = "/";
+        }
+      },
       suggestion: "ข้อมูลที่คุณกำลังค้นหาอาจถูกลบหรือย้าย",
     };
   }
@@ -293,7 +300,14 @@ export const createErrorFallback = (error, resetErrorBoundary) => {
     },
     secondaryAction: {
       text: "กลับไปหน้าหลัก",
-      onClick: () => (window.location.href = "/"),
+      onClick: () => {
+        // Don't redirect to home if we're on reset-password page
+        if (window.location.pathname === '/reset-password') {
+          window.location.reload();
+        } else {
+          window.location.href = "/";
+        }
+      },
     },
   };
 };

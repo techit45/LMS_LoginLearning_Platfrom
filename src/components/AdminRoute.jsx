@@ -25,6 +25,14 @@ const AdminRoute = ({ children }) => {
 
   // ตรวจสอบว่าเป็น admin หรือไม่ (ใช้จาก AuthContext)
   const canAccessAdmin = isAdmin || userRole === 'instructor' || userRole === 'super_admin' || userRole === 'branch_manager';
+  
+  console.log('🛡️ AdminRoute check:', {
+    user: user?.email || 'no user',
+    isAdmin,
+    userRole,
+    canAccessAdmin,
+    loading
+  });
 
   // ถ้าไม่ใช่ admin redirect ไปหน้าหลัก
   if (!canAccessAdmin) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -13,11 +13,13 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  ExternalLink,
   Bell,
   Search,
   Menu,
   X,
-  Code2
+  Code2,
+  Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,8 +27,20 @@ import { useAuth } from '@/contexts/AuthContext';
 const AdminLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
   const location = useLocation();
   const { user, signOut } = useAuth();
+
+  // Check if screen is desktop size
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   const navigationItems = [
     {
@@ -52,6 +66,12 @@ const AdminLayout = () => {
       icon: Code2,
       path: '/admin/projects',
       description: 'จัดการผลงานและโครงงาน'
+    },
+    {
+      title: 'ตารางสอน',
+      icon: Calendar,
+      path: '/admin/teaching-schedule',
+      description: 'จัดการตารางเรียนอาจารย์'
     },
     {
       title: 'สถิติและรายงาน',
@@ -125,11 +145,15 @@ const AdminLayout = () => {
       <motion.div
         animate={{ 
           width: sidebarCollapsed ? 80 : 280,
-          x: mobileMenuOpen ? 0 : -280
+          x: isDesktop ? 0 : (mobileMenuOpen ? 0 : -280)
+        }}
+        initial={{ 
+          width: sidebarCollapsed ? 80 : 280,
+          x: 0
         }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className={`fixed lg:relative left-0 top-0 h-full bg-white border-r border-gray-200 shadow-lg z-50 flex flex-col ${
-          mobileMenuOpen ? 'block' : 'hidden lg:flex'
+          isDesktop ? 'flex' : (mobileMenuOpen ? 'flex' : 'hidden')
         }`}
       >
         {/* Header */}
@@ -182,6 +206,39 @@ const AdminLayout = () => {
               const Icon = item.icon;
               const active = isActive(item.path);
               
+              // Handle external links
+              if (item.external) {
+                return (
+                  <a
+                    key={item.path}
+                    href={item.path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                  >
+                    <Icon className="flex-shrink-0 w-5 h-5 text-gray-400 group-hover:text-gray-600" />
+                    
+                    {!sidebarCollapsed && (
+                      <motion.div
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="ml-3 flex-1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{item.title}</span>
+                          <ExternalLink className="w-3 h-3 opacity-60" />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {item.description}
+                        </p>
+                      </motion.div>
+                    )}
+                  </a>
+                );
+              }
+              
+              // Handle internal links
               return (
                 <Link
                   key={item.path}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Save,
@@ -62,6 +62,53 @@ const ProjectForm = ({
   const [newTag, setNewTag] = useState("");
 
   const isEditMode = mode === "edit" && projectId;
+  const hasShownRecoveryToast = useRef(false);
+
+  // localStorage keys for auto-save
+  const STORAGE_KEY = isEditMode
+    ? `project-edit-${projectId}`
+    : "project-create-draft";
+  const STORAGE_EXPIRY_KEY = `${STORAGE_KEY}-expiry`;
+
+  // Auto-save to localStorage
+  const saveToLocalStorage = (data) => {
+    try {
+      const expiryTime = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(STORAGE_EXPIRY_KEY, expiryTime.toString());
+    } catch (error) {
+      console.warn("Cannot save to localStorage:", error);
+    }
+  };
+
+  // Load from localStorage
+  const loadFromLocalStorage = () => {
+    try {
+      const expiry = localStorage.getItem(STORAGE_EXPIRY_KEY);
+      if (expiry && Date.now() > parseInt(expiry)) {
+        // Data expired, remove it
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_EXPIRY_KEY);
+        return null;
+      }
+
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch (error) {
+      console.warn("Cannot load from localStorage:", error);
+      return null;
+    }
+  };
+
+  // Clear localStorage
+  const clearLocalStorage = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_EXPIRY_KEY);
+    } catch (error) {
+      console.warn("Cannot clear localStorage:", error);
+    }
+  };
 
   // Load project data when in edit mode
   useEffect(() => {
@@ -121,37 +168,96 @@ const ProjectForm = ({
       if (isEditMode) {
         loadProject();
       } else {
-        // Reset form for create mode
-        setFormData({
-          title: "",
-          description: "",
-          short_description: "",
-          category: "",
-          difficulty_level: "beginner",
-          duration_hours: "",
-          is_featured: false,
-          technologies: [],
-          project_url: "",
-          github_url: "",
-          video_url: "",
-          cover_image_url: "",
-          thumbnail_url: "",
-          tags: [],
-          status: "published",
-        });
-        setImagePreview(null);
-        setProjectImage(null);
+        // Reset form for create mode and try to load from localStorage
+        const savedData = loadFromLocalStorage();
+        if (savedData) {
+          setFormData({
+            title: savedData.title || "",
+            description: savedData.description || "",
+            short_description: savedData.short_description || "",
+            category: savedData.category || "",
+            difficulty_level: savedData.difficulty_level || "beginner",
+            duration_hours: savedData.duration_hours || "",
+            is_featured: savedData.is_featured || false,
+            technologies: savedData.technologies || [],
+            project_url: savedData.project_url || "",
+            github_url: savedData.github_url || "",
+            video_url: savedData.video_url || "",
+            cover_image_url: savedData.cover_image_url || "",
+            thumbnail_url: savedData.thumbnail_url || "",
+            tags: savedData.tags || [],
+            status: savedData.status || "published",
+          });
+          setNewTechnology(savedData.newTechnology || "");
+          setNewTag(savedData.newTag || "");
+          if (savedData.imagePreview) {
+            setImagePreview(savedData.imagePreview);
+          }
+          // Show toast to inform user (only once)
+          if (!hasShownRecoveryToast.current) {
+            hasShownRecoveryToast.current = true;
+            setTimeout(() => {
+              toast({
+                title: "🔄 กู้คืนข้อมูลสำเร็จ",
+                description: "ข้อมูลที่คุณกรอกไว้ก่อนหน้านี้ถูกกู้คืนแล้ว",
+                duration: 4000,
+              });
+            }, 500);
+          }
+        } else {
+          // Reset to default
+          setFormData({
+            title: "",
+            description: "",
+            short_description: "",
+            category: "",
+            difficulty_level: "beginner",
+            duration_hours: "",
+            is_featured: false,
+            technologies: [],
+            project_url: "",
+            github_url: "",
+            video_url: "",
+            cover_image_url: "",
+            thumbnail_url: "",
+            tags: [],
+            status: "published",
+          });
+          setImagePreview(null);
+          setProjectImage(null);
+          setNewTechnology("");
+          setNewTag("");
+        }
         setErrors({});
       }
     }
   }, [projectId, isEditMode, isOpen, toast, onClose]);
 
+  // Reset recovery toast flag when form opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      hasShownRecoveryToast.current = false;
+    }
+  }, [isOpen]);
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
+    const newFormData = {
+      ...formData,
       [name]: type === "checkbox" ? checked : value,
-    }));
+    };
+    setFormData(newFormData);
+
+    // Auto-save to localStorage (only for create mode)
+    if (!isEditMode) {
+      const dataToSave = {
+        ...newFormData,
+        newTechnology,
+        newTag,
+        imagePreview,
+      };
+      saveToLocalStorage(dataToSave);
+    }
 
     // Clear error when user starts typing
     if (errors[name]) {
@@ -164,36 +270,86 @@ const ProjectForm = ({
       newTechnology.trim() &&
       !formData.technologies.includes(newTechnology.trim())
     ) {
-      setFormData((prev) => ({
-        ...prev,
-        technologies: [...prev.technologies, newTechnology.trim()],
-      }));
+      const newFormData = {
+        ...formData,
+        technologies: [...formData.technologies, newTechnology.trim()],
+      };
+      setFormData(newFormData);
       setNewTechnology("");
+
+      // Auto-save to localStorage (only for create mode)
+      if (!isEditMode) {
+        const dataToSave = {
+          ...newFormData,
+          newTechnology: "",
+          newTag,
+          imagePreview,
+        };
+        saveToLocalStorage(dataToSave);
+      }
     }
   };
 
   const removeTechnology = (techToRemove) => {
-    setFormData((prev) => ({
-      ...prev,
-      technologies: prev.technologies.filter((tech) => tech !== techToRemove),
-    }));
+    const newFormData = {
+      ...formData,
+      technologies: formData.technologies.filter(
+        (tech) => tech !== techToRemove
+      ),
+    };
+    setFormData(newFormData);
+
+    // Auto-save to localStorage (only for create mode)
+    if (!isEditMode) {
+      const dataToSave = {
+        ...newFormData,
+        newTechnology,
+        newTag,
+        imagePreview,
+      };
+      saveToLocalStorage(dataToSave);
+    }
   };
 
   const addTag = () => {
     if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      setFormData((prev) => ({
-        ...prev,
-        tags: [...prev.tags, newTag.trim()],
-      }));
+      const newFormData = {
+        ...formData,
+        tags: [...formData.tags, newTag.trim()],
+      };
+      setFormData(newFormData);
       setNewTag("");
+
+      // Auto-save to localStorage (only for create mode)
+      if (!isEditMode) {
+        const dataToSave = {
+          ...newFormData,
+          newTechnology,
+          newTag: "",
+          imagePreview,
+        };
+        saveToLocalStorage(dataToSave);
+      }
     }
   };
 
   const removeTag = (tagToRemove) => {
-    setFormData((prev) => ({
-      ...prev,
-      tags: prev.tags.filter((tag) => tag !== tagToRemove),
-    }));
+    const newFormData = {
+      ...formData,
+      tags: formData.tags.filter((tag) => tag !== tagToRemove),
+    };
+    setFormData(newFormData);
+
+    // Auto-save to localStorage (only for create mode)
+    if (!isEditMode) {
+      const dataToSave = {
+        ...newFormData,
+        newTechnology,
+        newTag,
+        imagePreview,
+      };
+      saveToLocalStorage(dataToSave);
+    }
   };
 
   const validateForm = () => {
@@ -323,6 +479,9 @@ const ProjectForm = ({
           : `โครงงาน "${formData.title}" ถูกสร้างเรียบร้อยแล้ว`,
       });
 
+      // Clear localStorage after successful submission
+      clearLocalStorage();
+
       onSuccess && onSuccess(data);
       onClose();
     } catch (error) {
@@ -370,16 +529,41 @@ const ProjectForm = ({
     // Create preview URL
     const reader = new FileReader();
     reader.onload = (e) => {
-      setImagePreview(e.target.result);
+      const previewUrl = e.target.result;
+      setImagePreview(previewUrl);
+
+      // Auto-save image preview to localStorage (only for create mode)
+      if (!isEditMode) {
+        const dataToSave = {
+          ...formData,
+          newTechnology,
+          newTag,
+          imagePreview: previewUrl,
+        };
+        saveToLocalStorage(dataToSave);
+      }
     };
     reader.readAsDataURL(file);
   };
 
   const handleRemoveImage = () => {
     setProjectImage(null);
-    setImagePreview(
-      isEditMode ? formData.cover_image_url || formData.thumbnail_url : null
-    );
+    const newImagePreview = isEditMode
+      ? formData.cover_image_url || formData.thumbnail_url
+      : null;
+    setImagePreview(newImagePreview);
+
+    // Auto-save image removal to localStorage (only for create mode)
+    if (!isEditMode) {
+      const dataToSave = {
+        ...formData,
+        newTechnology,
+        newTag,
+        imagePreview: newImagePreview,
+      };
+      saveToLocalStorage(dataToSave);
+    }
+
     // Reset file input
     const fileInput = document.getElementById("project-image-input");
     if (fileInput) {
@@ -549,7 +733,19 @@ const ProjectForm = ({
                   <Input
                     name="newTechnology"
                     value={newTechnology}
-                    onChange={(e) => setNewTechnology(e.target.value)}
+                    onChange={(e) => {
+                      setNewTechnology(e.target.value);
+                      // Auto-save newTechnology to localStorage (only for create mode)
+                      if (!isEditMode) {
+                        const dataToSave = {
+                          ...formData,
+                          newTechnology: e.target.value,
+                          newTag,
+                          imagePreview,
+                        };
+                        saveToLocalStorage(dataToSave);
+                      }
+                    }}
                     placeholder="เช่น React, Node.js, MongoDB"
                     className="bg-white border-gray-300 text-gray-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-xl shadow-sm"
                     onKeyPress={(e) =>
@@ -597,7 +793,19 @@ const ProjectForm = ({
                   <Input
                     name="newTag"
                     value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
+                    onChange={(e) => {
+                      setNewTag(e.target.value);
+                      // Auto-save newTag to localStorage (only for create mode)
+                      if (!isEditMode) {
+                        const dataToSave = {
+                          ...formData,
+                          newTechnology,
+                          newTag: e.target.value,
+                          imagePreview,
+                        };
+                        saveToLocalStorage(dataToSave);
+                      }
+                    }}
                     placeholder="เช่น React, Frontend, Responsive"
                     className="bg-white border-gray-300 text-gray-800 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 rounded-xl shadow-sm"
                     onKeyPress={(e) =>
@@ -711,7 +919,7 @@ const ProjectForm = ({
                     <div className="bg-cyan-500 p-2 rounded-lg mr-3">
                       <Globe className="w-4 h-4 text-white" />
                     </div>
-                    Demo URL
+                    Drive URL
                   </label>
                   <Input
                     name="project_url"
@@ -869,12 +1077,83 @@ const ProjectForm = ({
                 </div>
               </div>
 
+              {/* Clear Draft Button - only show for create mode if there's saved data */}
+              {!isEditMode && loadFromLocalStorage() && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-yellow-500 p-2 rounded-lg">
+                        <AlertCircle className="w-4 h-4 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-yellow-800 font-medium">
+                          พบข้อมูลที่บันทึกไว้
+                        </p>
+                        <p className="text-yellow-600 text-sm">
+                          ข้อมูลจะถูกบันทึกอัตโนมัติทุกครั้งที่มีการเปลี่ยนแปลง
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        clearLocalStorage();
+                        // Reset form
+                        setFormData({
+                          title: "",
+                          description: "",
+                          short_description: "",
+                          category: "",
+                          difficulty_level: "beginner",
+                          duration_hours: "",
+                          is_featured: false,
+                          technologies: [],
+                          project_url: "",
+                          github_url: "",
+                          video_url: "",
+                          cover_image_url: "",
+                          thumbnail_url: "",
+                          tags: [],
+                          status: "published",
+                        });
+                        setImagePreview(null);
+                        setProjectImage(null);
+                        setNewTechnology("");
+                        setNewTag("");
+                        setErrors({});
+                        toast({
+                          title: "🗑️ ล้างข้อมูลแล้ว",
+                          description: "ข้อมูลที่บันทึกไว้ถูกล้างเรียบร้อยแล้ว",
+                        });
+                      }}
+                      className="text-yellow-700 border-yellow-300 hover:bg-yellow-100"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      ล้างข้อมูล
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex justify-center space-x-4 pt-8">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={onClose}
+                  onClick={() => {
+                    // Ask user if they want to keep the draft data
+                    if (!isEditMode && loadFromLocalStorage()) {
+                      const keepDraft = window.confirm(
+                        "คุณต้องการเก็บข้อมูลที่กรอกไว้สำหรับครั้งต่อไปหรือไม่?"
+                      );
+                      if (!keepDraft) {
+                        clearLocalStorage();
+                      }
+                    }
+                    onClose();
+                  }}
                   disabled={loading}
                   className="px-8 py-3 text-gray-600 border-gray-300 hover:bg-gray-50 rounded-xl font-medium text-lg h-14 min-w-[120px]"
                 >

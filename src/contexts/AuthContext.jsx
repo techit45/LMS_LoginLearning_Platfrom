@@ -1,7 +1,9 @@
 
 import * as React from 'react';
+const { useRef } = React;
 import { supabase, ADMIN_DOMAIN } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast.jsx';
+import { useLocation } from 'react-router-dom';
 
 const AuthContext = React.createContext();
 
@@ -17,8 +19,18 @@ const ROLES = {
 
 // Helper function to check if email is admin
 const isAdminEmail = (email) => {
-  if (!email) return false;
-  return email.toLowerCase().endsWith(`@${ADMIN_DOMAIN}`);
+  if (!email) {
+    console.log('🔍 isAdminEmail: No email provided');
+    return false;
+  }
+  const isAdmin = email.toLowerCase().endsWith(`@${ADMIN_DOMAIN}`);
+  console.log('🔍 isAdminEmail check:', {
+    email: email,
+    domain: ADMIN_DOMAIN,
+    isAdmin: isAdmin,
+    lowercaseEmail: email.toLowerCase()
+  });
+  return isAdmin;
 };
 
 export const AuthProvider = ({ children }) => {
@@ -27,6 +39,8 @@ export const AuthProvider = ({ children }) => {
   const [isAdmin, setIsAdmin] = React.useState(false); // Simple admin check for now
   const [userRole, setUserRole] = React.useState(ROLES.GUEST); // More granular role
   const { toast } = useToast();
+  const hasShownLoginToast = useRef(false);
+  const location = useLocation();
 
   React.useEffect(() => {
     const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
@@ -65,15 +79,20 @@ export const AuthProvider = ({ children }) => {
       clearTimeout(timeoutId);
       removeEventListeners();
     };
-  }, [user, toast]);
+  }, [user]); // ลบ toast dependency เพื่อหลีกเลี่ยงการเรียกซ้ำ
 
   React.useEffect(() => {
     const initAuth = async () => {
       try {
+        // Check if we're on reset password page to prevent loading additional data
+        const isResetPasswordPage = location.pathname === '/reset-password';
+        
+        console.log('AuthContext initAuth - isResetPasswordPage:', isResetPasswordPage);
+        
         if (!supabase) {
           console.warn("Supabase client is not initialized. This might be because Supabase URL or Anon Key are missing or incorrect.");
-          // Only show toast if toast function is available
-          if (toast) {
+          // Only show toast if toast function is available and not on reset password page
+          if (toast && !isResetPasswordPage) {
             toast({ 
               title: "⚠️ Supabase ยังไม่ได้เริ่มการทำงาน", 
               description: "กรุณาตรวจสอบการตั้งค่า Supabase URL และ Anon Key", 
@@ -133,10 +152,87 @@ export const AuthProvider = ({ children }) => {
         
         // Role determination logic
         if (currentUser) {
-          if (isAdminEmail(currentUser.email)) {
-            setIsAdmin(true);
-            setUserRole(ROLES.SUPER_ADMIN); // Admin domain users are super admin
+          // Don't fetch user profile data if on reset password page
+          if (isResetPasswordPage) {
+            console.log('On reset password page, skipping profile data fetch');
+            setIsAdmin(false);
+            setUserRole(ROLES.STUDENT); // Use minimal role for reset page
           } else {
+            if (isAdminEmail(currentUser.email)) {
+              console.log('✅ Setting user as SUPER_ADMIN');
+              setIsAdmin(true);
+              setUserRole(ROLES.SUPER_ADMIN); // Admin domain users are super admin
+            } else {
+              // ดึง role จากฐานข้อมูล user_profiles
+              try {
+                const { data: profile, error: profileError } = await supabase
+                  .from('user_profiles')
+                  .select('role')
+                  .eq('user_id', currentUser.id)
+                  .maybeSingle();
+                
+                if (profileError) {
+                  console.log('Error fetching user profile:', profileError);
+                }
+                
+                const dbRole = profile?.role || 'student';
+                console.log('📊 Database role found:', dbRole, 'Profile data:', profile);
+                const mappedRole = dbRole === 'admin' ? ROLES.SUPER_ADMIN : 
+                                 dbRole === 'instructor' ? ROLES.INSTRUCTOR : ROLES.STUDENT;
+                
+                console.log('📊 Setting role from database:', { dbRole, mappedRole });
+                setIsAdmin(dbRole === 'admin' || dbRole === 'instructor');
+                setUserRole(mappedRole);
+              } catch (error) {
+                console.log('Could not fetch user role from database, using default');
+                setIsAdmin(false);
+                setUserRole(ROLES.STUDENT);
+              }
+            }
+          }
+        } else {
+          setIsAdmin(false);
+          setUserRole(ROLES.GUEST);
+        }
+
+      } catch (e) {
+        console.error("Exception in getSession:", e);
+        toast({ title: "เกิดข้อผิดพลาดร้ายแรงในการโหลดเซสชัน", description: e.message, variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event, session);
+      
+      // Check if we're on reset password page
+      const currentIsResetPasswordPage = window.location.pathname === '/reset-password';
+      console.log('🔍 Auth state change - Reset password page check:', {
+        pathname: window.location.pathname,
+        isResetPasswordPage: currentIsResetPasswordPage,
+        event: event
+      });
+
+      const currentUser = session?.user ?? null;
+      
+      // ป้องกันการ process ซ้ำสำหรับ INITIAL_SESSION events
+      if (event === 'INITIAL_SESSION' && user && user.id === currentUser?.id && !currentIsResetPasswordPage) {
+        // Skip ถ้าเป็น INITIAL_SESSION ซ้ำสำหรับ user คนเดิม
+        return;
+      }
+      setUser(currentUser);
+
+      if (currentUser) {
+        // ✅ ALWAYS PROCESS ROLES - ไม่ต้องตรวจสอบ reset password page ที่นี่
+        console.log('🔄 Processing user roles for current user');
+        if (isAdminEmail(currentUser.email)) {
+          console.log('✅ Auth state change: Setting user as SUPER_ADMIN');
+          setIsAdmin(true);
+          setUserRole(ROLES.SUPER_ADMIN);
+        } else {
             // ดึง role จากฐานข้อมูล user_profiles
             try {
               const { data: profile, error: profileError } = await supabase
@@ -160,68 +256,36 @@ export const AuthProvider = ({ children }) => {
               setIsAdmin(false);
               setUserRole(ROLES.STUDENT);
             }
-          }
-        } else {
-          setIsAdmin(false);
-          setUserRole(ROLES.GUEST);
         }
-
-      } catch (e) {
-        console.error("Exception in getSession:", e);
-        toast({ title: "เกิดข้อผิดพลาดร้ายแรงในการโหลดเซสชัน", description: e.message, variant: "destructive" });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, session);
-      
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-
-      if (currentUser) {
-        if (isAdminEmail(currentUser.email)) {
-          setIsAdmin(true);
-          setUserRole(ROLES.SUPER_ADMIN);
-        } else {
-          // ดึง role จากฐานข้อมูล user_profiles
-          try {
-            const { data: profile, error: profileError } = await supabase
-              .from('user_profiles')
-              .select('role')
-              .eq('user_id', currentUser.id)
-              .maybeSingle();
-            
-            if (profileError) {
-              console.log('Error fetching user profile:', profileError);
-            }
-            
-            const dbRole = profile?.role || 'student';
-            const mappedRole = dbRole === 'admin' ? ROLES.SUPER_ADMIN : 
-                             dbRole === 'instructor' ? ROLES.INSTRUCTOR : ROLES.STUDENT;
-            
-            setIsAdmin(dbRole === 'admin' || dbRole === 'instructor');
-            setUserRole(mappedRole);
-          } catch (error) {
-            console.log('Could not fetch user role from database, using default');
-            setIsAdmin(false);
-            setUserRole(ROLES.STUDENT);
-          }
+          
+        // Show login success toast after role is set (only if not on reset password page)
+        if (event === "SIGNED_IN" && !hasShownLoginToast.current && !currentIsResetPasswordPage) {
+          hasShownLoginToast.current = true;
+          setTimeout(() => {
+            const role = isAdminEmail(currentUser.email) ? 'super_admin' : 'student';
+            const roleLabel = role === 'super_admin' ? 'ผู้ดูแลระบบ' : 'ผู้เรียน';
+            toast({ 
+              title: `🎉 เข้าสู่ระบบสำเร็จ!`,
+              description: `ยินดีต้อนรับในฐานะ ${roleLabel}`,
+              duration: 3000
+            });
+          }, 100);
         }
       } else {
         setIsAdmin(false);
         setUserRole(ROLES.GUEST);
+        if (event === "SIGNED_OUT") {
+          hasShownLoginToast.current = false; // Reset flag when user signs out
+        }
       }
       
-      if (event === "SIGNED_IN" && currentUser) {
-        toast({ title: `เข้าสู่ระบบสำเร็จในฐานะ ${userRole}!` });
-      } else if (event === "PASSWORD_RECOVERY") {
-        toast({ title: "การกู้คืนรหัสผ่าน", description: "คำแนะนำในการกู้คืนรหัสผ่านถูกส่งไปยังอีเมลของคุณแล้ว" });
-      } else if (event === "USER_UPDATED") {
-        toast({ title: "ข้อมูลผู้ใช้อัปเดตแล้ว" });
+      // Don't show toasts on reset password page  
+      if (!currentIsResetPasswordPage) {
+        if (event === "PASSWORD_RECOVERY") {
+          toast({ title: "การกู้คืนรหัสผ่าน", description: "คำแนะนำในการกู้คืนรหัสผ่านถูกส่งไปยังอีเมลของคุณแล้ว" });
+        } else if (event === "USER_UPDATED") {
+          toast({ title: "ข้อมูลผู้ใช้อัปเดตแล้ว" });
+        }
       }
       setLoading(false); 
     });
@@ -236,7 +300,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     initAuth();
-  }, [toast]);
+  }, [location]); // ลบ toast dependency เพื่อหลีกเลี่ยงการเรียกซ้ำ
 
   const signInWithPassword = async (email, password) => {
     if (!supabase) {
@@ -290,23 +354,6 @@ export const AuthProvider = ({ children }) => {
     return { data, error };
   };
 
-  const signInWithGoogle = async () => {
-    if (!supabase) {
-      toast({ title: "Supabase ยังไม่ได้เชื่อมต่อ", description: "กรุณาเชื่อมต่อ Supabase ก่อนใช้งาน", variant: "destructive" });
-      return { error: { message: "Supabase client not initialized" } };
-    }
-    setLoading(true);
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin,
-        // You can add user metadata here if needed, though it's often set post-signup
-        // queryParams: { role: ROLES.STUDENT } // Example, might need custom logic server-side
-      }
-    });
-    setLoading(false);
-    return { data, error };
-  };
 
   const signOut = async () => {
     if (!supabase) {
@@ -380,11 +427,20 @@ export const AuthProvider = ({ children }) => {
     hasRole, // Expose role checking function
     signInWithPassword,
     signUpWithPassword,
-    signInWithGoogle,
     signOut,
     loading,
     isSupabaseConnected: !!supabase,
   };
+
+  // Debug log context values on change
+  React.useEffect(() => {
+    console.log('🎯 AuthContext values updated:', {
+      user: user?.email || 'no user',
+      isAdmin,
+      userRole,
+      loading
+    });
+  }, [user, isAdmin, userRole, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

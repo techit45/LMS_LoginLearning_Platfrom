@@ -1,6 +1,21 @@
 import { supabase } from './supabaseClient';
 import { getEmergencyData } from './quickFix';
 
+// Simple in-memory cache
+const cache = new Map();
+
+const getCachedData = (key, maxAge) => {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < maxAge) {
+    return cached.data;
+  }
+  return null;
+};
+
+const setCachedData = (key, data) => {
+  cache.set(key, { data, timestamp: Date.now() });
+};
+
 // ==========================================
 // PROJECT CRUD OPERATIONS
 // ==========================================
@@ -129,124 +144,69 @@ export const getProjectsByCategory = async (category) => {
  * Get featured projects for homepage
  */
 export const getFeaturedProjects = async () => {
+  // Return cache if available and fresh (5 minutes)
+  const cacheKey = 'featured_projects';
+  const cached = getCachedData(cacheKey, 5 * 60 * 1000); // 5 minutes cache
+  if (cached) {
+    console.log('📦 Using cached featured projects');
+    return { data: cached, error: null };
+  }
+
   try {
     console.log('Fetching featured projects from database...');
     
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select(`
-          id,
-          title,
-          description,
-          short_description,
-          category,
-          difficulty_level,
-          is_featured,
-          technology,
-          demo_url,
-          github_url,
-          thumbnail_url,
-          creator_id,
-          created_at,
-          updated_at,
-          is_approved,
-          view_count,
-          like_count
-        `)
-        .eq('is_approved', true)
-        .eq('is_featured', true)
-        .order('created_at', { ascending: false })
-        .limit(6);
+    // Add timeout to database query
+    const queryPromise = supabase
+      .from('projects')
+      .select(`
+        id,
+        title,
+        description,
+        short_description,
+        category,
+        difficulty_level,
+        is_featured,
+        technology,
+        demo_url,
+        github_url,
+        thumbnail_url,
+        creator_id,
+        created_at,
+        updated_at,
+        is_approved,
+        view_count,
+        like_count
+      `)
+      .eq('is_approved', true)
+      .eq('is_featured', true)
+      .order('created_at', { ascending: false })
+      .limit(6);
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database query timeout')), 3000)
+    );
+    
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
-      if (error) {
-        console.error('Featured projects database error:', error);
-        console.error('🚨 This is likely due to missing environment variables in production');
-        console.error('Check NETLIFY_SETUP.md for configuration instructions');
-        throw error;
-      }
-
-      if (data && data.length > 0) {
-        console.log('Successfully fetched featured projects:', data.length);
-        const projectsWithStats = data.map(project => ({
-          ...project,
-          created_by: 'นักเรียน',
-          view_count: project.view_count || Math.floor(Math.random() * 500) + 100,
-          like_count: project.like_count || Math.floor(Math.random() * 50) + 10
-        }));
-        return { data: projectsWithStats, error: null };
-      }
-
-      // Skip database fallback due to timeouts
-      console.log('Skipping database fallback due to consistent timeouts');
-      throw new Error('Database not available');
-      
-    } catch (dbError) {
-      console.error('Featured projects database connection failed:', dbError);
-      console.log('🚑 Using mock featured projects due to database error');
+    if (error) {
+      console.error('Featured projects database error:', error);
+      throw error;
     }
 
-    // If no featured projects, get recent approved projects
-    if (!data || data.length === 0) {
-      console.log('No featured projects found, getting recent projects');
-      
-      const fallbackQueryPromise = supabase
-        .from('projects')
-        .select(`
-          id,
-          title,
-          description,
-          short_description,
-          category,
-          technology,
-          difficulty_level,
-          thumbnail_url,
-          demo_url,
-          github_url,
-          images,
-          tags,
-          is_featured,
-          is_approved,
-          view_count,
-          like_count,
-          creator_id,
-          created_at,
-          updated_at,
-          user_profiles!projects_creator_id_fkey(
-            full_name
-          )
-        `)
-        .eq('is_approved', true)
-        .order('created_at', { ascending: false })
-        .limit(6);
-
-      const { data: recentData, error: recentError } = await Promise.race([
-        fallbackQueryPromise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Fallback timeout')), 3000))
-      ]);
-
-      if (recentError) throw recentError;
-
-      const projectsWithStats = (recentData || []).map(project => ({
+    if (data && data.length > 0) {
+      console.log('Successfully fetched featured projects:', data.length);
+      const projectsWithStats = data.map(project => ({
         ...project,
-        created_by: project.user_profiles?.full_name || 'นักเรียน',
-        view_count: project.view_count || Math.floor(Math.random() * 200) + 50,
-        like_count: project.like_count || Math.floor(Math.random() * 20) + 5
+        created_by: 'นักเรียน',
+        view_count: project.view_count || Math.floor(Math.random() * 500) + 100,
+        like_count: project.like_count || Math.floor(Math.random() * 50) + 10
       }));
-
+      
+      // Cache the successful result
+      setCachedData(cacheKey, projectsWithStats);
+      
       return { data: projectsWithStats, error: null };
     }
-
-    // Process featured projects with enhanced data
-    const projectsWithStats = data.map(project => ({
-      ...project,
-      created_by: project.user_profiles?.full_name || 'นักเรียน',
-      view_count: project.view_count || Math.floor(Math.random() * 500) + 100,
-      like_count: project.like_count || Math.floor(Math.random() * 50) + 10
-    }));
-
-    console.log('Featured projects loaded:', projectsWithStats.length);
-    return { data: projectsWithStats, error: null };
   } catch (error) {
     console.error('Error fetching featured projects:', error);
   }
@@ -254,55 +214,55 @@ export const getFeaturedProjects = async () => {
   // Always return mock data for development
   console.log('Returning mock featured projects for development');
   const mockProjects = [
-      {
-        id: 'mock-proj-1',
-        title: 'ระบบรดน้ำต้นไม้อัตโนมัติด้วย IoT',
-        description: 'โครงงานระบบรดน้ำต้นไม้อัตโนมัติที่ใช้เซ็นเซอร์ความชื้นในดินและควบคุมผ่านแอปมือถือ',
-        category: 'IoT/Hardware',
-        difficulty_level: 'intermediate',
-        thumbnail_url: '/images/project-iot.jpg',
-        created_by: 'น้องเอิร์ธ',
-        view_count: 234,
-        like_count: 18,
-        tags: ['Arduino', 'ESP32', 'React Native'],
-        demo_url: '#',
-        created_at: new Date().toISOString(),
-        is_featured: true,
-        is_approved: true
-      },
-      {
-        id: 'mock-proj-2', 
-        title: 'ปัญญาประดิษฐ์จำแนกขยะรีไซเคิล',
-        description: 'ระบบ AI ที่สามารถจำแนกประเภทขยะรีไซเคิลได้อย่างแม่นยำ ใช้ Computer Vision และ Machine Learning',
-        category: 'AI/Machine Learning',
-        difficulty_level: 'advanced',
-        thumbnail_url: '/images/project-ai.jpg',
-        created_by: 'น้องมิ้น',
-        view_count: 456,
-        like_count: 32,
-        tags: ['Python', 'TensorFlow', 'OpenCV'],
-        demo_url: '#',
-        created_at: new Date().toISOString(),
-        is_featured: true,
-        is_approved: true
-      },
-      {
-        id: 'mock-proj-3',
-        title: 'ฟาร์มไฮโดรโปนิกสมาร์ท',
-        description: 'ระบบควบคุมค่า pH, EC และการให้แสงแก่พืชผักไฮโดรโปนิกแบบอัตโนมัติ',
-        category: 'IoT/Hardware', 
-        difficulty_level: 'intermediate',
-        thumbnail_url: '/images/project-hydroponic.jpg',
-        created_by: 'น้องโทนี่',
-        view_count: 189,
-        like_count: 25,
-        tags: ['Arduino', 'Sensors', 'Mobile App'],
-        demo_url: '#',
-        created_at: new Date().toISOString(),
-        is_featured: true,
-        is_approved: true
-      }
-    ];
+    {
+      id: 'mock-proj-1',
+      title: 'ระบบรดน้ำต้นไม้อัตโนมัติด้วย IoT',
+      description: 'โครงงานระบบรดน้ำต้นไม้อัตโนมัติที่ใช้เซ็นเซอร์ความชื้นในดินและควบคุมผ่านแอปมือถือ',
+      category: 'IoT/Hardware',
+      difficulty_level: 'intermediate',
+      thumbnail_url: 'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400',
+      created_by: 'น้องเอิร์ธ',
+      view_count: 234,
+      like_count: 18,
+      tags: ['Arduino', 'ESP32', 'React Native'],
+      demo_url: '#',
+      created_at: new Date().toISOString(),
+      is_featured: true,
+      is_approved: true
+    },
+    {
+      id: 'mock-proj-2', 
+      title: 'ปัญญาประดิษฐ์จำแนกขยะรีไซเคิล',
+      description: 'ระบบ AI ที่สามารถจำแนกประเภทขยะรีไซเคิลได้อย่างแม่นยำ ใช้ Computer Vision และ Machine Learning',
+      category: 'AI/Machine Learning',
+      difficulty_level: 'advanced',
+      thumbnail_url: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400',
+      created_by: 'น้องมิ้น',
+      view_count: 456,
+      like_count: 32,
+      tags: ['Python', 'TensorFlow', 'OpenCV'],
+      demo_url: '#',
+      created_at: new Date().toISOString(),
+      is_featured: true,
+      is_approved: true
+    },
+    {
+      id: 'mock-proj-3',
+      title: 'ฟาร์มไฮโดรโปนิกสมาร์ท',
+      description: 'ระบบควบคุมค่า pH, EC และการให้แสงแก่พืชผักไฮโดรโปนิกแบบอัตโนมัติ',
+      category: 'IoT/Hardware', 
+      difficulty_level: 'intermediate',
+      thumbnail_url: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400',
+      created_by: 'น้องโทนี่',
+      view_count: 189,
+      like_count: 25,
+      tags: ['Arduino', 'Sensors', 'Mobile App'],
+      demo_url: '#',
+      created_at: new Date().toISOString(),
+      is_featured: true,
+      is_approved: true
+    }
+  ];
 
   return { data: mockProjects, error: null };
 };

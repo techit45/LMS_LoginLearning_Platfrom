@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test DnD</title>
+    <style>
+        .draggable {
+            background: lightblue;
+            padding: 10px;
+            margin: 5px;
+            cursor: move;
+        }
+        .droppable {
+            background: lightgray;
+            padding: 20px;
+            margin: 5px;
+            min-height: 100px;
+            border: 2px dashed #ccc;
+        }
+        .droppable.drag-over {
+            background: lightgreen;
+            border-color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple HTML5 Drag & Drop Test</h1>
+    
+    <div class="draggable" draggable="true" data-item="course1">
+        Course 1 - การเขียนโปรแกรม
+    </div>
+    
+    <div class="draggable" draggable="true" data-item="course2">
+        Course 2 - UI/UX Design
+    </div>
+    
+    <div class="droppable" data-slot="slot1">
+        Drop Zone 1 (8:00-9:00)
+    </div>
+    
+    <div class="droppable" data-slot="slot2">
+        Drop Zone 2 (9:00-10:00)
+    </div>
+
+    <script>
+        // Add drag event listeners
+        document.querySelectorAll('.draggable').forEach(item => {
+            item.addEventListener('dragstart', (e) => {
+                console.log('🚀 Drag start:', e.target.dataset.item);
+                e.dataTransfer.setData('text/plain', e.target.dataset.item);
+            });
+        });
+
+        document.querySelectorAll('.droppable').forEach(zone => {
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('drag-over');
+            });
+            
+            zone.addEventListener('dragleave', (e) => {
+                zone.classList.remove('drag-over');
+            });
+            
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+                const item = e.dataTransfer.getData('text/plain');
+                console.log('💧 Drop:', item, 'in', zone.dataset.slot);
+                zone.innerHTML = `Dropped: ${item}`;
+                zone.style.background = 'lightgreen';
+            });
+        });
+    </script>
+</body>
+</html>

@@ -102,9 +102,9 @@ const HomePage = () => {
 
     const loadFeaturedProjects = async () => {
       try {
-        // Add timeout for emergency fallback
+        // Use shorter timeout for better UX (5 seconds instead of 8)
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("Projects loading timeout")), 8000);
+          setTimeout(() => reject(new Error("Projects loading timeout")), 5000);
         });
 
         const { data, error } = await Promise.race([
@@ -113,20 +113,24 @@ const HomePage = () => {
         ]);
 
         if (error) {
-          console.error("Error loading featured projects:", error);
+          // Only log timeout errors, not regular database errors
+          if (error.message === "Projects loading timeout") {
+            console.log("⏱️ Projects loading timeout - using fallback data");
+          }
           // Use emergency data instead of showing error
           const emergencyData = getEmergencyData();
           setFeaturedProjects(emergencyData.projects);
-          console.log("🚑 Using emergency projects data");
         } else {
           setFeaturedProjects(data || []);
         }
       } catch (error) {
-        console.error("Error loading projects:", error);
+        // Only log meaningful errors, not expected timeouts
+        if (error.message !== "Projects loading timeout") {
+          console.warn("Projects fallback:", error.message);
+        }
         // Use emergency data on any error
         const emergencyData = getEmergencyData();
         setFeaturedProjects(emergencyData.projects);
-        console.log("🚑 Using emergency projects data after error");
       } finally {
         setProjectsLoading(false);
       }

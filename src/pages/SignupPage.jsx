@@ -17,7 +17,7 @@ const SignupPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
-  const { signUpWithPassword, signInWithGoogle, isSupabaseConnected } = useAuth();
+  const { signUpWithPassword, isSupabaseConnected } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -64,26 +64,6 @@ const SignupPage = () => {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setError('');
-     if (!isSupabaseConnected) {
-      toast({
-        title: "⚠️ ยังไม่ได้เชื่อมต่อ Supabase",
-        description: "โปรดเชื่อมต่อ Supabase ก่อนทำการสมัครสมาชิกด้วย Google",
-        variant: "destructive",
-      });
-      return;
-    }
-    setLoading(true);
-    const { error: googleError } = await signInWithGoogle();
-    setLoading(false);
-    if (googleError) {
-      setError(googleError.message);
-      toast({ title: "สมัครสมาชิกด้วย Google ไม่สำเร็จ", description: googleError.message, variant: "destructive" });
-    } else {
-      // Supabase handles redirection, or you can navigate on session update in AuthContext
-    }
-  };
 
   const pageVariants = {
     initial: { opacity: 0, y: 20 },
@@ -251,33 +231,6 @@ const SignupPage = () => {
             </Button>
           </motion.div>
         </form>
-        <motion.div 
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.8 }}
-          className="mt-6"
-        >
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-700" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-800 text-gray-400 rounded-md">หรือสมัครด้วย</span>
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <Button
-              onClick={handleGoogleSignIn}
-              variant="outline"
-              className="w-full flex justify-center py-3 px-4 border-gray-300 text-gray-800 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-900"
-              disabled={loading || !isSupabaseConnected}
-            >
-              <svg className="w-5 h-5 mr-2" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 381.7 512 244 512 110.3 512 0 401.7 0 265.2S110.3 18.3 244 18.3c67.4 0 120.9 24.8 160.4 60.3l-64.8 63.1c-20.1-18.9-48.4-30.8-89.3-30.8-70.1 0-128.2 57.2-128.2 128.2s58.1 128.2 128.2 128.2c80.3 0 110.1-58.8 113.8-87.9H244v-74.6h236.7c2.3 12.7 3.8 25.9 3.8 39.9z"></path></svg>
-              สมัครด้วย Google
-            </Button>
-          </div>
-        </motion.div>
         {!isSupabaseConnected && (
           <motion.div 
             initial={{ opacity: 0 }}

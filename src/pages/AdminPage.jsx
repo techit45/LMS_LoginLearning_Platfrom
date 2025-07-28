@@ -13,6 +13,7 @@ import {
   Eye, 
   Edit,
   UserPlus,
+  ExternalLink,
   Palette,
   Upload,
   Image,
@@ -355,6 +356,13 @@ const AdminPage = () => {
               <Button variant="outline" className="w-full justify-start">
                 <Code2 className="w-4 h-4 mr-2" />
                 จัดการโครงงาน
+              </Button>
+            </Link>
+            
+            <Link to="/admin/teaching-schedule">
+              <Button variant="outline" className="w-full justify-start">
+                <Calendar className="w-4 h-4 mr-2" />
+                ตารางสอน
               </Button>
             </Link>
             

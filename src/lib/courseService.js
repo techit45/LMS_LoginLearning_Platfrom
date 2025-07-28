@@ -589,7 +589,7 @@ export const getFeaturedCourses = async () => {
             level,
             is_featured,
             is_active,
-            cover_image_url,
+            thumbnail_url,
             instructor_id,
             created_at,
             updated_at
@@ -625,7 +625,7 @@ export const getFeaturedCourses = async () => {
             category,
             level,
             is_active,
-            cover_image_url,
+            thumbnail_url,
             instructor_id,
             created_at,
             updated_at
@@ -881,7 +881,7 @@ export const uploadCourseImages = async (courseId, formData) => {
     const randomString = Math.random().toString(36).substring(2, 8);
     const fileExtension = file.name.split('.').pop();
     const fileName = `course-image-${timestamp}-${randomString}.${fileExtension}`;
-    const filePath = `course-images/${courseId}/${fileName}`;
+    let filePath = `course-images/${courseId}/${fileName}`;
 
     // Try different storage buckets (course-files first, then fallback)
     let uploadData, uploadError;
