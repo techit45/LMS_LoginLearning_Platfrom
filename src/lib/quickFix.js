@@ -204,7 +204,7 @@ export const getEmergencyData = () => {
   return {
     courses: [
       {
-        id: "emergency-course-1",
+        id: "550e8400-e29b-41d4-a716-446655440001",
         title: "React เบื้องต้น - สร้างเว็บแอปพลิเคชัน",
         description:
           "เรียนรู้ React ตั้งแต่พื้นฐานจนสามารถสร้างเว็บแอปพลิเคชันได้ รวมถึง Hooks, State Management และ Component Design",
@@ -224,7 +224,7 @@ export const getEmergencyData = () => {
         updated_at: "2024-02-01T10:30:00Z",
       },
       {
-        id: "emergency-course-2",
+        id: "550e8400-e29b-41d4-a716-446655440002",
         title: "วิศวกรรมเคมี - กระบวนการอุตสาหกรรม",
         description:
           "ศึกษาพื้นฐานวิศวกรรมเคมี การออกแบบกระบวนการ การควบคุมคุณภาพ และการประยุกต์ใช้ในอุตสาหกรรม",
@@ -244,7 +244,7 @@ export const getEmergencyData = () => {
         updated_at: "2024-01-25T14:15:00Z",
       },
       {
-        id: "emergency-course-3",
+        id: "550e8400-e29b-41d4-a716-446655440003",
         title: "IoT และการประยุกต์ในชีวิตประจำวัน",
         description:
           "เรียนรู้ Internet of Things ตั้งแต่พื้นฐาน การเชื่อมต่ออุปกรณ์ การใช้งาน Arduino, ESP32 และการสร้างระบบ Smart Home",
@@ -264,7 +264,7 @@ export const getEmergencyData = () => {
         updated_at: "2024-02-05T16:45:00Z",
       },
       {
-        id: "emergency-course-4",
+        id: "550e8400-e29b-41d4-a716-446655440004",
         title: "Python สำหรับวิทยาศาสตร์ข้อมูล",
         description:
           "เรียนรู้การใช้ Python ในการวิเคราะห์ข้อมูล Machine Learning และ Data Visualization ด้วย Pandas, NumPy และ Matplotlib",
@@ -284,7 +284,7 @@ export const getEmergencyData = () => {
         updated_at: "2024-01-30T13:20:00Z",
       },
       {
-        id: "emergency-course-5",
+        id: "550e8400-e29b-41d4-a716-446655440005",
         title: "การออกแบบ 3D ด้วย Fusion 360",
         description:
           "เรียนรู้การออกแบบชิ้นงาน 3D การจำลองการทำงาน และการเตรียมไฟล์สำหรับการพิมพ์ 3D และการผลิต",

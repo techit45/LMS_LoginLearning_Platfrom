@@ -27,7 +27,6 @@ export const getAllCourses = async () => {
             description,
             category,
             level,
-            // price, // ตัดฟังก์ชันเงินออกไปก่อน
             duration_hours,
             thumbnail_url,
             is_active,
@@ -583,7 +582,6 @@ export const getFeaturedCourses = async () => {
             title,
             description,
             short_description,
-            // price, // ตัดฟังก์ชันเงินออกไปก่อน
             duration_hours,
             category,
             level,
@@ -620,7 +618,6 @@ export const getFeaturedCourses = async () => {
             title,
             description,
             short_description,
-            // price, // ตัดฟังก์ชันเงินออกไปก่อน
             duration_hours,
             category,
             level,
@@ -657,7 +654,6 @@ export const getFeaturedCourses = async () => {
             description,
             category,
             level,
-            // price, // ตัดฟังก์ชันเงินออกไปก่อน
             duration_hours,
             thumbnail_url,
             is_active,
