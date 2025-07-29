@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import SEOHead from '@/components/SEOHead';
@@ -332,51 +331,115 @@ const CourseDetailPage = () => {
         </Link>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      {/* Hero Section */}
+      <div className="relative bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 rounded-3xl overflow-hidden mb-8">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="relative z-10 p-8 lg:p-12">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium">
+                {course.category || 'คอร์สเรียน'}
+              </span>
+              <div className="flex items-center gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                ))}
+                <span className="text-white/80 text-sm ml-2">(4.9)</span>
+              </div>
+            </div>
+            
+            <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
+              {course.title}
+            </h1>
+            
+            <p className="text-xl text-white/90 mb-6 leading-relaxed max-w-3xl">
+              {course.description}
+            </p>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-white/90">
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg p-3">
+                <BookOpen className="w-5 h-5 text-white" />
+                <div>
+                  <div className="text-xs text-white/70">ผู้สอน</div>
+                  <div className="font-medium">{course.instructor_name || 'ไม่ระบุ'}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg p-3">
+                <Clock className="w-5 h-5 text-white" />
+                <div>
+                  <div className="text-xs text-white/70">ระยะเวลา</div>
+                  <div className="font-medium">{course.duration_hours || 0} ชั่วโมง</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg p-3">
+                <Users className="w-5 h-5 text-white" />
+                <div>
+                  <div className="text-xs text-white/70">ผู้เรียน</div>
+                  <div className="font-medium">{course.enrollment_count || 0} คน</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg p-3">
+                <Award className="w-5 h-5 text-white" />
+                <div>
+                  <div className="text-xs text-white/70">ระดับ</div>
+                  <div className="font-medium">{course.level === 'beginner' ? 'เริ่มต้น' : course.level === 'intermediate' ? 'กลาง' : course.level === 'advanced' ? 'สูง' : 'ไม่ระบุ'}</div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-4 gap-8">
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
-          className="lg:col-span-2 space-y-6"
+          className="lg:col-span-3 space-y-8"
         >
-          <div className="glass-effect p-6 sm:p-8 rounded-xl shadow-xl">
-            <h1 className="text-3xl sm:text-4xl font-bold text-emerald-900 mb-4">{course.title}</h1>
-            <div className="text-emerald-800 text-lg leading-relaxed mb-6">
-              {formatTextWithLineBreaks(course.description)}
+          {/* Course Content */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-6 border-b border-gray-100">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                <div className="p-2 bg-blue-500 rounded-lg">
+                  <BookOpen className="w-6 h-6 text-white" />
+                </div>
+                รายละเอียดคอร์ส
+              </h2>
+              <p className="text-gray-600">เนื้อหาและรายละเอียดที่คุณจะได้เรียนรู้ในคอร์สนี้</p>
             </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mb-6">
-              <div className="flex items-center space-x-2">
-                <BookOpen className="w-5 h-5 text-[#667eea]" />
-                <span className="text-emerald-800">สอนโดย: {course.instructor_name || 'ไม่ระบุ'}</span>
+            <div className="p-8">
+              
+              {courseImages && courseImages.length > 0 && (
+                <div className="mb-8">
+                  <ImageGallery images={courseImages} />
+                </div>
+              )}
+              
+              <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+                  {formatTextWithLineBreaks(course.description)}
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Clock className="w-5 h-5 text-[#667eea]" />
-                <span className="text-emerald-800">ระยะเวลา: {course.duration_hours || 0} ชั่วโมง</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Users className="w-5 h-5 text-[#667eea]" />
-                <span className="text-emerald-800">ผู้เรียน: {course.enrollment_count || 0} คน</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Award className="w-5 h-5 text-[#667eea]" />
-                <span className="text-emerald-800">ระดับ: {course.level || 'ไม่ระบุ'}</span>
-              </div>
-            </div>
-            <div className="mb-6">
-              <ImageGallery images={courseImages} />
             </div>
           </div>
 
-          {/* Forum Section Only */}
-          <div className="glass-effect p-6 sm:p-8 rounded-xl shadow-xl">
-
-            <div className="mb-6">
-              <h2 className="text-2xl font-semibold text-emerald-900 flex items-center">
-                <MessageSquare className="w-6 h-6 mr-2" />
+          {/* Forum Section */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 border-b border-gray-100">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                  <MessageSquare className="w-6 h-6 text-white" />
+                </div>
                 ฟอรัมสนทนา
               </h2>
+              <p className="text-white/90 mt-2">แลกเปลี่ยนความคิดเห็นและถามตอบกับเพื่อนนักเรียนและผู้สอน</p>
             </div>
+            <div className="p-6">
 
             {/* Forum Content - Always Show */}
             {enrollmentStatus.isEnrolled ? (
@@ -450,6 +513,7 @@ const CourseDetailPage = () => {
               </div>
             )}
           </div>
+        </div>
         </motion.div>
 
         <motion.div 
@@ -458,80 +522,160 @@ const CourseDetailPage = () => {
           transition={{ delay: 0.2 }}
           className="lg:col-span-1 space-y-6"
         >
-          <div className="glass-effect p-6 sm:p-8 rounded-xl shadow-xl">
-            <div className="flex items-center justify-between mb-2">
-                <h2 className="text-3xl font-bold text-emerald-900">฿{course.price?.toLocaleString() || '0'}</h2>
-                <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />)}
-                    <span className="ml-2 text-sm text-emerald-800">(5.0)</span>
+          {/* Enrollment Card */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden sticky top-8">
+            <div className="bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 p-6 text-white relative overflow-hidden">
+              <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-2xl font-bold flex items-center gap-2">
+                    คอร์สฟรี
+                    <div className="px-2 py-1 bg-white/20 rounded-full text-xs font-medium">FREE</div>
+                  </h3>
+                  <div className="flex items-center gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 text-yellow-300 fill-current" />
+                    ))}
+                    <span className="text-white/90 text-sm ml-1">(4.9)</span>
+                  </div>
                 </div>
-            </div>
-            <p className="text-sm text-emerald-700 mb-6">ราคาพิเศษสำหรับนักเรียน Login Learning</p>
-            
-            {enrollmentStatus.isEnrolled && (
-              <div className="flex items-center space-x-2 mb-4 p-3 bg-green-500/20 rounded-lg border border-green-500/30">
-                <UserCheck className="w-5 h-5 text-green-400" />
-                <span className="text-green-400 font-medium">คุณได้ลงทะเบียนคอร์สนี้แล้ว</span>
+                <p className="text-emerald-100 text-sm">เรียนฟรี! เข้าถึงได้ทันที ไม่มีค่าใช้จ่าย</p>
               </div>
-            )}
+            </div>
             
-            {enrollmentStatus.isEnrolled ? (
-              <Link to={`/courses/${courseId}/learn`} className="block w-full">
+            <div className="p-6">
+            
+              {enrollmentStatus.isEnrolled && (
+                <div className="flex items-center gap-3 mb-6 p-4 bg-green-50 rounded-xl border border-green-200">
+                  <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                    <UserCheck className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-green-700">ลงทะเบียนแล้ว</p>
+                    <p className="text-sm text-green-600">คุณสามารถเข้าเรียนได้แล้ว</p>
+                  </div>
+                </div>
+              )}
+              
+              {enrollmentStatus.isEnrolled ? (
+                <Link to={`/courses/${courseId}/learn`} className="block w-full mb-4">
+                  <Button 
+                    size="lg" 
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 rounded-xl shadow-lg transform transition hover:scale-105"
+                  >
+                    <BookOpen className="w-5 h-5 mr-2" />
+                    เริ่มเรียนเลย
+                  </Button>
+                </Link>
+              ) : (
                 <Button 
                   size="lg" 
-                  className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white text-lg py-3"
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-4 rounded-xl shadow-lg transform transition hover:scale-105 mb-4"
+                  onClick={handleEnroll}
+                  disabled={enrolling}
                 >
-                  <BookOpen className="w-5 h-5 mr-2" />
-                  เริ่มเรียน
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  {enrolling ? 'กำลังลงทะเบียน...' : 'ลงทะเบียนฟรี'}
                 </Button>
-              </Link>
-            ) : (
-              <Button 
-                size="lg" 
-                className="w-full bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:from-[#5a6fcf] hover:to-[#673f8b] text-gray-800 text-lg py-3"
-                onClick={handleEnroll}
-                disabled={enrolling}
-              >
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                {enrolling ? 'กำลังลงทะเบียน...' : 'ลงทะเบียนเรียนเลย'}
-              </Button>
-            )}
-            <p className="text-xs text-slate-500 mt-4 text-center">รับประกันความพึงพอใจ คืนเงินภายใน 7 วัน</p>
+              )}
+              
+              <div className="space-y-4">
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">รายการที่รวมอยู่ในคอร์ส</h4>
+                  <div className="space-y-3 text-sm text-gray-600">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                        <Clock className="w-3 h-3 text-green-600" />
+                      </div>
+                      <span>เข้าถึงได้ตลอดชีวิต</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Users className="w-3 h-3 text-blue-600" />
+                      </div>
+                      <span>ชุมชนผู้เรียนออนไลน์</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
+                        <Award className="w-3 h-3 text-purple-600" />
+                      </div>
+                      <span>ใบประกาศนียบัตรเมื่อจบคอร์ส</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="glass-effect p-6 sm:p-8 rounded-xl shadow-xl">
-            <h3 className="text-xl font-semibold text-emerald-900 mb-3">สิ่งที่คุณจะได้รับ</h3>
-            <ul className="space-y-2 text-emerald-800 text-sm list-disc list-inside">
-              {course.learning_outcomes && course.learning_outcomes.length > 0 ? (
-                (() => {
-                  try {
-                    const outcomes = typeof course.learning_outcomes === 'string' 
-                      ? JSON.parse(course.learning_outcomes) 
-                      : course.learning_outcomes;
-                    return outcomes.filter(outcome => outcome.trim() !== '').map((outcome, index) => (
-                      <li key={index}>{outcome}</li>
-                    ));
-                  } catch (error) {
-                    console.warn('Error parsing learning outcomes:', error);
-                    return [
-                      <li key="default-1">ความรู้และทักษะทางวิศวกรรมที่แข็งแกร่ง</li>,
-                      <li key="default-2">ประสบการณ์ทำโปรเจกต์จริง</li>,
-                      <li key="default-3">ใบประกาศนียบัตรเมื่อเรียนจบ</li>,
-                      <li key="default-4">คำแนะนำจากผู้เชี่ยวชาญ</li>,
-                      <li key="default-5">โอกาสในการสร้างเครือข่าย</li>
-                    ];
-                  }
-                })()
-              ) : (
-                <>
-                  <li>ความรู้และทักษะทางวิศวกรรมที่แข็งแกร่ง</li>
-                  <li>ประสบการณ์ทำโปรเจกต์จริง</li>
-                  <li>ใบประกาศนียบัตรเมื่อเรียนจบ</li>
-                  <li>คำแนะนำจากผู้เชี่ยวชาญ</li>
-                  <li>โอกาสในการสร้างเครือข่าย</li>
-                </>
-              )}
-            </ul>
+          {/* Learning Outcomes */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 border-b border-gray-100">
+              <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <div className="p-2 bg-purple-500 rounded-lg">
+                  <Award className="w-5 h-5 text-white" />
+                </div>
+                สิ่งที่คุณจะได้รับ
+              </h3>
+              <p className="text-gray-600 text-sm">ผลลัพธ์การเรียนรู้ที่คุณจะได้รับจากคอร์สนี้</p>
+            </div>
+            <div className="p-6">
+              <div className="space-y-3">
+                {course.learning_outcomes && course.learning_outcomes.length > 0 ? (
+                  (() => {
+                    try {
+                      const outcomes = typeof course.learning_outcomes === 'string' 
+                        ? JSON.parse(course.learning_outcomes) 
+                        : course.learning_outcomes;
+                      return outcomes.filter(outcome => outcome.trim() !== '').map((outcome, index) => (
+                        <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-100 hover:shadow-md transition-shadow">
+                          <div className="w-7 h-7 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg">
+                            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <span className="text-gray-800 text-sm font-medium">{outcome}</span>
+                        </div>
+                      ));
+                    } catch (error) {
+                      console.warn('Error parsing learning outcomes:', error);
+                      return [
+                        'ความรู้และทักษะทางวิศวกรรมที่แข็งแกร่ง',
+                        'ประสบการณ์ทำโปรเจกต์จริง',
+                        'ใบประกาศนียบัตรเมื่อเรียนจบ',
+                        'คำแนะนำจากผู้เชี่ยวชาญ',
+                        'โอกาสในการสร้างเครือข่าย'
+                      ].map((outcome, index) => (
+                        <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-100 hover:shadow-md transition-shadow">
+                          <div className="w-7 h-7 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg">
+                            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <span className="text-gray-800 text-sm font-medium">{outcome}</span>
+                        </div>
+                      ));
+                    }
+                  })()
+                ) : (
+                  [
+                    'ความรู้และทักษะทางวิศวกรรมที่แข็งแกร่ง',
+                    'ประสบการณ์ทำโปรเจกต์จริง',
+                    'ใบประกาศนียบัตรเมื่อเรียนจบ',
+                    'คำแนะนำจากผู้เชี่ยวชาญ',
+                    'โอกาสในการสร้างเครือข่าย'
+                  ].map((outcome, index) => (
+                    <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-100 hover:shadow-md transition-shadow">
+                      <div className="w-7 h-7 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg">
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <span className="text-gray-800 text-sm font-medium">{outcome}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Tools Required Section */}
@@ -543,13 +687,28 @@ const CourseDetailPage = () => {
               const filteredTools = tools.filter(tool => tool.trim() !== '');
               if (filteredTools.length > 0) {
                 return (
-                  <div className="glass-effect p-6 sm:p-8 rounded-xl shadow-xl">
-                    <h3 className="text-xl font-semibold text-emerald-900 mb-3">เครื่องมือที่ใช้</h3>
-                    <ul className="space-y-2 text-emerald-800 text-sm list-disc list-inside">
-                      {filteredTools.map((tool, index) => (
-                        <li key={index}>{tool}</li>
-                      ))}
-                    </ul>
+                  <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                    <div className="bg-gradient-to-r from-orange-50 to-yellow-50 p-6 border-b border-gray-100">
+                      <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                        <div className="p-2 bg-orange-500 rounded-lg">
+                          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        เครื่องมือที่ใช้
+                      </h3>
+                      <p className="text-gray-600 text-sm">เครื่องมือและซอฟต์แวร์ที่จำเป็นในคอร์สนี้</p>
+                    </div>
+                    <div className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {filteredTools.map((tool, index) => (
+                          <div key={index} className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg border border-orange-100">
+                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                            <span className="text-gray-800 text-sm font-medium">{tool}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 );
               }

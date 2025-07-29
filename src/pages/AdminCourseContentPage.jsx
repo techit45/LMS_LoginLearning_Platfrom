@@ -57,12 +57,10 @@ const DraggableContentItem = ({ content, index, moveContent, onEdit, onDelete, o
 
   const getContentIcon = (type) => {
     switch (type) {
-      case 'lesson':
-        return <PlayCircle className="w-5 h-5 text-blue-500" />;
-      case 'quiz':
-        return <CheckSquare className="w-5 h-5 text-green-500" />;
-      case 'assignment':
-        return <Trophy className="w-5 h-5 text-purple-500" />;
+      case 'video':
+        return <PlayCircle className="w-5 h-5 text-red-500" />;
+      case 'document':
+        return <FileText className="w-5 h-5 text-blue-500" />;
       default:
         return <FileText className="w-5 h-5 text-gray-500" />;
     }
@@ -70,10 +68,9 @@ const DraggableContentItem = ({ content, index, moveContent, onEdit, onDelete, o
 
   const getContentTypeLabel = (type) => {
     switch (type) {
-      case 'lesson': return 'lesson';
-      case 'quiz': return 'quiz';
-      case 'assignment': return 'assignment';
-      default: return 'content';
+      case 'video': return 'วิดีโอ';
+      case 'document': return 'เอกสาร';
+      default: return 'เนื้อหา';
     }
   };
 
@@ -309,13 +306,9 @@ const AdminCourseContentPage = () => {
   const getContentIcon = (contentType) => {
     switch (contentType) {
       case 'video':
-        return <PlayCircle className="w-5 h-5 text-blue-500" />;
-      case 'quiz':
-        return <Trophy className="w-5 h-5 text-yellow-500" />;
-      case 'assignment':
-        return <FileText className="w-5 h-5 text-purple-500" />;
+        return <PlayCircle className="w-5 h-5 text-red-500" />;
       case 'document':
-        return <FileText className="w-5 h-5 text-green-500" />;
+        return <FileText className="w-5 h-5 text-blue-500" />;
       default:
         return <FileText className="w-5 h-5 text-gray-500" />;
     }
@@ -324,10 +317,7 @@ const AdminCourseContentPage = () => {
   const getContentTypeLabel = (contentType) => {
     const labels = {
       video: 'วิดีโอ',
-      quiz: 'แบบทดสอบ',
-      assignment: 'งานมอบหมาย',
-      document: 'เอกสาร',
-      text: 'ข้อความ'
+      document: 'เอกสารเรียน'
     };
     return labels[contentType] || contentType;
   };
