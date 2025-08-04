@@ -227,8 +227,17 @@ export default defineConfig({
 						if (id.includes('@radix-ui')) {
 							return 'radix-ui';
 						}
-						if (id.includes('lucide-react') || id.includes('framer-motion')) {
-							return 'ui';
+						if (id.includes('lucide-react')) {
+							return 'icons';
+						}
+						if (id.includes('framer-motion')) {
+							return 'animations';
+						}
+						if (id.includes('react-dnd')) {
+							return 'drag-drop';
+						}
+						if (id.includes('recharts')) {
+							return 'charts';
 						}
 						if (id.includes('@supabase')) {
 							return 'supabase';
