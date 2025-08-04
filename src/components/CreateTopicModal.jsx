@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { createTopic } from '@/lib/forumService';
+import { createTopic } from '../lib/forumService';
 import FileUploadZone from './FileUploadZone';
 
 const CreateTopicModal = ({ 

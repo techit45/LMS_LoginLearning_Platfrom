@@ -19,7 +19,7 @@ import {
   formatFileSize, 
   getFileIcon,
   canPreview
-} from '@/lib/forumAttachmentService';
+} from '../lib/forumAttachmentService';
 
 const AttachmentList = ({ 
   targetType, 

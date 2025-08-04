@@ -30,7 +30,7 @@ import {
   Area
 } from 'recharts';
 import { Button } from '@/components/ui/button';
-import { getDashboardStats } from '@/lib/dashboardService';
+import { getDashboardStats } from '../lib/dashboardService';
 
 const COLORS = {
   primary: '#3b82f6',

@@ -14,7 +14,7 @@ import {
   isNetworkError,
   isPermissionError,
   isNotFoundError,
-} from "@/lib/errorHandler";
+} from "../lib/errorHandler";
 
 /**
  * Component to display database errors with appropriate actions

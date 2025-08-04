@@ -17,9 +17,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast.jsx';
-import { createCourse, updateCourse } from '@/lib/courseService';
-import { uploadCourseImage } from '@/lib/attachmentService';
-import { createCourseStructure } from '@/lib/courseStructureService';
+import { createCourse, updateCourse } from '../lib/courseService';
+import { uploadCourseImage } from '../lib/attachmentService';
+import { createCourseStructure } from '../lib/courseStructureService';
 import CourseImageUpload from '@/components/CourseImageUpload';
 
 const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {

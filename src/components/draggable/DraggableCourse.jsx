@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useDrag } from 'react-dnd';
 import { GripVertical } from 'lucide-react';
 import { ItemTypes } from '@/types/schedule';
-import { theme } from '@/lib/theme';
+import { theme } from '../../lib/theme';
 
 const DraggableCourse = ({ course, instructors = [] }) => {
   const [{ isDragging }, drag, dragPreview] = useDrag({

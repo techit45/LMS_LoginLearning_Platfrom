@@ -23,15 +23,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCourseByIdAdmin } from '@/lib/courseService';
+import { getCourseByIdAdmin } from '../lib/courseService';
 import { 
   getCourseContent, 
   createContent, 
   updateContent, 
   deleteContent, 
   reorderContent 
-} from '@/lib/contentService';
-import { getCourseContentWithProgress } from '@/lib/progressManagementService';
+} from '../lib/contentService';
+import { getCourseContentWithProgress } from '../lib/progressManagementService';
 import ContentEditor from '@/components/ContentEditor';
 
 // YouTube Video Player Component

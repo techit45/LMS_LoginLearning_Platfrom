@@ -18,7 +18,7 @@ import {
   getAssignmentSubmissions, 
   updateSubmissionGrade,
   getAssignmentById 
-} from '@/lib/assignmentService';
+} from '../lib/assignmentService';
 import SubmissionCard from '@/components/SubmissionCard';
 import GradingModal from '@/components/GradingModal';
 

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { uploadAttachmentFile } from '@/lib/attachmentService';
+import { uploadAttachmentFile } from '../lib/attachmentService';
 
 const UniversalFileUpload = ({ 
   contentId, 

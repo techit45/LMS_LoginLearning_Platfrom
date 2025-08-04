@@ -27,8 +27,8 @@ import {
   runAllTests,
   testStorageAccess,
   testAuthenticationFlow,
-} from "@/lib/testingUtils";
-import { diagnoseStudentLoadingIssues } from "@/lib/quickFix";
+} from "../lib/testingUtils";
+import { diagnoseStudentLoadingIssues } from "../lib/quickFix";
 import SEOHead from "@/components/SEOHead";
 
 const SystemDiagnosticPage = () => {

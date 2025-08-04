@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { validateQuizData, generateSampleQuestions } from '@/lib/quizService';
+import { validateQuizData, generateSampleQuestions } from '../lib/quizService';
 
 const QuizEditor = ({ contentId, initialQuiz, onSave }) => {
   const { toast } = useToast();

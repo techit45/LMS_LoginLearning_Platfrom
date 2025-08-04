@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { uploadCourseImages, deleteCourseImage } from '@/lib/courseService';
+import { uploadCourseImages, deleteCourseImage } from '../lib/courseService';
 
 const CourseImageUpload = ({ 
   courseId, 
@@ -108,7 +108,7 @@ const CourseImageUpload = ({
           result = await uploadCourseImages(courseId, formData);
         } else {
           // Use attachmentService for temporary uploads
-          const { uploadCourseImage } = await import('@/lib/attachmentService');
+          const { uploadCourseImage } = await import('../lib/attachmentService');
           result = await uploadCourseImage(file);
           // Convert the response format to match courseService format
           if (result.data?.publicUrl) {

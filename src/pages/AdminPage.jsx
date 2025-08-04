@@ -35,7 +35,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
-import { getDashboardStats, getRecentActivity, getSystemHealth } from '@/lib/dashboardService';
+import { getDashboardStats, getRecentActivity, getSystemHealth } from '../lib/dashboardService';
 import AdminAnalyticsDashboard from '@/components/AdminAnalyticsDashboard';
 
 const AdminPage = () => {

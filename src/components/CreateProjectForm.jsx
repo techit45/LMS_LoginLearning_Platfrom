@@ -19,8 +19,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast.jsx";
-import { createProject } from "@/lib/projectService";
-import { uploadProjectImage } from "@/lib/projectImageService";
+import { createProject } from "../lib/projectService";
+import { uploadProjectImage } from "../lib/projectImageService";
 
 const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
   const { toast } = useToast();

@@ -36,9 +36,9 @@ import {
   getActiveTab,
   saveActiveTab,
   deleteAllUserSettings
-} from '@/lib/userService';
-import { uploadProfileImage, deleteProfileImage } from '@/lib/attachmentService';
-import { supabase } from '@/lib/supabaseClient';
+} from '../lib/userService';
+import { uploadProfileImage, deleteProfileImage } from '../lib/attachmentService';
+import { supabase } from '../lib/supabaseClient';
 import { Input } from '@/components/ui/input';
 
 const SettingsPageDatabase = () => {

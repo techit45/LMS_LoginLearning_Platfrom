@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { uploadAssignmentFile, deleteAssignmentFile, validateFile } from '@/lib/assignmentService';
+import { uploadAssignmentFile, deleteAssignmentFile, validateFile } from '../lib/assignmentService';
 
 const FileUpload = ({ 
   assignment, 

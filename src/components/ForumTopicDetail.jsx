@@ -32,7 +32,7 @@ import {
   formatRelativeTime, 
   getTopicTypeDisplay, 
   getTopicTypeColor 
-} from '@/lib/forumService';
+} from '../lib/forumService';
 import AttachmentList from './AttachmentList';
 
 const ForumTopicDetail = ({ 

@@ -23,8 +23,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast.jsx';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCourseById } from '@/lib/courseService';
-import { getCourseContent } from '@/lib/contentService';
+import { getCourseById } from '../lib/courseService';
+import { getCourseContent } from '../lib/contentService';
 
 const CourseLearningPage = () => {
   const { courseId } = useParams();

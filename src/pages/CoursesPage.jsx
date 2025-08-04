@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
-import { getAllCourses, getCoursesByCompany } from '@/lib/courseService';
-import { getEmergencyData } from '@/lib/quickFix';
+import { getAllCourses, getCoursesByCompany } from '../lib/courseService';
+import { getEmergencyData } from '../lib/quickFix';
 import { useCompany } from '@/contexts/CompanyContext';
 
 const CoursesPage = () => {

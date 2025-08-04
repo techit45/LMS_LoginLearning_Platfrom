@@ -26,7 +26,7 @@ import {
   submitFinalSubmission,
   uploadAssignmentFile,
   validateFile,
-} from "@/lib/assignmentService";
+} from "../lib/assignmentService";
 
 const AssignmentPlayer = ({ contentId, assignment, onComplete }) => {
   const { toast } = useToast();

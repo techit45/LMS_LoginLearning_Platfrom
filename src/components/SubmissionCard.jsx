@@ -12,7 +12,7 @@ import {
   FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient';
 
 const SubmissionCard = ({ submission, assignment, onGrade }) => {
   const isGraded = submission.score !== null;

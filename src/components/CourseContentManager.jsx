@@ -18,7 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast.jsx';
-import { getCourseContent, addCourseContent, updateCourseContent, deleteCourseContent } from '@/lib/contentService';
+import { getCourseContent, addCourseContent, updateCourseContent, deleteCourseContent } from '../lib/contentService';
 
 const CourseContentManager = ({ 
   courseId, 

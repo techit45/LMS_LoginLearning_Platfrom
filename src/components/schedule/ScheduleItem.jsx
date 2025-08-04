@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useDrag } from 'react-dnd';
 import { Edit3, Trash2, GripVertical, Plus } from 'lucide-react';
 import { ItemTypes } from '@/types/schedule';
-import { theme, adjustBrightness } from '@/lib/theme';
+import { theme, adjustBrightness } from '../../lib/theme';
 
 const ScheduleItem = ({ 
   schedule, 

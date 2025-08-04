@@ -32,7 +32,7 @@ import {
   deleteProject,
   permanentlyDeleteProject,
   getProjectStats 
-} from '@/lib/projectService';
+} from '../lib/projectService';
 import ProjectForm from '@/components/ProjectForm';
 import TransferItemModal from '@/components/TransferItemModal';
 

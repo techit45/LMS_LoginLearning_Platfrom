@@ -21,7 +21,7 @@ import {
   getAvailableSchedules, 
   getProjectTemplates, 
   submitOnsiteRegistration 
-} from '@/lib/onsiteService';
+} from '../lib/onsiteService';
 
 const OnsiteRegistrationForm = ({ course, isOpen, onClose, onSuccess }) => {
   const { toast } = useToast();

@@ -25,7 +25,7 @@ import {
   deleteAttachment,
   formatFileSize,
   getFileCategory 
-} from '@/lib/attachmentService';
+} from '../lib/attachmentService';
 
 const AttachmentViewer = ({ 
   contentId, 

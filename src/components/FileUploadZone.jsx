@@ -17,7 +17,7 @@ import {
   formatFileSize,
   getFileCategory,
   isPreviewable,
-} from "@/lib/attachmentService";
+} from "../lib/attachmentService";
 
 const FileUploadZone = ({
   contentId,

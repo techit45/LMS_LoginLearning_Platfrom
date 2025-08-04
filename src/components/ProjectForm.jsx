@@ -24,9 +24,9 @@ import {
   createProject,
   updateProject,
   getProjectForEdit,
-} from "@/lib/projectService";
-import { uploadProjectImage } from "@/lib/projectImageService";
-import { createProjectStructure, getCompanySlug } from "@/lib/googleDriveClientService";
+} from "../lib/projectService";
+import { uploadProjectImage } from "../lib/projectImageService";
+import { createProjectStructure, getCompanySlug } from "../lib/googleDriveClientService";
 
 const ProjectForm = ({
   isOpen,

@@ -7,7 +7,7 @@ import { Users, UserPlus, Search, Edit, Trash2, ArrowLeft, GraduationCap, Shield
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { getAllUsersForAdmin, updateUserRole } from '@/lib/userService';
+import { getAllUsersForAdmin, updateUserRole } from '../lib/userService';
 
 const AdminUsersPage = () => {
   const { toast } = useToast();

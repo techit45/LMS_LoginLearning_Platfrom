@@ -1,7 +1,7 @@
 
 import * as React from 'react';
 const { useRef } = React;
-import { supabase, ADMIN_DOMAIN } from '@/lib/supabaseClient';
+import { supabase, ADMIN_DOMAIN } from '../lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast.jsx';
 import { useLocation } from 'react-router-dom';
 

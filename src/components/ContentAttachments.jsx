@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { getContentAttachments, downloadAttachment } from '@/lib/attachmentService';
+import { getContentAttachments, downloadAttachment } from '../lib/attachmentService';
 
 const ContentAttachments = ({ contentId, className = '' }) => {
   const { toast } = useToast();

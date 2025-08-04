@@ -26,7 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { getWeekRange, getCurrentDays, getTimeSlots, getISOWeek } from '@/lib/weekUtils';
+import { getWeekRange, getCurrentDays, getTimeSlots, getISOWeek } from '../lib/weekUtils';
 import { 
   getWeekInfo, 
   getInstructors, 
@@ -35,7 +35,7 @@ import {
   createSchedule, 
   updateSchedule, 
   deleteSchedule 
-} from '@/lib/teachingScheduleService';
+} from '../lib/teachingScheduleService';
 import CourseManager from '@/components/schedule/CourseManager';
 import WeekPicker from '@/components/schedule/WeekPicker';
 
@@ -1154,7 +1154,7 @@ const TeachingSchedulePageNew = () => {
   // Handle adding new course
   const handleAddCourse = useCallback(async (courseData) => {
     try {
-      const { createCourse } = await import('@/lib/teachingScheduleService');
+      const { createCourse } = await import('../lib/teachingScheduleService');
       const result = await createCourse(courseData);
       
       if (result.error) {
@@ -1186,7 +1186,7 @@ const TeachingSchedulePageNew = () => {
   // Handle updating course
   const handleUpdateCourse = useCallback(async (courseId, courseData) => {
     try {
-      const { updateCourse } = await import('@/lib/teachingScheduleService');
+      const { updateCourse } = await import('../lib/teachingScheduleService');
       const result = await updateCourse(courseId, courseData);
       
       if (result.error) {
@@ -1242,7 +1242,7 @@ const TeachingSchedulePageNew = () => {
     console.log('🗑️ Deleting course:', course.id, course.name);
 
     try {
-      const { deleteCourse } = await import('@/lib/teachingScheduleService');
+      const { deleteCourse } = await import('../lib/teachingScheduleService');
       const result = await deleteCourse(course.id);
       
       console.log('📝 Delete result:', result);

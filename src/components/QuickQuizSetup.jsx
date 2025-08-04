@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { X, Plus, Trash2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { createQuizForContent } from '@/lib/quizService';
+import { createQuizForContent } from '../lib/quizService';
 
 const QuickQuizSetup = ({ isOpen, onClose, contentId, courseId }) => {
   const { toast } = useToast();

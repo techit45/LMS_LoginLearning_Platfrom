@@ -22,8 +22,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { updateCourse, getCourseById, getCourseImages, updateCourseImages } from '@/lib/courseService';
-import { uploadCourseImage } from '@/lib/attachmentService';
+import { updateCourse, getCourseById, getCourseImages, updateCourseImages } from '../lib/courseService';
+import { uploadCourseImage } from '../lib/attachmentService';
 import CourseImageUpload from '@/components/CourseImageUpload';
 
 const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {

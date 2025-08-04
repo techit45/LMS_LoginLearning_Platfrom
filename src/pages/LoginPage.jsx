@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { loginSchema } from "@/lib/validationSchemas";
-import { supabase } from "@/lib/supabaseClient";
+import { loginSchema } from "../lib/validationSchemas";
+import { supabase } from "../lib/supabaseClient";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_TIME = 60 * 1000; // 1 minute

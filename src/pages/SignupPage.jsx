@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { signupSchema } from '@/lib/validationSchemas';
+import { signupSchema } from '../lib/validationSchemas';
 
 const SignupPage = () => {
   const [email, setEmail] = useState('');

@@ -20,7 +20,7 @@ import {
   addChapterFolder, 
   getDefaultChapterStructure,
   validateChapterStructure 
-} from '@/lib/courseStructureService';
+} from '../lib/courseStructureService';
 
 const CourseChapterManager = ({ 
   courseId, 

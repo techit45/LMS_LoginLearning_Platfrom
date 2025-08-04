@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { X, Save, Plus } from 'lucide-react';
-import { theme } from '@/lib/theme';
+import { theme } from '../../lib/theme';
 
 const CourseForm = ({
   isOpen,

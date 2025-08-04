@@ -20,8 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { updateUserProfile } from "@/lib/userService";
-import { supabase } from "@/lib/supabaseClient";
+import { updateUserProfile } from "../lib/userService";
+import { supabase } from "../lib/supabaseClient";
 
 const UserProfilePage = () => {
   const { user, isAdmin } = useAuth();

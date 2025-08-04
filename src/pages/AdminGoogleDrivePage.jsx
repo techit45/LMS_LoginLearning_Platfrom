@@ -37,7 +37,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { googleDriveClient } from '@/lib/googleDriveClient';
+import { googleDriveClient } from '../lib/googleDriveClient';
 
 const AdminGoogleDrivePage = () => {
   const DEFAULT_FOLDER = import.meta.env.VITE_GOOGLE_DRIVE_DEFAULT_FOLDER || '0AAMvBF62LaLyUk9PVA';
