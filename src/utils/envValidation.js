@@ -81,9 +81,20 @@ export const initializeApp = () => {
     return true;
   } catch (error) {
     console.error('❌ Environment validation failed:', error.message);
+    
+    // In development, show alert
     if (import.meta.env.DEV) {
       alert(`Configuration Error:\n${error.message}\n\nกรุณาตรวจสอบไฟล์ .env`);
+      return false;
     }
-    return false;
+    
+    // In production, show warning but allow app to continue with fallback
+    // This prevents the error page from showing when env vars aren't set on Netlify yet
+    console.warn('🚨 Production: Using fallback configuration. Please set environment variables in Netlify.');
+    console.warn('📋 Required variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
+    console.warn('🔗 Setup guide: Check NETLIFY_ENV_SETUP.md');
+    
+    // Return true to allow app to load (will show connection errors in UI instead)
+    return true;
   }
 };
