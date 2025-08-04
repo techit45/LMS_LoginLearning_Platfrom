@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import SEOHead from '@/components/SEOHead';
+import SEOHead from '../components/SEOHead';
 import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
 import { ArrowLeft, BookOpen, Clock, Users, Award, ShoppingCart, Star, UserCheck, AlertCircle, MessageSquare, Plus } from 'lucide-react';
 import { getCourseById, getCourseImages } from '../lib/courseService';
 import { enrollInCourse, isUserEnrolled } from '../lib/enrollmentService';
-import { useAuth } from '@/contexts/AuthContext';
-import AttachmentViewer from '@/components/AttachmentViewer';
-import ForumTopicCard from '@/components/ForumTopicCard';
-import ForumTopicDetail from '@/components/ForumTopicDetail';
-import CreateTopicModal from '@/components/CreateTopicModal';
-import ImageGallery from '@/components/ImageGallery';
+import { useAuth } from '../contexts/AuthContext';
+import AttachmentViewer from '../components/AttachmentViewer';
+import ForumTopicCard from '../components/ForumTopicCard';
+import ForumTopicDetail from '../components/ForumTopicDetail';
+import CreateTopicModal from '../components/CreateTopicModal';
+import ImageGallery from '../components/ImageGallery';
 import { getCourseTopics, toggleLike, toggleTopicPin, toggleTopicLock, deleteTopic } from '../lib/forumService';
 
 const CourseDetailPage = () => {

@@ -11,8 +11,8 @@ import {
   ChevronUp,
   AlertCircle
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
 import { validateQuizData, generateSampleQuestions } from '../lib/quizService';
 
 const QuizEditor = ({ contentId, initialQuiz, onSave }) => {

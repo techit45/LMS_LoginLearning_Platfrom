@@ -17,17 +17,17 @@ import {
   ArrowRight,
   Sparkles,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast.jsx";
+import { Button } from "../components/ui/button";
+import { useToast } from "../hooks/use-toast.jsx";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 import { getFeaturedCourses } from "../lib/courseService";
 import { getFeaturedProjects } from "../lib/projectService";
 import { getEmergencyData } from "../lib/quickFix";
-import SEOHead from "@/components/SEOHead";
-import CourseSlider from "@/components/CourseSlider";
-import ProjectSlider from "@/components/ProjectSlider";
-import TestimonialSlider from "@/components/TestimonialSlider";
+import SEOHead from "../components/SEOHead";
+import CourseSlider from "../components/CourseSlider";
+import ProjectSlider from "../components/ProjectSlider";
+import TestimonialSlider from "../components/TestimonialSlider";
 
 const testimonials = [
   {

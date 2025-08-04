@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import SEOHead from '@/components/SEOHead';
+import SEOHead from '../components/SEOHead';
 import { Users, Target, Zap, Briefcase, Lightbulb, MapPin, Phone, Mail, Users as UsersIcon } from 'lucide-react';
-import TestimonialSlider from '@/components/TestimonialSlider';
+import TestimonialSlider from '../components/TestimonialSlider';
 
 const AboutPage = () => {
   const companyInfo = {

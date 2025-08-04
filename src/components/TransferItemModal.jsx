@@ -10,9 +10,9 @@ import {
   FileText,
   Loader2
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { useCompany, COMPANIES } from '@/contexts/CompanyContext';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
+import { useCompany, COMPANIES } from '../contexts/CompanyContext';
 
 const TransferItemModal = ({ 
   isOpen, 

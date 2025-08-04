@@ -17,9 +17,9 @@ import {
   CheckCircle,
   Loader2
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { useCompany } from '@/contexts/CompanyContext';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
+import { useCompany } from '../contexts/CompanyContext';
 
 const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
   const { toast } = useToast();

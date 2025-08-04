@@ -29,7 +29,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { Button } from '@/components/ui/button';
+import { Button } from '../components/ui/button';
 import { getDashboardStats } from '../lib/dashboardService';
 
 const COLORS = {

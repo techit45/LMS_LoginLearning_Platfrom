@@ -36,7 +36,7 @@ import {
   Scissors,
   ExternalLink
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '../components/ui/button';
 import { googleDriveClient } from '../lib/googleDriveClient';
 
 const AdminGoogleDrivePage = () => {

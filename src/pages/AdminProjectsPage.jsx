@@ -22,9 +22,9 @@ import {
   FolderOpen,
   ArrowRight
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { useToast } from '../hooks/use-toast';
 import { 
   getAllProjectsAdmin, 
   toggleProjectApproval, 
@@ -33,8 +33,8 @@ import {
   permanentlyDeleteProject,
   getProjectStats 
 } from '../lib/projectService';
-import ProjectForm from '@/components/ProjectForm';
-import TransferItemModal from '@/components/TransferItemModal';
+import ProjectForm from '../components/ProjectForm';
+import TransferItemModal from '../components/TransferItemModal';
 
 const AdminProjectsPage = () => {
   const { toast } = useToast();

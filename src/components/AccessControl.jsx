@@ -1,5 +1,5 @@
 import React from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 import {
   hasPermission,
   hasAnyPermission,
@@ -7,7 +7,7 @@ import {
   ROLES,
 } from "../lib/accessControl.jsx";
 import { AlertTriangle, Lock, UserX } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "../components/ui/button";
 
 /**
  * Component to conditionally render content based on user permissions

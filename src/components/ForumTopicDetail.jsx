@@ -20,8 +20,8 @@ import {
   Bell,
   BellOff
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
 import { 
   getTopicWithReplies, 
   createReply, 

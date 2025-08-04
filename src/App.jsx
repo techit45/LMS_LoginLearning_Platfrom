@@ -2,54 +2,54 @@
 import React from 'react';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { HashRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import ErrorBoundary from '@/components/ErrorBoundary';
-import { Toaster } from '@/components/ui/toaster';
-import { ToastProvider } from '@/hooks/use-toast.jsx';
-import ToastDisplay from '@/components/ToastDisplay';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { CompanyProvider } from '@/contexts/CompanyContext';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import AdminRoute from '@/components/AdminRoute';
+import ErrorBoundary from './components/ErrorBoundary';
+import { Toaster } from './components/ui/toaster';
+import { ToastProvider } from './hooks/use-toast.jsx';
+import ToastDisplay from './components/ToastDisplay';
+import { AuthProvider } from './contexts/AuthContext';
+import { CompanyProvider } from './contexts/CompanyContext';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 
 // Lazy load components for better performance
-const HomePage = React.lazy(() => import('@/pages/HomePage'));
-const AboutPage = React.lazy(() => import('@/pages/AboutPage'));
-const CoursesPage = React.lazy(() => import('@/pages/CoursesPage'));
-const CourseDetailPage = React.lazy(() => import('@/pages/CourseDetailPage'));
-const CourseLearningPage = React.lazy(() => import('@/pages/CourseLearningPage'));
-const OnsitePage = React.lazy(() => import('@/pages/OnsitePage'));
-const AdmissionsPage = React.lazy(() => import('@/pages/AdmissionsPage'));
-const ContactPage = React.lazy(() => import('@/pages/ContactPage'));
-const LoginPage = React.lazy(() => import('@/pages/LoginPage'));
-const SignupPage = React.lazy(() => import('@/pages/SignupPage'));
-const ForgotPasswordPage = React.lazy(() => import('@/pages/ForgotPasswordPage'));
-const ResetPasswordPage = React.lazy(() => import('@/pages/ResetPasswordPageNew'));
-const DashboardPage = React.lazy(() => import('@/pages/DashboardPage'));
-const UserProfilePage = React.lazy(() => import('@/pages/UserProfilePage'));
-const SettingsPageDatabase = React.lazy(() => import('@/pages/SettingsPageDatabase'));
-const ProjectsPage = React.lazy(() => import('@/pages/ProjectsPage'));
-const ProjectDetailPage = React.lazy(() => import('@/pages/ProjectDetailPage'));
-const SystemDiagnosticPage = React.lazy(() => import('@/pages/SystemDiagnosticPage'));
-const TestDrivePage = React.lazy(() => import('@/pages/TestDrivePage'));
+const HomePage = React.lazy(() => import('./pages/HomePage'));
+const AboutPage = React.lazy(() => import('./pages/AboutPage'));
+const CoursesPage = React.lazy(() => import('./pages/CoursesPage'));
+const CourseDetailPage = React.lazy(() => import('./pages/CourseDetailPage'));
+const CourseLearningPage = React.lazy(() => import('./pages/CourseLearningPage'));
+const OnsitePage = React.lazy(() => import('./pages/OnsitePage'));
+const AdmissionsPage = React.lazy(() => import('./pages/AdmissionsPage'));
+const ContactPage = React.lazy(() => import('./pages/ContactPage'));
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const SignupPage = React.lazy(() => import('./pages/SignupPage'));
+const ForgotPasswordPage = React.lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPageNew'));
+const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
+const UserProfilePage = React.lazy(() => import('./pages/UserProfilePage'));
+const SettingsPageDatabase = React.lazy(() => import('./pages/SettingsPageDatabase'));
+const ProjectsPage = React.lazy(() => import('./pages/ProjectsPage'));
+const ProjectDetailPage = React.lazy(() => import('./pages/ProjectDetailPage'));
+const SystemDiagnosticPage = React.lazy(() => import('./pages/SystemDiagnosticPage'));
+const TestDrivePage = React.lazy(() => import('./pages/TestDrivePage'));
 
 // Admin components (lazy loaded)
-const AdminLayout = React.lazy(() => import('@/components/AdminLayout'));
-const AdminPage = React.lazy(() => import('@/pages/AdminPage'));
-const AdminUsersPage = React.lazy(() => import('@/pages/AdminUsersPage'));
-const AdminCoursesPage = React.lazy(() => import('@/pages/AdminCoursesPage'));
-const AdminCourseContentPage = React.lazy(() => import('@/pages/AdminCourseContentPage'));
-const AdminAssignmentGradingPage = React.lazy(() => import('@/pages/AdminAssignmentGradingPage'));
-const AdminProjectsPage = React.lazy(() => import('@/pages/AdminProjectsPage'));
-const TeachingSchedulePageNew = React.lazy(() => import('@/pages/TeachingSchedulePageNew'));
-const AdminGoogleDrivePage = React.lazy(() => import('@/pages/AdminGoogleDrivePage'));
-const GoogleDriveIntegrationTest = React.lazy(() => import('@/components/GoogleDriveIntegrationTest'));
+const AdminLayout = React.lazy(() => import('./components/AdminLayout'));
+const AdminPage = React.lazy(() => import('./pages/AdminPage'));
+const AdminUsersPage = React.lazy(() => import('./pages/AdminUsersPage'));
+const AdminCoursesPage = React.lazy(() => import('./pages/AdminCoursesPage'));
+const AdminCourseContentPage = React.lazy(() => import('./pages/AdminCourseContentPage'));
+const AdminAssignmentGradingPage = React.lazy(() => import('./pages/AdminAssignmentGradingPage'));
+const AdminProjectsPage = React.lazy(() => import('./pages/AdminProjectsPage'));
+const TeachingSchedulePageNew = React.lazy(() => import('./pages/TeachingSchedulePageNew'));
+const AdminGoogleDrivePage = React.lazy(() => import('./pages/AdminGoogleDrivePage'));
+const GoogleDriveIntegrationTest = React.lazy(() => import('./components/GoogleDriveIntegrationTest'));
 
 // Company-specific components
-const CompanySelectionPage = React.lazy(() => import('@/pages/CompanySelectionPage'));
-const CompanyLayout = React.lazy(() => import('@/components/CompanyLayout'));
-const CompanyHomePage = React.lazy(() => import('@/pages/CompanyHomePage'));
+const CompanySelectionPage = React.lazy(() => import('./pages/CompanySelectionPage'));
+const CompanyLayout = React.lazy(() => import('./components/CompanyLayout'));
+const CompanyHomePage = React.lazy(() => import('./pages/CompanyHomePage'));
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (

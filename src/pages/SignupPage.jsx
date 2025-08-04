@@ -3,10 +3,10 @@ import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { UserPlus, Mail, Lock, User, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/use-toast';
 import { signupSchema } from '../lib/validationSchemas';
 
 const SignupPage = () => {

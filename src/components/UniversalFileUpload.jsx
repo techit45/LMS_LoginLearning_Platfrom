@@ -14,8 +14,8 @@ import {
   CheckCircle,
   Loader2
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
 import { uploadAttachmentFile } from '../lib/attachmentService';
 
 const UniversalFileUpload = ({ 

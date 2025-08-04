@@ -15,9 +15,9 @@ import {
   Clock,
   Loader2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import FileUploadZone from "@/components/FileUploadZone";
+import { Button } from "../components/ui/button";
+import { useToast } from "../hooks/use-toast";
+import FileUploadZone from "../components/FileUploadZone";
 import {
   getAssignmentByContentId,
   getUserSubmissions,

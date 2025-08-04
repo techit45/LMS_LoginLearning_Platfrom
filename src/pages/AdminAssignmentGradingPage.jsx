@@ -12,15 +12,15 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { Input } from '../components/ui/input';
+import { useToast } from '../hooks/use-toast';
 import { 
   getAssignmentSubmissions, 
   updateSubmissionGrade,
   getAssignmentById 
 } from '../lib/assignmentService';
-import SubmissionCard from '@/components/SubmissionCard';
-import GradingModal from '@/components/GradingModal';
+import SubmissionCard from '../components/SubmissionCard';
+import GradingModal from '../components/GradingModal';
 
 const AdminAssignmentGradingPage = () => {
   const { assignmentId } = useParams();

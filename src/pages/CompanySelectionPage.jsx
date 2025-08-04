@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useCompany } from '@/contexts/CompanyContext';
+import { useCompany } from '../contexts/CompanyContext';
 import {
   Building2,
   Code2,

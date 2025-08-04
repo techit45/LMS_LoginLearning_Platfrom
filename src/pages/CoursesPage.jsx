@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useParams } from 'react-router-dom';
-import SEOHead from '@/components/SEOHead';
+import SEOHead from '../components/SEOHead';
 import { BookOpen, Users, Clock, Search, BookOpenText, Filter, Grid3X3, List, Star, Award, ChevronDown, Code2, Shield, Database, Palette } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { useToast } from '../hooks/use-toast';
 import { Link } from 'react-router-dom';
 import { getAllCourses, getCoursesByCompany } from '../lib/courseService';
 import { getEmergencyData } from '../lib/quickFix';
-import { useCompany } from '@/contexts/CompanyContext';
+import { useCompany } from '../contexts/CompanyContext';
 
 const CoursesPage = () => {
   const { toast } = useToast();

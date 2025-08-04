@@ -1,7 +1,7 @@
 import React from "react";
 import { Helmet } from "react-helmet-async";
 import { motion } from "framer-motion";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 import {
   User,
   Mail,
@@ -16,10 +16,10 @@ import {
   EyeOff,
   KeyRound,
 } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { Textarea } from "../components/ui/textarea";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { useToast } from "../hooks/use-toast";
 import { updateUserProfile } from "../lib/userService";
 import { supabase } from "../lib/supabaseClient";
 

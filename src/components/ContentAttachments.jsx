@@ -12,8 +12,8 @@ import {
   Loader2,
   AlertCircle
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
 import { getContentAttachments, downloadAttachment } from '../lib/attachmentService';
 
 const ContentAttachments = ({ contentId, className = '' }) => {

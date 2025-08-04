@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import SEOHead from '@/components/SEOHead';
+import SEOHead from '../components/SEOHead';
 import { 
   ArrowLeft, 
   ExternalLink, 
@@ -21,12 +21,12 @@ import {
   X,
   Trash2
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '../components/ui/button';
 import { getProjectById, permanentlyDeleteProject } from '../lib/projectService';
 import { trackProjectView, toggleProjectLike, getUserProjectLikes, getProjectLikeCount, getProjectComments, addProjectComment, getProjectCommentCount } from '../lib/projectInteractionService';
-import { useToast } from '@/hooks/use-toast.jsx';
-import { useAuth } from '@/contexts/AuthContext';
-import ProjectForm from '@/components/ProjectForm';
+import { useToast } from '../hooks/use-toast.jsx';
+import { useAuth } from '../contexts/AuthContext';
+import ProjectForm from '../components/ProjectForm';
 
 const ProjectDetailPage = () => {
   const { projectId } = useParams();

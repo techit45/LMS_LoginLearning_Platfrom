@@ -23,9 +23,9 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
+import { useAuth } from '../contexts/AuthContext';
 import {
   getProfileSettings,
   saveProfileSettings,
@@ -39,7 +39,7 @@ import {
 } from '../lib/userService';
 import { uploadProfileImage, deleteProfileImage } from '../lib/attachmentService';
 import { supabase } from '../lib/supabaseClient';
-import { Input } from '@/components/ui/input';
+import { Input } from '../components/ui/input';
 
 const SettingsPageDatabase = () => {
   const { user } = useAuth();

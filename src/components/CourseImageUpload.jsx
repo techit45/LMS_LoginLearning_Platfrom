@@ -13,8 +13,8 @@ import {
   CheckCircle,
   Loader2
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
 import { uploadCourseImages, deleteCourseImage } from '../lib/courseService';
 
 const CourseImageUpload = ({ 

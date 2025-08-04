@@ -10,8 +10,8 @@ import {
   RotateCcw,
   Trophy
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
 import { startQuizAttempt, submitQuizAttempt } from '../lib/quizService';
 
 const QuizPlayer = ({ quiz, onComplete, onClose }) => {

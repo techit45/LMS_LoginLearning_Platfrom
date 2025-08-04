@@ -15,7 +15,7 @@ import {
   Flag
 } from 'lucide-react';
 import { formatRelativeTime, getTopicTypeDisplay, getTopicTypeColor } from '../lib/forumService';
-import { Button } from '@/components/ui/button';
+import { Button } from '../components/ui/button';
 
 const ForumTopicCard = ({ 
   topic, 

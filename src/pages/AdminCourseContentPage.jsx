@@ -19,9 +19,9 @@ import {
   Clock,
   BookOpen
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
+import { useAuth } from '../contexts/AuthContext';
 import { getCourseByIdAdmin } from '../lib/courseService';
 import { 
   getCourseContent, 
@@ -31,7 +31,7 @@ import {
   reorderContent 
 } from '../lib/contentService';
 import { getCourseContentWithProgress } from '../lib/progressManagementService';
-import ContentEditor from '@/components/ContentEditor';
+import ContentEditor from '../components/ContentEditor';
 
 // YouTube Video Player Component
 const YouTubePlayer = ({ videos, currentIndex, onVideoChange, isExpanded, onToggleExpanded }) => {

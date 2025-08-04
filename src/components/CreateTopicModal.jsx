@@ -12,8 +12,8 @@ import {
   File,
   Paperclip
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
 import { createTopic } from '../lib/forumService';
 import FileUploadZone from './FileUploadZone';
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useCompany } from '@/contexts/CompanyContext';
+import { useCompany } from '../contexts/CompanyContext';
 import { useNavigate } from 'react-router-dom';
 import {
   GraduationCap,

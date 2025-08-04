@@ -6,8 +6,8 @@ import {
   AlertCircle,
   Info
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
 
 const AssignmentEditor = ({ initialAssignment, onSave }) => {
   const { toast } = useToast();

@@ -11,11 +11,11 @@ import {
   Shield,
   AlertTriangle
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast.jsx';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { useToast } from '../hooks/use-toast.jsx';
 import { supabase } from '../lib/supabaseClient';
-import SEOHead from '@/components/SEOHead';
+import SEOHead from '../components/SEOHead';
 import Joi from 'joi';
 
 const ResetPasswordPageNew = () => {

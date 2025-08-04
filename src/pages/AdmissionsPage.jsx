@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { School, Book, Edit3, TrendingUp, Target, Users, DollarSign, Globe, ExternalLink, ChevronDown, ChevronUp, Award, Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '../components/ui/button';
 
 const AdmissionsPage = () => {
   const [expandedCards, setExpandedCards] = useState({});

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ExternalLink, Calendar, User, Tag, Eye, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button } from '../components/ui/button';
 
 // Helper function to get Supabase storage URL for project images
 const getSupabaseImageUrl = (imagePath) => {

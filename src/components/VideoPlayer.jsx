@@ -12,7 +12,7 @@ import {
   ExternalLink,
   CheckCircle
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '../components/ui/button';
 
 // Helper function to detect video type
 const getVideoType = (url) => {

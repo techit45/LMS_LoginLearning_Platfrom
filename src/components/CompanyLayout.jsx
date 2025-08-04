@@ -1,8 +1,8 @@
 import React from 'react';
 import { Outlet, useParams, Navigate } from 'react-router-dom';
-import { useCompany } from '@/contexts/CompanyContext';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import { useCompany } from '../contexts/CompanyContext';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 const CompanyLayout = () => {
   const { companySlug } = useParams();

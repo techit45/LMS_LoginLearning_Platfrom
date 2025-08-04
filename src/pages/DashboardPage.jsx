@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
-import SEOHead from "@/components/SEOHead";
-import { useAuth } from "@/contexts/AuthContext";
+import SEOHead from "../components/SEOHead";
+import { useAuth } from "../contexts/AuthContext";
 import {
   LayoutDashboard,
   BookOpen,
@@ -20,8 +20,8 @@ import {
   Settings,
   ArrowRight,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "../components/ui/button";
+import { useToast } from "../hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
 const DashboardPage = () => {

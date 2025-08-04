@@ -20,9 +20,9 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast.jsx';
-import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast.jsx';
+import { useAuth } from '../contexts/AuthContext';
 import { getCourseById } from '../lib/courseService';
 import { getCourseContent } from '../lib/contentService';
 

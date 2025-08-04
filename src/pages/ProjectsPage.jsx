@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import SEOHead from "@/components/SEOHead";
+import SEOHead from "../components/SEOHead";
 import { Code2, Plus, Star, Lightbulb } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast.jsx";
-import { useAuth } from "@/contexts/AuthContext";
-import { useCompany } from "@/contexts/CompanyContext";
+import { Button } from "../components/ui/button";
+import { useToast } from "../hooks/use-toast.jsx";
+import { useAuth } from "../contexts/AuthContext";
+import { useCompany } from "../contexts/CompanyContext";
 import { getAllProjects, getFeaturedProjects } from "../lib/projectService";
 import { getEmergencyData } from "../lib/quickFix";
-import ProjectShowcase from "@/components/ProjectShowcase";
-import ProjectSlider from "@/components/ProjectSlider";
-import ProjectForm from "@/components/ProjectForm";
+import ProjectShowcase from "../components/ProjectShowcase";
+import ProjectSlider from "../components/ProjectSlider";
+import ProjectForm from "../components/ProjectForm";
 
 const ProjectsPage = () => {
   const { toast } = useToast();

@@ -22,9 +22,9 @@ import {
   Calendar,
   Cloud
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
-import GoogleDriveFloatingButton from '@/components/GoogleDriveFloatingButton';
+import { Button } from '../components/ui/button';
+import { useAuth } from '../contexts/AuthContext';
+import GoogleDriveFloatingButton from '../components/GoogleDriveFloatingButton';
 
 const AdminLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

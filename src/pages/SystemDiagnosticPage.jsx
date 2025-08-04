@@ -15,10 +15,10 @@ import {
   Bug,
   Zap,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "../components/ui/button";
+import { useToast } from "../hooks/use-toast";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 import {
   testStudentAccess,
   adminTestRLSPolicies,
@@ -29,7 +29,7 @@ import {
   testAuthenticationFlow,
 } from "../lib/testingUtils";
 import { diagnoseStudentLoadingIssues } from "../lib/quickFix";
-import SEOHead from "@/components/SEOHead";
+import SEOHead from "../components/SEOHead";
 
 const SystemDiagnosticPage = () => {
   const { toast } = useToast();

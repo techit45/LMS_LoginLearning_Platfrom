@@ -12,7 +12,7 @@ import {
   Heart,
   Edit
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '../components/ui/button';
 
 const ProjectCard = ({ project, onView, onEdit, featured = false, currentUserId, isAdmin = false }) => {
   const cardVariants = {

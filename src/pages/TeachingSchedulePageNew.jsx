@@ -22,9 +22,9 @@ import {
   Building2,
   Briefcase
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
+import { useAuth } from '../contexts/AuthContext';
 import { getWeekRange, getCurrentDays, getTimeSlots, getISOWeek } from '../lib/weekUtils';
 import { 
   getWeekInfo, 
@@ -35,8 +35,8 @@ import {
   updateSchedule, 
   deleteSchedule 
 } from '../lib/teachingScheduleService';
-import CourseManager from '@/components/schedule/CourseManager';
-import WeekPicker from '@/components/schedule/WeekPicker';
+import CourseManager from '../components/schedule/CourseManager';
+import WeekPicker from '../components/schedule/WeekPicker';
 
 // Drag and Drop Item Types
 const ItemTypes = {
