@@ -213,7 +213,6 @@ export default defineConfig({
 	},
 	optimizeDeps: {
 		include: [
-			'tailwind-merge', 
 			'clsx',
 			'@radix-ui/react-slot',
 			'@radix-ui/react-dialog',
@@ -247,8 +246,8 @@ export default defineConfig({
 					'express', 'cors', 'formidable', 'googleapis', 
 					'google-auth-library', 'joi', 'dotenv', 'concurrently'
 				];
-				// Don't externalize frontend dependencies like tailwind-merge
-				const frontendDeps = ['tailwind-merge', 'clsx', 'react', 'react-dom'];
+				// Don't externalize frontend dependencies
+				const frontendDeps = ['clsx', 'react', 'react-dom'];
 				if (frontendDeps.some(dep => id.includes(dep))) {
 					return false;
 				}
@@ -279,7 +278,7 @@ export default defineConfig({
 						if (id.includes('@supabase')) {
 							return 'supabase';
 						}
-						if (id.includes('clsx') || id.includes('tailwind-merge')) {
+						if (id.includes('clsx')) {
 							return 'utils';
 						}
 						if (id.includes('dompurify')) {
