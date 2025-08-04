@@ -1,7 +1,8 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
+import { forwardRef } from "../../lib/reactCompat"
 
-const Textarea = React.forwardRef(({ className, ...props }, ref) => {
+const Textarea = forwardRef(({ className, ...props }, ref) => {
   return (
     (<textarea
       className={cn(

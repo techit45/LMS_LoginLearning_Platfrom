@@ -191,7 +191,10 @@ export default defineConfig({
 		// Remove hardcoded credentials for security
 	},
 	plugins: [
-		react(),
+		react({
+			jsxRuntime: 'classic',
+			jsxImportSource: undefined
+		}),
 		addTransformIndexHtml
 	],
 	server: {

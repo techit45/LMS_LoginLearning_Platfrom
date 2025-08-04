@@ -1,7 +1,8 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
+import { forwardRef } from "../../lib/reactCompat"
 
-const Input = React.forwardRef(({ className, type, value, ...props }, ref) => {
+const Input = forwardRef(({ className, type, value, ...props }, ref) => {
   return (
     (<input
       type={type}
