@@ -1,9 +1,29 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { BookOpenText, PlusCircle, Search, Edit, Trash2, Users, Eye, BarChart3, AlertTriangle, FileText, Power, PowerOff, ArrowLeft, Star } from 'lucide-react';
+import { 
+  BookOpenText, 
+  PlusCircle, 
+  Search, 
+  Edit, 
+  Trash2, 
+  Users, 
+  Eye, 
+  BarChart3, 
+  AlertTriangle, 
+  FileText, 
+  Power, 
+  PowerOff, 
+  ArrowLeft, 
+  Star,
+  StarOff,
+  FolderOpen,
+  Calendar,
+  Tag,
+  X,
+  ArrowRight
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast.jsx';
@@ -11,6 +31,7 @@ import { getAllCoursesAdmin, toggleCourseStatus, getCourseStats, toggleCourseFea
 import { Link } from 'react-router-dom';
 import CreateCourseForm from '@/components/CreateCourseForm';
 import EditCourseForm from '@/components/EditCourseForm';
+import TransferItemModal from '@/components/TransferItemModal';
 
 const AdminCoursesPage = () => {
   const { toast } = useToast();
@@ -22,9 +43,8 @@ const AdminCoursesPage = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deletingCourseId, setDeletingCourseId] = useState(null);
-  const [deletingCourseName, setDeletingCourseName] = useState('');
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferringCourse, setTransferringCourse] = useState(null);
 
   // Helper function to format text with line breaks (for preview)
   const formatTextPreview = (text) => {
@@ -88,35 +108,54 @@ const AdminCoursesPage = () => {
   };
 
   const handleDeletePermanently = async (courseId, courseName) => {
-    setDeletingCourseId(courseId);
-    setDeletingCourseName(courseName);
-    setShowDeleteDialog(true);
-  };
+    // Find course to check Google Drive folder
+    const course = courses.find(c => c.id === courseId);
+    const hasGoogleDrive = course?.google_drive_folder_id;
+    
+    // First confirmation with Google Drive information
+    // eslint-disable-next-line no-restricted-globals
+    const firstConfirm = confirm(`⚠️ คำเตือน: ลบคอร์ส "${courseName}" ถาวร\n\n🗑️ การลบนี้จะลบข้อมูลดังนี้:\n✓ ข้อมูลคอร์สใน Database\n✓ เนื้อหาและบทเรียนทั้งหมด\n✓ ข้อมูลนักเรียนและความคืบหน้า\n${hasGoogleDrive ? '✓ โฟลเดอร์ Google Drive และไฟล์ทั้งหมด' : '• ไม่มีโฟลเดอร์ Google Drive'}\n\n⚠️ ไม่สามารถกู้คืนได้!\n\nต้องการดำเนินการต่อหรือไม่?`);
+    
+    if (!firstConfirm) {
+      return;
+    }
 
-  const confirmDeletePermanently = async () => {
-    if (!deletingCourseId) return;
+    // Second confirmation with typing requirement
+    // eslint-disable-next-line no-restricted-globals
+    const confirmText = prompt(`🔒 ยืนยันการลบถาวร\n\nพิมพ์ "DELETE" (ตัวพิมพ์ใหญ่) เพื่อยืนยัน:\n\nคอร์ส: "${courseName}"\n${hasGoogleDrive ? `Google Drive: มีโฟลเดอร์ (${course.google_drive_folder_id})` : 'Google Drive: ไม่มีโฟลเดอร์'}\n\n⚠️ การลบนี้ไม่สามารถกู้คืนได้`);
+    
+    if (confirmText !== 'DELETE') {
+      toast({
+        title: "ยกเลิกการลบ",
+        description: "การลบถาวรถูกยกเลิก",
+        variant: "default"
+      });
+      return;
+    }
 
-    const { error } = await deleteCourseCompletely(deletingCourseId);
+    // Show loading toast
+    toast({
+      title: "กำลังลบคอร์ส...",
+      description: hasGoogleDrive ? "กำลังลบข้อมูลและโฟลเดอร์ Google Drive" : "กำลังลบข้อมูลจาก Database",
+      variant: "default"
+    });
+
+    const { error } = await deleteCourseCompletely(courseId);
     if (error) {
       toast({
-        title: "ไม่สามารถลบคอร์สได้",
+        title: "ไม่สามารถลบคอร์สถาวรได้",
         description: error.message,
         variant: "destructive"
       });
     } else {
       toast({
-        title: "ลบคอร์สถาวรสำเร็จ",
-        description: `คอร์ส "${deletingCourseName}" ถูกลบออกจากระบบแล้ว`,
+        title: "✅ ลบคอร์สถาวรสำเร็จ",
+        description: `คอร์ส "${courseName}" ${hasGoogleDrive ? 'พร้อมโฟลเดอร์ Google Drive ' : ''}ถูกลบออกจากระบบแล้ว`,
         variant: "default"
       });
       loadCourses();
       loadStats();
     }
-
-    // Reset delete dialog
-    setShowDeleteDialog(false);
-    setDeletingCourseId(null);
-    setDeletingCourseName('');
   };
 
   const handleToggleFeatured = async (courseId, courseTitle, currentFeatured) => {
@@ -140,8 +179,6 @@ const AdminCoursesPage = () => {
     }
   };
 
-  
-
   const handleCourseCreated = () => {
     loadCourses(); // Refresh the course list
     loadStats(); // Refresh statistics
@@ -162,17 +199,38 @@ const AdminCoursesPage = () => {
     setEditingCourseId(null);
   };
 
-  const handleFeatureNotImplemented = (featureName) => {
+  const handleTransferCourse = (course) => {
+    setTransferringCourse(course);
+    setShowTransferModal(true);
+  };
+
+  const handleTransferComplete = (transferResult) => {
+    setShowTransferModal(false);
+    setTransferringCourse(null);
+    loadCourses(); // Refresh the courses list
     toast({
-      title: "ฟีเจอร์ยังไม่พร้อมใช้งาน",
-      description: `${featureName} ยังอยู่ในระหว่างการพัฒนา`,
-      variant: "info"
+      title: "ย้ายคอร์สเรียนสำเร็จ",
+      description: `คอร์สเรียน "${transferResult.title}" ถูกย้ายไปยัง ${transferResult.transfer_details?.to_company} แล้ว`,
+      variant: "default"
+    });
+  };
+
+  const handleTransferClose = () => {
+    setShowTransferModal(false);
+    setTransferringCourse(null);
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
   
   const filteredCourses = courses.filter(course => 
     course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    course.category.toLowerCase().includes(searchTerm.toLowerCase())
+    course.category?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const pageVariants = {
@@ -215,9 +273,11 @@ const AdminCoursesPage = () => {
             จัดการคอร์สเรียน
           </h1>
         </div>
+        
         <Button 
           onClick={() => setShowCreateForm(true)}
-          className="bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:from-[#5a6fcf] hover:to-[#673f8b] text-white-800"
+          className="bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:from-[#5a6fcf] hover:to-[#673f8b] text-white font-semibold shadow-lg"
+          size="lg"
         >
           <PlusCircle className="w-5 h-5 mr-2" />
           เพิ่มคอร์สใหม่
@@ -272,163 +332,210 @@ const AdminCoursesPage = () => {
       )}
 
       <div className="mb-6 glass-effect p-4 rounded-xl">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <Input 
-            type="text"
-            placeholder="ค้นหาคอร์ส (ชื่อ, หมวดหมู่)..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 w-full bg-slate-200 border-slate-400 text-gray-900 focus:border-[#667eea]"
-          />
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Input 
+              type="text"
+              placeholder="ค้นหาคอร์ส (ชื่อ, หมวดหมู่)..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-full bg-slate-200 border-slate-400 text-gray-900 focus:border-[#667eea]"
+            />
+          </div>
+          
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowCreateForm(true)}
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2"
+            >
+              <PlusCircle className="w-4 h-4 mr-2" />
+              เพิ่มคอร์ส
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="glass-effect rounded-xl shadow-xl overflow-x-auto">
+      {/* Organizational List View */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center">
+          <div className="p-12 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#667eea] mx-auto mb-4"></div>
-            <p className="text-purple-700">กำลังโหลดข้อมูลคอร์ส...</p>
+            <p className="text-gray-600">กำลังโหลดข้อมูลคอร์ส...</p>
           </div>
         ) : (
-          <table className="w-full min-w-max text-left text-purple-800">
-            <thead className="border-b border-slate-700">
-              <tr className="bg-purple-100/30">
-                <th className="p-4">ชื่อคอร์ส</th>
-                <th className="p-4">หมวดหมู่</th>
-                <th className="p-4">นักเรียน</th>
-                <th className="p-4">ระยะเวลา</th>
-                <th className="p-4">ราคา</th>
-                <th className="p-4">สถานะ</th>
-                <th className="p-4">แนะนำ</th>
-                <th className="p-4">วันที่สร้าง</th>
-                <th className="p-4 text-center">การดำเนินการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCourses.map((course, index) => (
-                <motion.tr 
-                  key={course.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors"
-                >
-                  <td className="p-4">
-                    <div>
-                      <p className="font-medium text-purple-900">{course.title}</p>
-                      <p className="text-sm text-purple-700 truncate max-w-xs">
-                        {formatTextPreview(course.description)}
-                      </p>
+          <div className="divide-y divide-gray-100">
+            {filteredCourses.map((course, index) => (
+              <motion.div
+                key={course.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: index * 0.02 }}
+                className="group hover:bg-gray-50/80 transition-colors duration-150"
+              >
+                <div className="p-6">
+                  <div className="flex items-center gap-6">
+                    {/* Course Image & Title */}
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      {course.image_url && (
+                        <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+                          <img 
+                            src={course.image_url} 
+                            alt={course.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 text-lg truncate group-hover:text-indigo-600 transition-colors">
+                          {course.title}
+                        </h3>
+                        <p className="text-gray-600 text-sm mt-1 line-clamp-1">
+                          {formatTextPreview(course.description)}
+                        </p>
+                      </div>
                     </div>
-                  </td>
-                  <td className="p-4">
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-500/30 text-blue-300">
-                      {course.category || 'ไม่ระบุ'}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center">
-                      <Users className="w-4 h-4 mr-1 text-purple-700" />
-                      {course.enrollment_count || 0}
+
+                    {/* Category & Details */}
+                    <div className="hidden md:flex items-center gap-3 flex-shrink-0">
+                      <div className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium">
+                        {course.category || 'ไม่ระบุ'}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Users className="w-4 h-4" />
+                        <span>{course.enrollment_count || 0}</span>
+                        <Calendar className="w-4 h-4 ml-2" />
+                        <span>{course.duration_hours || 0}ชม.</span>
+                      </div>
                     </div>
-                  </td>
-                  <td className="p-4">{course.duration_hours || 0} ชั่วโมง</td>
-                  <td className="p-4">
-                    {course.price ? `฿${course.price.toLocaleString()}` : 'ฟรี'}
-                  </td>
-                  <td className="p-4">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      course.is_active ? 'bg-green-500/30 text-green-300' :
-                      'bg-red-500/30 text-red-300'
-                    }`}>
-                      {course.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center">
-                      <Star className={`w-4 h-4 mr-1 ${
-                        course.is_featured ? 'text-yellow-400 fill-current' : 'text-gray-400'
-                      }`} />
-                      <span className={`text-xs ${
-                        course.is_featured ? 'text-yellow-400' : 'text-gray-500'
-                      }`}>
-                        {course.is_featured ? 'แนะนำ' : 'ทั่วไป'}
+
+                    {/* Price & Status */}
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <div className="text-right">
+                        <div className="font-semibold text-gray-900">
+                          {course.price ? `฿${course.price.toLocaleString()}` : 'ฟรี'}
+                        </div>
+                        <div className={`text-xs px-2 py-1 rounded-full ${
+                          course.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {course.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                        </div>
+                      </div>
+                      
+                      {course.is_featured && (
+                        <Star className="w-4 h-4 text-amber-400 fill-current" title="คอร์สแนะนำ" />
+                      )}
+                      
+                      <span className="text-xs text-gray-500 w-20 text-right">
+                        {formatDate(course.created_at)}
                       </span>
                     </div>
-                  </td>
-                  <td className="p-4">
-                    {new Date(course.created_at).toLocaleDateString('th-TH')}
-                  </td>
-                  <td className="p-4 text-center space-x-2">
-                    <Link to={`/admin/courses/${course.id}/content`}>
+
+                    {/* Quick Actions */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <Link to={`/admin/courses/${course.id}/content`}>
+                        <Button 
+                          size="sm"
+                          variant="ghost"
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50 p-2"
+                          title="จัดการเนื้อหา"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                      {course.google_drive_folder_id && (
+                        <Button 
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => window.open(`https://drive.google.com/drive/folders/${course.google_drive_folder_id}`, '_blank')}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2"
+                          title="เปิด Google Drive"
+                        >
+                          <FolderOpen className="w-4 h-4" />
+                        </Button>
+                      )}
+                      
+                      <div className="w-px h-6 bg-gray-200 mx-1"></div>
+                      
                       <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-green-400 hover:bg-green-500/20"
-                        title="จัดการเนื้อหา"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleToggleFeatured(course.id, course.title, course.is_featured)}
+                        className={`p-2 ${course.is_featured 
+                          ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50" 
+                          : "text-gray-400 hover:text-amber-600 hover:bg-amber-50"
+                        }`}
+                        title={course.is_featured ? "ยกเลิกคอร์สแนะนำ" : "ตั้งเป็นคอร์สแนะนำ"}
                       >
-                        <FileText className="w-4 h-4" />
+                        {course.is_featured ? <Star className="w-4 h-4 fill-current" /> : <StarOff className="w-4 h-4" />}
                       </Button>
-                    </Link>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => handleEditCourse(course.id)} 
-                      className="text-blue-400 hover:bg-blue-500/20"
-                      title="แก้ไขคอร์ส"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => handleToggleFeatured(course.id, course.title, course.is_featured)} 
-                      className={course.is_featured 
-                        ? "text-yellow-400 hover:bg-yellow-500/20" 
-                        : "text-gray-400 hover:bg-gray-500/20"
-                      }
-                      title={course.is_featured ? "ยกเลิกคอร์สแนะนำ" : "ตั้งเป็นคอร์สแนะนำ"}
-                    >
-                      <Star className={`w-4 h-4 ${course.is_featured ? 'fill-current' : ''}`} />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => handleToggleCourseStatus(course.id, course.title, course.is_active)} 
-                      className={course.is_active 
-                        ? "text-orange-400 hover:bg-orange-500/20" 
-                        : "text-green-400 hover:bg-green-500/20"
-                      }
-                      title={course.is_active ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-                    >
-                      {course.is_active ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
-                    </Button>
-                    {!course.is_active && (
+                      
                       <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => handleDeletePermanently(course.id, course.title)}
-                        className="text-red-400 hover:bg-red-500/20"
-                        title="ลบถาวร (ไม่สามารถกู้คืนได้)"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEditCourse(course.id)} 
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2"
+                        title="แก้ไขคอร์ส"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Edit className="w-4 h-4" />
                       </Button>
-                    )}
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
+
+                      <Button 
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleTransferCourse(course)} 
+                        className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 p-2"
+                        title="ย้ายไปยังบริษัทอื่น"
+                      >
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                      
+                      <Button 
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleToggleCourseStatus(course.id, course.title, course.is_active)} 
+                        className={`p-2 ${course.is_active 
+                          ? "text-orange-600 hover:text-orange-700 hover:bg-orange-50" 
+                          : "text-green-600 hover:text-green-700 hover:bg-green-50"
+                        }`}
+                        title={course.is_active ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+                      >
+                        {course.is_active ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+                      </Button>
+                      
+                      {!course.is_active && (
+                        <Button 
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeletePermanently(course.id, course.title)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2"
+                          title="ลบถาวร (ไม่สามารถกู้คืนได้)"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         )}
-        {!loading && filteredCourses.length === 0 && (
+      </div>
+
+      {/* No Results Message */}
+      {!loading && filteredCourses.length === 0 && (
+        <div className="glass-effect rounded-xl shadow-xl">
           <div className="text-center p-8">
             <AlertTriangle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
             <p className="text-purple-700 text-lg">ไม่พบคอร์สเรียนที่ตรงกับการค้นหา</p>
             <p className="text-purple-600 text-sm mt-2">ลองปรับเปลี่ยนคำค้นหาหรือเพิ่มคอร์สใหม่</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Create Course Form Modal */}
       <CreateCourseForm
@@ -445,53 +552,15 @@ const AdminCoursesPage = () => {
         courseId={editingCourseId}
       />
 
-      {/* Delete Confirmation Dialog */}
-      {showDeleteDialog && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-xl p-6 shadow-2xl border max-w-md w-full mx-4"
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">ลบคอร์สถาวร</h3>
-                <p className="text-sm text-gray-600">การดำเนินการนี้ไม่สามารถยกเลิกได้</p>
-              </div>
-            </div>
+      {/* Transfer Course Modal */}
+      <TransferItemModal
+        isOpen={showTransferModal}
+        onClose={handleTransferClose}
+        item={transferringCourse}
+        itemType="course"
+        onTransferComplete={handleTransferComplete}
+      />
 
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <p className="text-red-800 font-medium mb-2">
-                ⚠️ คำเตือน: การลบถาวร
-              </p>
-              <p className="text-red-700 text-sm leading-relaxed">
-                คุณกำลังจะลบคอร์ส <strong>"{deletingCourseName}"</strong> ออกจากระบบอย่างถาวร
-                รวมถึงเนื้อหาทั้งหมดในคอร์ส การดำเนินการนี้<strong>ไม่สามารถกู้คืนได้</strong>
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                onClick={() => setShowDeleteDialog(false)}
-                variant="outline"
-                className="flex-1"
-              >
-                ยกเลิก
-              </Button>
-              <Button
-                onClick={confirmDeletePermanently}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-              >
-                ลบถาวร
-              </Button>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </motion.div>
   );
 };

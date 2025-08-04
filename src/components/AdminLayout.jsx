@@ -19,10 +19,12 @@ import {
   Menu,
   X,
   Code2,
-  Calendar
+  Calendar,
+  Cloud
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import GoogleDriveFloatingButton from '@/components/GoogleDriveFloatingButton';
 
 const AdminLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -72,6 +74,12 @@ const AdminLayout = () => {
       icon: Calendar,
       path: '/admin/teaching-schedule',
       description: 'จัดการตารางเรียนอาจารย์'
+    },
+    {
+      title: 'Google Drive',
+      icon: Cloud,
+      path: '/admin/google-drive',
+      description: 'จัดการไฟล์และเอกสาร'
     },
     {
       title: 'สถิติและรายงาน',
@@ -375,6 +383,9 @@ const AdminLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Google Drive Floating Action Button */}
+      <GoogleDriveFloatingButton showForAdmin={true} />
     </div>
   );
 };

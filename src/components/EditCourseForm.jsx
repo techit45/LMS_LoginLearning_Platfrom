@@ -16,7 +16,8 @@ import {
   Award,
   Settings,
   Eye,
-  Star
+  Star,
+  Building2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,7 +42,8 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
     max_students: 50,
     is_active: true,
     is_featured: false,
-    thumbnail_url: ''
+    thumbnail_url: '',
+    company: 'login' // Default company
   });
 
   const [errors, setErrors] = useState({});
@@ -80,7 +82,8 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
         max_students: data.max_students || 50,
         is_active: data.is_active !== undefined ? data.is_active : true,
         is_featured: data.is_featured !== undefined ? data.is_featured : false,
-        thumbnail_url: data.thumbnail_url || ''
+        thumbnail_url: data.thumbnail_url || '',
+        company: data.company || 'login' // Add company field for edit mode
       });
 
       // Set image preview if exists
@@ -138,6 +141,10 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
 
     if (!formData.category.trim()) {
       newErrors.category = 'กรุณาระบุหมวดหมู่';
+    }
+    
+    if (!formData.company) {
+      newErrors.company = 'กรุณาเลือกบริษัท';
     }
 
     if (!formData.instructor_name.trim()) {
@@ -525,6 +532,35 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
                 )}
               </div>
 
+
+              {/* Company Selection */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+                <label className="block text-gray-800 font-semibold mb-3 flex items-center">
+                  <div className="bg-blue-500 p-2 rounded-lg mr-3">
+                    <Building2 className="w-4 h-4 text-white" />
+                  </div>
+                  บริษัท *
+                </label>
+                <select
+                  name="company"
+                  value={formData.company}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 h-12 shadow-sm"
+                >
+                  <option value="login">Login Learning</option>
+                  <option value="meta">Meta Tech Academy</option>
+                  <option value="med">Med Solutions</option>
+                  <option value="edtech">EdTech Innovation</option>
+                  <option value="innotech">InnoTech Labs</option>
+                  <option value="w2d">W2D Studio</option>
+                </select>
+                {errors.company && (
+                  <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
+                    <AlertCircle className="w-4 h-4 mr-2" />
+                    {errors.company}
+                  </p>
+                )}
+              </div>
 
               {/* Category and Difficulty */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

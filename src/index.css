@@ -124,8 +124,8 @@ body {
   50% { transform: translateY(-10px) rotate(1deg); }
 }
 
-/* Spin animation for orbiting elements */
-@keyframes spin {
+/* Orbit animation for orbiting elements */
+@keyframes orbit {
   from { transform: rotate(0deg) translateX(50px); }
   to { transform: rotate(360deg) translateX(50px); }
 }
@@ -134,6 +134,28 @@ body {
 @keyframes rotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* Smooth loading spinner animation */
+@keyframes smooth-spin {
+  from { 
+    transform: rotate(0deg); 
+  }
+  to { 
+    transform: rotate(360deg); 
+  }
+}
+
+/* Utility classes for smooth spinners */
+.animate-smooth-spin {
+  animation: smooth-spin 1s linear infinite;
+}
+
+.enhanced-spinner {
+  animation: smooth-spin 1s linear infinite;
+  border: 3px solid rgba(59, 130, 246, 0.2);
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
 }
 
 /* Mind Map Flow Animation */
@@ -271,4 +293,58 @@ body {
 .bg-accent-blue { background-color: var(--accent-blue); }
 .text-accent-blue { color: var(--accent-blue); }
 .border-accent-blue { border-color: var(--accent-blue); }
+
+/* Drag and Drop Styles */
+.drag-preview {
+  opacity: 0.7;
+  transform: rotate(3deg) scale(0.98);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  z-index: 1000;
+}
+
+.drop-zone-active {
+  background-color: rgba(34, 197, 94, 0.1);
+  border-color: #22c55e;
+  transform: scale(1.02);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.drop-zone-hover {
+  background-color: rgba(59, 130, 246, 0.05);
+  border-color: #3b82f6;
+}
+
+.draggable-item {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: grab;
+}
+
+.draggable-item:active {
+  cursor: grabbing;
+}
+
+.drag-handle {
+  transition: all 0.2s ease-in-out;
+}
+
+.drag-handle:hover {
+  transform: scale(1.1);
+  color: inherit;
+}
+
+/* Animation for drag feedback */
+@keyframes dragPulse {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8; 
+    transform: scale(1.02);
+  }
+}
+
+.drag-active {
+  animation: dragPulse 1s ease-in-out infinite;
+}
 

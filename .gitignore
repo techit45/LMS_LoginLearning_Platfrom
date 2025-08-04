@@ -81,6 +81,12 @@ development/
 secrets/
 .secrets/
 
+# Google Drive API Credentials
+credentials/
+*.json
+service-account*.json
+google-drive*.json
+
 # Backup files
 *.backup
 *.bak

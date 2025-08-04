@@ -93,7 +93,7 @@ INSERT INTO courses (
     'intermediate',
     1990.00,
     6,
-    'https://images.unsplash.com/photo-1518709268805-4e9042af2176',
+    'https://images.unsplash.com/photo-1466611653911-95081537e5b7',
     true,
     false
 ),

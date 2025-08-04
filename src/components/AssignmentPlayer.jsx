@@ -11,26 +11,35 @@ import {
   Download,
   Eye,
   Edit3,
+  Paperclip,
+  Clock,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import FileUpload from "@/components/FileUpload";
+import FileUploadZone from "@/components/FileUploadZone";
 import {
   getAssignmentByContentId,
   getUserSubmissions,
   createSubmission,
   updateSubmission,
   submitFinalSubmission,
+  uploadAssignmentFile,
+  validateFile,
 } from "@/lib/assignmentService";
 
-const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
+const AssignmentPlayer = ({ contentId, assignment, onComplete }) => {
   const { toast } = useToast();
 
   // Helper function to determine status from submission data
   const getSubmissionStatus = (submission) => {
     if (!submission) return "draft";
-    if (submission.graded_at && submission.score !== null) return "graded";
-    if (submission.submitted_at) return "submitted";
+
+    if (submission.submitted_at) {
+      if (submission.graded_at) return "graded";
+      return "submitted";
+    }
+
     return "draft";
   };
 
@@ -42,11 +51,12 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
 
   // Form state
   const [submissionText, setSubmissionText] = useState("");
-  const [files, setFiles] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  // UI state
+  // View state
   const [mode, setMode] = useState("submit"); // 'submit', 'view', 'edit'
 
   const loadAssignmentData = useCallback(async () => {
@@ -64,7 +74,7 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
       }
 
       // Load user submissions
-      if (currentAssignmentData?.id) {
+      if (currentAssignmentData) {
         const { data: submissionsData, error: submissionsError } =
           await getUserSubmissions(currentAssignmentData.id);
         if (submissionsError) throw submissionsError;
@@ -76,14 +86,22 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
           const latest = submissionsData[0];
           setCurrentSubmission(latest);
           setSubmissionText(latest.submission_text || "");
-          setFiles([]); // ปิดการใช้งาน file upload ชั่วคราว
+
+          // Load attached files if any
+          if (latest.attached_files) {
+            try {
+              const attachedFiles = JSON.parse(latest.attached_files);
+              setUploadedFiles(attachedFiles || []);
+            } catch (e) {
+              console.error("Error parsing attached files:", e);
+              setUploadedFiles([]);
+            }
+          } else {
+            setUploadedFiles([]);
+          }
 
           // Set mode based on submission status
-          if (
-            latest.submitted_at ||
-            getSubmissionStatus(latest) === "submitted" ||
-            getSubmissionStatus(latest) === "graded"
-          ) {
+          if (latest.submitted_at || latest.graded_at) {
             setMode("view");
           } else {
             setMode("edit");
@@ -106,6 +124,50 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
     loadAssignmentData();
   }, [loadAssignmentData]);
 
+  const handleFileUpload = async (file) => {
+    if (!assignmentData) return null;
+
+    setUploading(true);
+    try {
+      // Validate file
+      const validation = validateFile(file, assignmentData);
+
+      if (!validation.isValid) {
+        toast({
+          title: "ไฟล์ไม่ถูกต้อง",
+          description: validation.errors.join(", "),
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      // Upload file
+      const { data, error } = await uploadAssignmentFile(
+        file,
+        assignmentData.id
+      );
+      if (error) throw error;
+
+      toast({
+        title: "อัปโหลดไฟล์สำเร็จ",
+        description: `อัปโหลดไฟล์ ${file.name} สำเร็จแล้ว`,
+      });
+
+      return data;
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast({
+        title: "ไม่สามารถอัปโหลดไฟล์ได้",
+        description: error.message,
+        variant: "destructive",
+      });
+
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSaveDraft = async () => {
     if (!assignmentData) return;
 
@@ -113,11 +175,12 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
     try {
       const submissionData = {
         text: submissionText,
+        attached_files: JSON.stringify(uploadedFiles),
       };
 
       let result;
       if (currentSubmission && !currentSubmission.submitted_at) {
-        // Update existing draft (has no submitted_at)
+        // Update existing draft
         result = await updateSubmission(currentSubmission.id, submissionData);
       } else {
         // Create new draft
@@ -130,7 +193,7 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
 
       toast({
         title: "บันทึกแบบร่างแล้ว",
-        description: "งานของคุณได้รับการบันทึกเป็นแบบร่างแล้ว",
+        description: "งานของคุณได้รับการบันทึกเป็นแบบร่างเรียบร้อยแล้ว",
       });
 
       // Reload submissions
@@ -138,7 +201,7 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
     } catch (error) {
       console.error("Error saving draft:", error);
       toast({
-        title: "ไม่สามารถบันทึกได้",
+        title: "ไม่สามารถบันทึกแบบร่างได้",
         description: error.message,
         variant: "destructive",
       });
@@ -151,10 +214,10 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
     if (!assignmentData) return;
 
     // Validate submission
-    if (!submissionText.trim()) {
+    if (submissionText.trim().length === 0 && uploadedFiles.length === 0) {
       toast({
-        title: "กรุณาเพิ่มเนื้อหา",
-        description: "กรุณาเขียนคำตอบหรือเนื้อหางาน",
+        title: "กรุณาเพิ่มเนื้อหาหรือไฟล์แนบ",
+        description: "กรุณาเขียนคำตอบหรือแนบไฟล์อย่างน้อย 1 อย่าง",
         variant: "destructive",
       });
       return;
@@ -164,18 +227,23 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
     try {
       const submissionData = {
         text: submissionText,
+        attached_files: JSON.stringify(uploadedFiles),
       };
 
       let result;
-      if (currentSubmission && !currentSubmission.submitted_at) {
-        // Submit existing draft
-        await updateSubmission(currentSubmission.id, submissionData);
-        result = await submitFinalSubmission(currentSubmission.id);
+
+      if (currentSubmission) {
+        // Update existing submission and mark as submitted
+        result = await updateSubmission(currentSubmission.id, submissionData);
+        if (!result.error) {
+          // Mark as submitted
+          result = await submitFinalSubmission(currentSubmission.id);
+        }
       } else {
         // Create and submit new submission
         result = await createSubmission(assignmentData.id, submissionData);
         if (!result.error) {
-          // Mark as submitted immediately
+          // Mark as submitted
           result = await submitFinalSubmission(result.data.id);
         }
       }
@@ -207,29 +275,29 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
     assignmentData?.due_date && new Date() > new Date(assignmentData.due_date);
   const canEdit = mode === "submit" || mode === "edit";
   const hasSubmitted =
-    currentSubmission?.submitted_at ||
-    getSubmissionStatus(currentSubmission) === "submitted" ||
-    getSubmissionStatus(currentSubmission) === "graded";
+    currentSubmission &&
+    (getSubmissionStatus(currentSubmission) === "submitted" ||
+      getSubmissionStatus(currentSubmission) === "graded");
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-700">กำลังโหลดงานมอบหมาย...</p>
-        </div>
+      <div className="p-8 text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p className="text-gray-700">กำลังโหลดข้อมูล...</p>
       </div>
     );
   }
 
   if (!assignmentData) {
     return (
-      <div className="text-center py-12">
-        <FileText className="w-16 h-16 text-gray-700 mx-auto mb-4" />
+      <div className="p-8 text-center">
+        <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
         <h3 className="text-xl font-semibold text-gray-900 mb-2">
-          ไม่พบงานมอบหมาย
+          ไม่พบข้อมูลงาน
         </h3>
-        <p className="text-gray-700">ไม่สามารถโหลดข้อมูลงานมอบหมายได้</p>
+        <p className="text-gray-700">
+          ไม่พบข้อมูลงานที่ต้องการ กรุณาลองใหม่อีกครั้ง
+        </p>
       </div>
     );
   }
@@ -237,25 +305,25 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
   return (
     <div className="space-y-6">
       {/* Assignment Header */}
-      <div className="space-y-4">
-        <div className="flex items-start justify-between">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
+            <h3 className="text-xl font-bold text-gray-900 mb-1">
               {assignmentData.title}
             </h3>
-            <p className="text-gray-800">{assignmentData.description}</p>
+            <p className="text-gray-600">{assignmentData.description}</p>
           </div>
 
           <div className="flex items-center space-x-2 ml-4">
             {hasSubmitted && (
-              <div className="flex items-center space-x-1 text-green-400 text-sm">
-                <CheckCircle2 className="w-4 h-4" />
+              <div className="flex items-center space-x-1 text-sm">
+                <CheckCircle2 className="w-4 h-4 text-green-600" />
                 <span>ส่งแล้ว</span>
               </div>
             )}
-            {isOverdue && !hasSubmitted && (
-              <div className="flex items-center space-x-1 text-red-400 text-sm">
-                <AlertTriangle className="w-4 h-4" />
+            {isOverdue && (
+              <div className="flex items-center space-x-1 text-sm">
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
                 <span>เกินกำหนด</span>
               </div>
             )}
@@ -263,44 +331,40 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
         </div>
 
         {/* Assignment Info */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-white border border-gray-300/30 rounded-lg">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           {assignmentData.due_date && (
-            <div className="flex items-center space-x-2 text-sm">
+            <div className="flex items-center space-x-2">
               <Calendar className="w-4 h-4 text-blue-400" />
               <div>
                 <p className="text-gray-700">กำหนดส่ง</p>
                 <p className="text-gray-900">
-                  {new Date(assignmentData.due_date).toLocaleDateString(
-                    "th-TH",
-                    {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }
-                  )}
+                  {new Date(assignmentData.due_date).toLocaleString("th-TH", {
+                    day: "numeric",
+                    month: "numeric",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
               </div>
             </div>
           )}
 
-          <div className="flex items-center space-x-2 text-sm">
+          <div className="flex items-center space-x-2">
             <Award className="w-4 h-4 text-yellow-400" />
             <div>
               <p className="text-gray-700">คะแนนเต็ม</p>
-              <p className="text-gray-900">
-                {assignmentData.max_score || 100} คะแนน
-              </p>
+              <p className="text-gray-900">{assignmentData.max_score || 100}</p>
             </div>
           </div>
 
           <div className="flex items-center space-x-2 text-sm">
             <FileText className="w-4 h-4 text-purple-400" />
             <div>
-              <p className="text-gray-700">จำนวนไฟล์สูงสุด</p>
+              <p className="text-gray-700">ไฟล์ที่อนุญาต</p>
               <p className="text-gray-900">
-                {assignmentData.max_files || 5} ไฟล์
+                {assignmentData.allowed_file_types?.join(", ") ||
+                  "pdf, doc, docx, jpg, png"}
               </p>
             </div>
           </div>
@@ -310,8 +374,8 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
       {/* Instructions */}
       {assignmentData.instructions && (
         <div className="glass-effect p-4 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-2">คำแนะนำ</h4>
-          <div className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+          <h4 className="font-semibold text-gray-900 mb-2">คำแนะนำ</h4>
+          <div className="text-gray-700 prose max-w-none">
             {assignmentData.instructions}
           </div>
         </div>
@@ -319,43 +383,41 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
 
       {/* Submission History */}
       {submissions.length > 0 && (
-        <div className="glass-effect p-4 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-3">
-            ประวัติการส่งงาน
-          </h4>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <h4 className="font-semibold text-gray-900 mb-3">ประวัติการส่งงาน</h4>
           <div className="space-y-2">
-            {submissions.map((submission, index) => (
+            {submissions.map((submission) => (
               <div
                 key={submission.id}
-                className="flex items-center justify-between p-3 bg-white border border-gray-300/30 rounded-lg"
+                className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="text-sm">
-                    <span className="text-gray-800">ส่งเมื่อ</span>
+                  <div className="flex-shrink-0">
+                    <span className="text-gray-800">ส่งเมื่อ:</span>
                     <span className="ml-2 text-xs text-gray-700">
                       {submission.submitted_at
-                        ? new Date(submission.submitted_at).toLocaleDateString(
+                        ? new Date(submission.submitted_at).toLocaleString(
                             "th-TH"
                           )
-                        : "ยังไม่ส่ง"}
+                        : "แบบร่าง"}
                     </span>
                   </div>
                   <div
-                    className={`px-2 py-1 rounded text-xs ${
-                      getSubmissionStatus(submission) === "submitted"
-                        ? "bg-green-500/20 text-green-400"
-                        : getSubmissionStatus(submission) === "graded"
-                        ? "bg-blue-500/20 text-blue-400"
-                        : "bg-yellow-500/20 text-yellow-400"
+                    className={`px-2 py-1 rounded-full text-xs ${
+                      getSubmissionStatus(submission) === "graded"
+                        ? "bg-green-100 text-green-800"
+                        : getSubmissionStatus(submission) === "submitted"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-800"
                     }`}
                   >
-                    {getSubmissionStatus(submission) === "submitted" &&
-                      "ส่งแล้ว"}
-                    {getSubmissionStatus(submission) === "graded" &&
-                      `ให้คะแนนแล้ว (${submission.score}/${
-                        assignmentData?.max_score || 100
-                      })`}
-                    {getSubmissionStatus(submission) === "draft" && "แบบร่าง"}
+                    {getSubmissionStatus(submission) === "graded"
+                      ? `ตรวจแล้ว (${submission.score || 0}/${
+                          assignmentData.max_score || 100
+                        })`
+                      : getSubmissionStatus(submission) === "submitted"
+                      ? "ส่งแล้ว"
+                      : "แบบร่าง"}
                   </div>
                 </div>
 
@@ -365,11 +427,27 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
                   onClick={() => {
                     setCurrentSubmission(submission);
                     setSubmissionText(submission.submission_text || "");
-                    setFiles([]); // ไม่ใช้ file upload
+
+                    // Load attached files if any
+                    if (submission.attached_files) {
+                      try {
+                        const attachedFiles = JSON.parse(
+                          submission.attached_files
+                        );
+                        setUploadedFiles(attachedFiles || []);
+                      } catch (e) {
+                        console.error("Error parsing attached files:", e);
+                        setUploadedFiles([]);
+                      }
+                    } else {
+                      setUploadedFiles([]);
+                    }
+
                     setMode("view");
                   }}
                 >
-                  <Eye className="w-4 h-4" />
+                  <Eye className="w-4 h-4 mr-1" />
+                  ดู
                 </Button>
               </div>
             ))}
@@ -384,12 +462,12 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className="glass-effect rounded-lg overflow-hidden"
+          transition={{ duration: 0.2 }}
         >
           {/* Mode Switcher */}
           {currentSubmission && (
-            <div className="border-b border-white/10 p-4">
-              <div className="flex items-center space-x-2">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div className="flex space-x-2">
                 <Button
                   size="sm"
                   variant={mode === "view" ? "default" : "ghost"}
@@ -412,7 +490,7 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
             </div>
           )}
 
-          <div className="p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             {mode === "view" ? (
               /* View Mode */
               <div className="space-y-4">
@@ -423,10 +501,41 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
                 {currentSubmission?.submission_text && (
                   <div>
                     <h5 className="text-sm font-medium text-gray-700 mb-2">
-                      ข้อความ
+                      ข้อความ/คำตอบ
                     </h5>
-                    <div className="p-4 bg-white border border-gray-300/30 rounded-lg text-gray-900 whitespace-pre-wrap">
+                    <div className="p-4 bg-white border border-gray-300 rounded-lg whitespace-pre-wrap">
                       {currentSubmission.submission_text}
+                    </div>
+                  </div>
+                )}
+
+                {/* Display uploaded files */}
+                {uploadedFiles.length > 0 && (
+                  <div>
+                    <h5 className="text-sm font-medium text-gray-700 mb-2">
+                      ไฟล์แนบ
+                    </h5>
+                    <div className="space-y-2">
+                      {uploadedFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex items-center">
+                            <Paperclip className="w-4 h-4 text-blue-400 mr-2" />
+                            <span className="text-gray-900 flex-1">
+                              {file.originalName || file.name}
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => window.open(file.url, "_blank")}
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -434,9 +543,9 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
                 {currentSubmission?.feedback && (
                   <div>
                     <h5 className="text-sm font-medium text-gray-700 mb-2">
-                      ความคิดเห็นจากอาจารย์
+                      ข้อเสนอแนะจากผู้สอน
                     </h5>
-                    <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-800">
+                    <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg text-blue-800">
                       {currentSubmission.feedback}
                     </div>
                   </div>
@@ -446,10 +555,10 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
               /* Edit Mode */
               <div className="space-y-6">
                 <h4 className="text-lg font-semibold text-gray-900">
-                  {currentSubmission ? "แก้ไขงาน" : "ส่งงานมอบหมาย"}
+                  {currentSubmission ? "แก้ไขงาน" : "ส่งงาน"}
                 </h4>
 
-                {/* Text Submission */}
+                {/* Text submission */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     ข้อความ/คำตอบ
@@ -457,29 +566,34 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
                   <textarea
                     value={submissionText}
                     onChange={(e) => setSubmissionText(e.target.value)}
-                    disabled={!canEdit}
+                    disabled={!canEdit || submitting}
                     rows={8}
-                    className="w-full p-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none resize-none"
-                    placeholder="เขียนคำตอบหรือคำอธิบายงานของคุณที่นี่..."
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-base shadow-sm resize-none"
+                    placeholder="พิมพ์คำตอบของคุณที่นี่..."
                   />
                 </div>
 
-                {/* File Upload - ปิดใช้งานชั่วคราว */}
-                <div className="text-xs text-gray-500">
-                  หมายเหตุ: การอัปโหลดไฟล์จะเพิ่มเติมในเวอร์ชันถัดไป
-                  ตอนนี้ใช้ข้อความเท่านั้น
+                {/* File Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ไฟล์แนบ (สูงสุด {assignmentData.max_files || 5} ไฟล์)
+                  </label>
+                  <FileUploadZone
+                    contentId={assignmentData.id}
+                    onFilesUploaded={(uploadedFiles) => {
+                      setUploadedFiles((prev) => [...prev, ...uploadedFiles]);
+                    }}
+                    maxFiles={assignmentData.max_files || 5}
+                    disabled={!canEdit || submitting}
+                  />
                 </div>
 
                 {/* Action Buttons */}
                 {canEdit && (
-                  <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                    <div className="text-xs text-gray-500">
-                      {isOverdue && (
-                        <div className="flex items-center space-x-1 text-amber-400">
-                          <AlertTriangle className="w-3 h-3" />
-                          <span>การส่งงานหลังกำหนดอาจมีผลต่อคะแนน</span>
-                        </div>
-                      )}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200/10">
+                    <div className="flex items-center space-x-1 text-amber-400">
+                      <AlertTriangle className="w-3 h-3" />
+                      <span>การส่งงานหลังกำหนดอาจมีผลต่อคะแนน</span>
                     </div>
 
                     <div className="flex items-center space-x-3">
@@ -504,7 +618,7 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete, onClose }) => {
                       <Button
                         onClick={handleSubmit}
                         disabled={saving || submitting}
-                        className="bg-green-500 hover:bg-green-600"
+                        className="bg-green-600 hover:bg-green-700"
                       >
                         {submitting ? (
                           <>

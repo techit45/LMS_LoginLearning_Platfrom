@@ -189,7 +189,7 @@ const HomePage = () => {
 
     loadFeaturedCourses();
     loadFeaturedProjects();
-  }, [toast]);
+  }, []); // Remove toast dependency to prevent infinite re-renders
 
   const handleFeatureClick = (featureName = "ฟีเจอร์นี้") => {
     const encouragingMessages = [
@@ -668,7 +668,7 @@ const HomePage = () => {
 
             {loading ? (
               <div className="col-span-full text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <div className="enhanced-spinner h-12 w-12 mx-auto mb-4"></div>
                 <p className="text-gray-600">กำลังโหลดคอร์สแนะนำ...</p>
               </div>
             ) : featuredCourses.length > 0 ? (
@@ -729,7 +729,7 @@ const HomePage = () => {
 
             {projectsLoading ? (
               <div className="col-span-full text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                <div className="enhanced-spinner h-12 w-12 mx-auto mb-4"></div>
                 <p className="text-gray-600">กำลังโหลดโครงงานติดดาว...</p>
               </div>
             ) : featuredProjects.length > 0 ? (
@@ -840,7 +840,7 @@ const HomePage = () => {
                               top: '50%',
                               transformOrigin: '0 0',
                               transform: `rotate(${i * 120}deg) translateX(50px)`,
-                              animation: `spin 3s linear infinite ${i * 0.3}s`
+                              animation: `orbit 3s linear infinite ${i * 0.3}s`
                             }}
                           />
                         ))}

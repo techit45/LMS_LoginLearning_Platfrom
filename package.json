@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "node server.js",
+    "dev:full": "concurrently \"npm run dev\" \"npm run server\""
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.0.5",
@@ -22,9 +24,15 @@
     "@supabase/supabase-js": "^2.39.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
+    "concurrently": "^9.2.0",
+    "cors": "^2.8.5",
     "dompurify": "^3.2.6",
     "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "formidable": "^3.5.4",
     "framer-motion": "^10.16.4",
+    "google-auth-library": "^10.2.0",
+    "googleapis": "^154.1.0",
     "joi": "^17.13.3",
     "lucide-react": "^0.292.0",
     "promptpay-qr": "^0.5.0",
@@ -35,6 +43,7 @@
     "react-dom": "^18.2.0",
     "react-helmet-async": "^2.0.5",
     "react-router-dom": "^6.16.0",
+    "recharts": "^3.1.0",
     "swiper": "^11.2.10",
     "tailwind-merge": "^1.14.0",
     "tailwindcss-animate": "^1.0.7",

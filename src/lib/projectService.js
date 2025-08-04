@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { getEmergencyData } from './quickFix';
+import { deleteProjectFolder, createProjectStructure, getCompanySlug, transferFolderContents, folderHasContents } from './googleDriveClientService';
 
 // Simple in-memory cache
 const cache = new Map();
@@ -148,7 +149,10 @@ export const getFeaturedProjects = async () => {
   const cacheKey = 'featured_projects';
   const cached = getCachedData(cacheKey, 5 * 60 * 1000); // 5 minutes cache
   if (cached) {
-    console.log('📦 Using cached featured projects');
+    // Only log cache usage occasionally to reduce console spam
+    if (Math.random() < 0.1) { // 10% chance to log
+      console.log('📦 Using cached featured projects');
+    }
     return { data: cached, error: null };
   }
 
@@ -220,7 +224,7 @@ export const getFeaturedProjects = async () => {
       description: 'โครงงานระบบรดน้ำต้นไม้อัตโนมัติที่ใช้เซ็นเซอร์ความชื้นในดินและควบคุมผ่านแอปมือถือ',
       category: 'IoT/Hardware',
       difficulty_level: 'intermediate',
-      thumbnail_url: 'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400',
+      thumbnail_url: 'https://images.unsplash.com/photo-1466611653911-95081537e5b7?w=400',
       created_by: 'น้องเอิร์ธ',
       view_count: 234,
       like_count: 18,
@@ -307,6 +311,7 @@ export const createProject = async (projectData) => {
         view_count,
         like_count,
         creator_id,
+        company,
         created_at,
         updated_at
       `)
@@ -362,11 +367,42 @@ export const deleteProject = async (projectId) => {
 };
 
 /**
- * Permanently delete project (Admin only) - Complete removal from database
+ * Permanently delete project (Admin only) - Complete removal from database AND Google Drive
  */
 export const permanentlyDeleteProject = async (projectId) => {
   try {
-    // First, delete related data (comments, likes, views) to maintain referential integrity
+    console.log(`🗑️ Starting permanent deletion of project: ${projectId}`);
+    
+    // Step 1: Get project details first (including Google Drive folder ID)
+    const { data: projectData, error: fetchError } = await supabase
+      .from('projects')
+      .select('title, google_drive_folder_id')
+      .eq('id', projectId)
+      .single();
+    
+    if (fetchError) {
+      console.error('Error fetching project for deletion:', fetchError);
+      throw fetchError;
+    }
+    
+    console.log(`📋 Project details: ${projectData.title}, Google Drive ID: ${projectData.google_drive_folder_id}`);
+    
+    // Step 2: Delete Google Drive folder if it exists
+    if (projectData.google_drive_folder_id) {
+      try {
+        console.log(`🗑️ Deleting Google Drive folder: ${projectData.google_drive_folder_id}`);
+        await deleteProjectFolder(projectData.google_drive_folder_id, projectData.title);
+        console.log(`✅ Google Drive folder deleted successfully`);
+      } catch (driveError) {
+        console.warn(`⚠️ Failed to delete Google Drive folder (continuing with database deletion):`, driveError.message);
+        // Continue with database deletion even if Google Drive deletion fails
+      }
+    } else {
+      console.log(`ℹ️ No Google Drive folder to delete`);
+    }
+    
+    // Step 3: Delete related data (comments, likes, views) to maintain referential integrity
+    console.log(`🗑️ Deleting related data for project: ${projectId}`);
     const deletePromises = [
       // Delete project comments
       supabase
@@ -388,19 +424,22 @@ export const permanentlyDeleteProject = async (projectId) => {
     ];
 
     // Execute all deletions (ignore errors for non-existent tables)
-    await Promise.allSettled(deletePromises);
+    const deleteResults = await Promise.allSettled(deletePromises);
+    console.log(`📊 Related data deletion results:`, deleteResults.map(r => r.status));
 
-    // Finally, delete the project itself
+    // Step 4: Finally, delete the project itself from database
+    console.log(`🗑️ Deleting project from database: ${projectId}`);
     const { error } = await supabase
       .from('projects')
       .delete()
       .eq('id', projectId);
 
     if (error) throw error;
-
+    
+    console.log(`✅ Project permanently deleted: ${projectData.title} (${projectId})`);
     return { error: null };
   } catch (error) {
-    console.error('Error permanently deleting project:', error);
+    console.error('❌ Error permanently deleting project:', error);
     return { error };
   }
 };
@@ -463,6 +502,26 @@ export const getAllProjectsAdmin = async () => {
 };
 
 /**
+ * Get projects by company for admin (including unapproved)
+ */
+export const getProjectsByCompanyAdmin = async (companyId) => {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      // .eq('company', companyId) // Temporarily disabled due to schema mismatch
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return { data: data || [], error: null };
+  } catch (error) {
+    console.error('Error fetching admin company projects:', error);
+    return { data: null, error };
+  }
+};
+
+/**
  * Get project statistics for admin dashboard
  */
 export const getProjectStats = async () => {
@@ -487,24 +546,176 @@ export const getProjectStats = async () => {
     // Get project categories
     const { data: categories, error: categoriesError } = await supabase
       .from('projects')
-      .select('category')
+      .select('category') // Removed company field due to schema mismatch
       .eq('is_approved', true);
 
     if (categoriesError) throw categoriesError;
 
     const uniqueCategories = new Set(categories?.map(p => p.category) || []);
+    // const uniqueCompanies = new Set(categories?.map(p => p.company) || []); // Disabled due to schema mismatch
 
     return {
       data: {
         totalProjects: totalProjects || 0,
         featuredProjects: featuredProjects || 0,
         totalCategories: uniqueCategories.size,
-        categories: Array.from(uniqueCategories)
+        totalCompanies: 6, // Hardcoded for now until schema is fixed
+        categories: Array.from(uniqueCategories),
+        companies: ['login', 'meta', 'med', 'edtech', 'innotech', 'w2d'] // Hardcoded for now
       },
       error: null
     };
   } catch (error) {
     console.error('Error fetching project stats:', error);
     return { data: null, error };
+  }
+};
+
+/**
+ * Transfer project to another company (Admin only)
+ * This function moves a project from one company to another including Google Drive folders
+ */
+export const transferItemToCompany = async (projectId, targetCompany, options = {}) => {
+  try {
+    console.log(`🔄 Starting project transfer: ${projectId} -> ${targetCompany}`);
+    
+    const { 
+      fromCompany, 
+      itemTitle, 
+      itemType = 'project',
+      transferDriveFolder = true 
+    } = options;
+
+    // Step 1: Get current project data
+    const { data: currentProject, error: fetchError } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', projectId)
+      .single();
+
+    if (fetchError) {
+      throw new Error(`Failed to fetch project: ${fetchError.message}`);
+    }
+
+    if (!currentProject) {
+      throw new Error('Project not found');
+    }
+
+    console.log(`📋 Current project data:`, currentProject);
+
+    // Step 2: Validate target company
+    const validCompanies = ['login', 'meta', 'med', 'edtech', 'innotech', 'w2d'];
+    if (!validCompanies.includes(targetCompany)) {
+      throw new Error(`Invalid target company: ${targetCompany}`);
+    }
+
+    // Step 3: Handle Google Drive folder transfer if needed
+    let newDriveFolderId = null;
+    let filesTransferred = false;
+    
+    if (transferDriveFolder && currentProject.google_drive_folder_id) {
+      try {
+        console.log(`🗂️ Starting Google Drive transfer for company: ${targetCompany}`);
+        
+        // Step 3a: Check if source folder has contents
+        const hasContents = await folderHasContents(currentProject.google_drive_folder_id);
+        console.log(`📋 Source folder has contents: ${hasContents}`);
+        
+        // Step 3b: Create new project structure in target company
+        const driveStructure = await createProjectStructure({
+          ...currentProject,
+          company: targetCompany
+        }, targetCompany);
+
+        if (driveStructure.success && driveStructure.projectFolderId) {
+          newDriveFolderId = driveStructure.projectFolderId;
+          console.log(`✅ New Google Drive folder created: ${newDriveFolderId}`);
+          
+          // Step 3c: Transfer files from old folder to new folder
+          if (hasContents) {
+            console.log(`🔄 Transferring files from ${currentProject.google_drive_folder_id} to ${newDriveFolderId}`);
+            
+            const transferResult = await transferFolderContents(
+              currentProject.google_drive_folder_id,
+              newDriveFolderId,
+              currentProject.title,
+              true // Delete source folder after transfer
+            );
+            
+            if (transferResult.success) {
+              filesTransferred = true;
+              console.log(`✅ Files transferred successfully`);
+            } else {
+              console.warn(`⚠️ File transfer completed with warnings`);
+            }
+          } else {
+            console.log(`ℹ️ Source folder is empty, no files to transfer`);
+            // Still delete the empty source folder
+            try {
+              await deleteProjectFolder(currentProject.google_drive_folder_id, currentProject.title);
+              console.log(`✅ Empty source folder deleted`);
+            } catch (deleteError) {
+              console.warn(`⚠️ Could not delete empty source folder:`, deleteError.message);
+            }
+          }
+        }
+        
+      } catch (driveError) {
+        console.error(`⚠️ Google Drive transfer failed:`, driveError);
+        // Continue with database transfer even if Drive transfer fails
+        console.log(`📝 Continuing with database transfer only`);
+      }
+    }
+
+    // Step 4: Update project in database
+    const updateData = {
+      company: targetCompany,
+      ...(newDriveFolderId && { google_drive_folder_id: newDriveFolderId }),
+      updated_at: new Date().toISOString()
+    };
+
+    console.log(`💾 Updating project in database:`, updateData);
+
+    const { data: updatedProject, error: updateError } = await supabase
+      .from('projects')
+      .update(updateData)
+      .eq('id', projectId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw new Error(`Failed to update project: ${updateError.message}`);
+    }
+
+    console.log(`✅ Project transfer completed:`, updatedProject);
+
+    // Clear cache to ensure fresh data
+    cache.clear();
+
+    return {
+      data: {
+        ...updatedProject,
+        transfer_details: {
+          from_company: currentProject.company,
+          to_company: targetCompany,
+          drive_folder_transferred: !!newDriveFolderId,
+          files_transferred: filesTransferred,
+          old_drive_folder_id: currentProject.google_drive_folder_id,
+          new_drive_folder_id: newDriveFolderId,
+          transferred_at: new Date().toISOString()
+        }
+      },
+      error: null
+    };
+
+  } catch (error) {
+    console.error('❌ Error transferring project:', error);
+    return { 
+      data: null, 
+      error: {
+        message: error.message || 'Failed to transfer project',
+        code: 'TRANSFER_FAILED'
+      }
+    };
   }
 };

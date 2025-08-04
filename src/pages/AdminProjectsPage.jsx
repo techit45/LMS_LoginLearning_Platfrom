@@ -18,7 +18,9 @@ import {
   ArrowLeft,
   Calendar,
   Tag,
-  X
+  X,
+  FolderOpen,
+  ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +34,7 @@ import {
   getProjectStats 
 } from '@/lib/projectService';
 import ProjectForm from '@/components/ProjectForm';
+import TransferItemModal from '@/components/TransferItemModal';
 
 const AdminProjectsPage = () => {
   const { toast } = useToast();
@@ -44,6 +47,8 @@ const AdminProjectsPage = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState(null);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferringProject, setTransferringProject] = useState(null);
 
   const loadProjects = useCallback(async () => {
     setLoading(true);
@@ -162,8 +167,13 @@ const AdminProjectsPage = () => {
   };
 
   const handlePermanentDeleteProject = async (projectId, projectTitle) => {
+    // Find project to check Google Drive folder
+    const project = projects.find(p => p.id === projectId);
+    const hasGoogleDrive = project?.google_drive_folder_id;
+    
+    // First confirmation with Google Drive information
     // eslint-disable-next-line no-restricted-globals
-    const firstConfirm = confirm(`⚠️ คำเตือน: คุณต้องการลบโครงงาน "${projectTitle}" ถาวรหรือไม่?\n\n⚠️ การลบถาวรจะลบโครงงานและข้อมูลที่เกี่ยวข้องทั้งหมดออกจากระบบ\n⚠️ ไม่สามารถกู้คืนได้อีก\n\nคลิก OK เพื่อดำเนินการต่อ`);
+    const firstConfirm = confirm(`⚠️ คำเตือน: ลบโครงงาน "${projectTitle}" ถาวร\n\n🗑️ การลบนี้จะลบข้อมูลดังนี้:\n✓ ข้อมูลโครงงานใน Database\n✓ ความคิดเห็นและการโต้ตอบทั้งหมด\n${hasGoogleDrive ? '✓ โฟลเดอร์ Google Drive และไฟล์ทั้งหมด' : '• ไม่มีโฟลเดอร์ Google Drive'}\n\n⚠️ ไม่สามารถกู้คืนได้!\n\nต้องการดำเนินการต่อหรือไม่?`);
     
     if (!firstConfirm) {
       return;
@@ -171,7 +181,7 @@ const AdminProjectsPage = () => {
 
     // Second confirmation with typing requirement
     // eslint-disable-next-line no-restricted-globals
-    const confirmText = prompt(`เพื่อยืนยันการลบถาวร กรุณาพิมพ์ "DELETE" (ตัวพิมพ์ใหญ่) ในช่องด้านล่าง:\n\nโครงงาน: "${projectTitle}"\n⚠️ การลบนี้ไม่สามารถกู้คืนได้`);
+    const confirmText = prompt(`🔒 ยืนยันการลบถาวร\n\nพิมพ์ "DELETE" (ตัวพิมพ์ใหญ่) เพื่อยืนยัน:\n\nโครงงาน: "${projectTitle}"\n${hasGoogleDrive ? `Google Drive: มีโฟลเดอร์ (${project.google_drive_folder_id})` : 'Google Drive: ไม่มีโฟลเดอร์'}\n\n⚠️ การลบนี้ไม่สามารถกู้คืนได้`);
     
     if (confirmText !== 'DELETE') {
       toast({
@@ -182,6 +192,13 @@ const AdminProjectsPage = () => {
       return;
     }
 
+    // Show loading toast
+    toast({
+      title: "กำลังลบโครงงาน...",
+      description: hasGoogleDrive ? "กำลังลบข้อมูลและโฟลเดอร์ Google Drive" : "กำลังลบข้อมูลจาก Database",
+      variant: "default"
+    });
+
     const { error } = await permanentlyDeleteProject(projectId);
     if (error) {
       toast({
@@ -191,8 +208,8 @@ const AdminProjectsPage = () => {
       });
     } else {
       toast({
-        title: "ลบโครงงานถาวรสำเร็จ",
-        description: `โครงงาน "${projectTitle}" ถูกลบออกจากระบบถาวรแล้ว`,
+        title: "✅ ลบโครงงานถาวรสำเร็จ",
+        description: `โครงงาน "${projectTitle}" ${hasGoogleDrive ? 'พร้อมโฟลเดอร์ Google Drive ' : ''}ถูกลบออกจากระบบแล้ว`,
         variant: "default"
       });
       loadProjects();
@@ -224,6 +241,27 @@ const AdminProjectsPage = () => {
   const handleEditClose = () => {
     setShowEditForm(false);
     setEditingProjectId(null);
+  };
+
+  const handleTransferProject = (project) => {
+    setTransferringProject(project);
+    setShowTransferModal(true);
+  };
+
+  const handleTransferComplete = (transferResult) => {
+    setShowTransferModal(false);
+    setTransferringProject(null);
+    loadProjects(); // Refresh the projects list
+    toast({
+      title: "ย้ายโครงงานสำเร็จ",
+      description: `โครงงาน "${transferResult.title}" ถูกย้ายไปยัง ${transferResult.transfer_details?.to_company} แล้ว`,
+      variant: "default"
+    });
+  };
+
+  const handleTransferClose = () => {
+    setShowTransferModal(false);
+    setTransferringProject(null);
   };
 
   const formatDate = (dateString) => {
@@ -355,128 +393,111 @@ const AdminProjectsPage = () => {
             />
           </div>
           
-          <Button
-            onClick={() => {
-              console.log('Search area create button clicked');
-              setShowCreateForm(true);
-            }}
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2"
-          >
-            <PlusCircle className="w-4 h-4 mr-2" />
-            เพิ่มโครงงาน
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => navigate('/admin/google-drive')}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2"
+            >
+              <FolderOpen className="w-4 h-4 mr-2" />
+              Google Drive
+            </Button>
+            <Button
+              onClick={() => {
+                console.log('Search area create button clicked');
+                setShowCreateForm(true);
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2"
+            >
+              <PlusCircle className="w-4 h-4 mr-2" />
+              เพิ่มโครงงาน
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="glass-effect rounded-xl shadow-xl overflow-x-auto">
+      {/* Organizational List View */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center">
+          <div className="p-12 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#667eea] mx-auto mb-4"></div>
-            <p className="text-purple-700">กำลังโหลดข้อมูลโครงงาน...</p>
+            <p className="text-gray-600">กำลังโหลดข้อมูลโครงงาน...</p>
           </div>
         ) : (
-          <table className="w-full min-w-max text-left text-purple-800">
-            <thead className="border-b border-slate-700">
-              <tr className="bg-purple-100/30">
-                <th className="p-4">โครงงาน</th>
-                <th className="p-4">หมวดหมู่</th>
-                <th className="p-4">เทคโนโลยี</th>
-                <th className="p-4">สถานะ</th>
-                <th className="p-4">แนะนำ</th>
-                <th className="p-4">วันที่สร้าง</th>
-                <th className="p-4 text-center">การดำเนินการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProjects.map((project, index) => (
-                <motion.tr 
-                  key={project.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors"
-                >
-                  <td className="p-4">
-                    <div className="flex items-center space-x-3">
+          <div className="divide-y divide-gray-100">
+            {filteredProjects.map((project, index) => (
+              <motion.div
+                key={project.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: index * 0.02 }}
+                className="group hover:bg-gray-50/80 transition-colors duration-150"
+              >
+                <div className="p-6">
+                  <div className="flex items-center gap-6">
+                    {/* Project Image & Title */}
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
                       {project.image_url && (
-                        <img 
-                          src={project.image_url} 
-                          alt={project.title}
-                          className="w-12 h-12 object-cover rounded-lg"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                          }}
-                        />
+                        <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+                          <img 
+                            src={project.image_url} 
+                            alt={project.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        </div>
                       )}
-                      <div>
-                        <p className="font-medium text-purple-900">{project.title}</p>
-                        <p className="text-sm text-purple-700 truncate max-w-xs">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 text-lg truncate group-hover:text-indigo-600 transition-colors">
+                          {project.title}
+                        </h3>
+                        <p className="text-gray-600 text-sm mt-1 line-clamp-1">
                           {project.description || 'ไม่มีคำอธิบาย'}
                         </p>
                       </div>
                     </div>
-                  </td>
-                  <td className="p-4">
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-500/30 text-blue-800">
-                      {project.category || 'ไม่ระบุ'}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex flex-wrap gap-1 max-w-32">
-                      {project.technologies?.slice(0, 2).map((tech, i) => (
-                        <span 
-                          key={i}
-                          className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-700"
-                        >
-                          {tech}
-                        </span>
-                      ))}
-                      {project.technologies?.length > 2 && (
-                        <span className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-700">
-                          +{project.technologies.length - 2}
-                        </span>
+
+                    {/* Category & Technologies */}
+                    <div className="hidden md:flex items-center gap-3 flex-shrink-0">
+                      <div className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium">
+                        {project.category || 'ไม่ระบุ'}
+                      </div>
+                      <div className="flex items-center gap-1 max-w-48">
+                        {project.technologies?.slice(0, 2).map((tech, i) => (
+                          <span key={i} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                            {tech}
+                          </span>
+                        ))}
+                        {project.technologies?.length > 2 && (
+                          <span className="text-gray-400 text-xs">+{project.technologies.length - 2}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status Indicators */}
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <div className={`w-3 h-3 rounded-full ${
+                        project.is_approved ? 'bg-green-400' : 'bg-yellow-400'
+                      }`} title={project.is_approved ? 'อนุมัติแล้ว' : 'รออนุมัติ'}></div>
+                      
+                      {project.is_featured && (
+                        <Star className="w-4 h-4 text-amber-400 fill-current" title="โครงงานแนะนำ" />
                       )}
+                      
+                      <span className="text-xs text-gray-500 w-20 text-right">
+                        {formatDate(project.created_at)}
+                      </span>
                     </div>
-                  </td>
-                  <td className="p-4">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      project.is_approved ? 'bg-green-500/30 text-green-800' :
-                      'bg-red-500/30 text-red-800'
-                    }`}>
-                      {project.is_approved ? 'อนุมัติแล้ว' : 'รออนุมัติ'}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleToggleFeatured(project.id, project.title, project.is_featured)}
-                      className={project.is_featured 
-                        ? "text-yellow-500 hover:bg-yellow-500/20" 
-                        : "text-gray-400 hover:bg-yellow-500/20"
-                      }
-                      title={project.is_featured ? "ลบจากแนะนำ" : "เพิ่มในแนะนำ"}
-                    >
-                      {project.is_featured ? 
-                        <Star className="w-4 h-4 fill-current" /> : 
-                        <StarOff className="w-4 h-4" />
-                      }
-                    </Button>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Calendar className="w-4 h-4 mr-1" />
-                      {formatDate(project.created_at)}
-                    </div>
-                  </td>
-                  <td className="p-4 text-center">
-                    <div className="flex items-center justify-center space-x-1">
+
+                    {/* Quick Actions */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       {project.demo_url && (
                         <Button 
-                          variant="ghost" 
-                          size="icon" 
+                          size="sm"
+                          variant="ghost"
                           onClick={() => window.open(project.demo_url, '_blank')}
-                          className="text-green-400 hover:bg-green-500/20"
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50 p-2"
                           title="ดูเดโม"
                         >
                           <ExternalLink className="w-4 h-4" />
@@ -484,69 +505,103 @@ const AdminProjectsPage = () => {
                       )}
                       {project.github_url && (
                         <Button 
-                          variant="ghost" 
-                          size="icon" 
+                          size="sm"
+                          variant="ghost"
                           onClick={() => window.open(project.github_url, '_blank')}
-                          className="text-gray-400 hover:bg-gray-500/20"
+                          className="text-gray-600 hover:text-gray-700 hover:bg-gray-100 p-2"
                           title="ดู GitHub"
                         >
                           <Github className="w-4 h-4" />
                         </Button>
                       )}
+                      {project.google_drive_folder_id && (
+                        <Button 
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => window.open(`https://drive.google.com/drive/folders/${project.google_drive_folder_id}`, '_blank')}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2"
+                          title="เปิด Google Drive"
+                        >
+                          <FolderOpen className="w-4 h-4" />
+                        </Button>
+                      )}
+                      
+                      <div className="w-px h-6 bg-gray-200 mx-1"></div>
+                      
                       <Button 
-                        variant="ghost" 
-                        size="icon" 
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleToggleFeatured(project.id, project.title, project.is_featured)}
+                        className={`p-2 ${project.is_featured 
+                          ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50" 
+                          : "text-gray-400 hover:text-amber-600 hover:bg-amber-50"
+                        }`}
+                        title={project.is_featured ? "ลบจากแนะนำ" : "เพิ่มในแนะนำ"}
+                      >
+                        {project.is_featured ? <Star className="w-4 h-4 fill-current" /> : <StarOff className="w-4 h-4" />}
+                      </Button>
+                      
+                      <Button 
+                        size="sm"
+                        variant="ghost"
                         onClick={() => handleEditProject(project)} 
-                        className="text-blue-400 hover:bg-blue-500/20"
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2"
                         title="แก้ไขโครงงาน"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
+
                       <Button 
-                        variant="ghost" 
-                        size="icon" 
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleTransferProject(project)} 
+                        className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 p-2"
+                        title="ย้ายไปยังบริษัทอื่น"
+                      >
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                      
+                      <Button 
+                        size="sm"
+                        variant="ghost"
                         onClick={() => handleToggleProjectApproval(project.id, project.title, project.is_approved)} 
-                        className={project.is_approved 
-                          ? "text-orange-400 hover:bg-orange-500/20" 
-                          : "text-green-400 hover:bg-green-500/20"
-                        }
+                        className={`p-2 ${project.is_approved 
+                          ? "text-orange-600 hover:text-orange-700 hover:bg-orange-50" 
+                          : "text-green-600 hover:text-green-700 hover:bg-green-50"
+                        }`}
                         title={project.is_approved ? "ไม่อนุมัติ" : "อนุมัติ"}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
+                      
                       <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => handleDeleteProject(project.id, project.title)}
-                        className="text-red-400 hover:bg-red-500/20"
-                        title="ลบโครงงาน (ชั่วคราว)"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
+                        size="sm"
+                        variant="ghost"
                         onClick={() => handlePermanentDeleteProject(project.id, project.title)}
-                        className="text-red-600 hover:bg-red-600/20 border border-red-600/30"
-                        title="ลบโครงงานถาวร (ไม่สามารถกู้คืนได้)"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2"
+                        title="ลบโครงงานถาวร (รวม Google Drive)"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         )}
-        {!loading && filteredProjects.length === 0 && (
+      </div>
+
+      {/* No Results Message */}
+      {!loading && filteredProjects.length === 0 && (
+        <div className="glass-effect rounded-xl shadow-xl">
           <div className="text-center p-8">
             <AlertTriangle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
             <p className="text-purple-700 text-lg">ไม่พบโครงงานที่ตรงกับการค้นหา</p>
             <p className="text-purple-600 text-sm mt-2">ลองปรับเปลี่ยนคำค้นหาหรือเพิ่มโครงงานใหม่</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Unified Project Form Modal */}
       <ProjectForm
@@ -562,6 +617,15 @@ const AdminProjectsPage = () => {
         onSuccess={handleEditSuccess}
         projectId={editingProjectId}
         mode="edit"
+      />
+
+      {/* Transfer Project Modal */}
+      <TransferItemModal
+        isOpen={showTransferModal}
+        onClose={handleTransferClose}
+        item={transferringProject}
+        itemType="project"
+        onTransferComplete={handleTransferComplete}
       />
     </motion.div>
   );

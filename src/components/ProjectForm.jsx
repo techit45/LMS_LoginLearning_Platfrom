@@ -15,6 +15,7 @@ import {
   Github,
   Calendar,
   Layers,
+  FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ import {
   getProjectForEdit,
 } from "@/lib/projectService";
 import { uploadProjectImage } from "@/lib/projectImageService";
+import { createProjectStructure, getCompanySlug } from "@/lib/googleDriveClientService";
 
 const ProjectForm = ({
   isOpen,
@@ -52,6 +54,8 @@ const ProjectForm = ({
     thumbnail_url: "",
     tags: [],
     status: "published",
+    google_drive_folder_id: "",
+    company: "login", // Default company
   });
 
   const [errors, setErrors] = useState({});
@@ -60,6 +64,7 @@ const ProjectForm = ({
   const [imagePreview, setImagePreview] = useState(null);
   const [newTechnology, setNewTechnology] = useState("");
   const [newTag, setNewTag] = useState("");
+  
 
   const isEditMode = mode === "edit" && projectId;
   const hasShownRecoveryToast = useRef(false);
@@ -145,6 +150,7 @@ const ProjectForm = ({
           thumbnail_url: data.thumbnail_url || data.cover_image_url || "",
           tags: data.tags || [],
           status: data.status || "published",
+          company: data.company || "login", // Add company field for edit mode
         });
 
         // Set image preview if exists
@@ -187,6 +193,7 @@ const ProjectForm = ({
             thumbnail_url: savedData.thumbnail_url || "",
             tags: savedData.tags || [],
             status: savedData.status || "published",
+            company: savedData.company || "login",
           });
           setNewTechnology(savedData.newTechnology || "");
           setNewTag(savedData.newTag || "");
@@ -222,6 +229,7 @@ const ProjectForm = ({
             thumbnail_url: "",
             tags: [],
             status: "published",
+            company: "login",
           });
           setImagePreview(null);
           setProjectImage(null);
@@ -367,6 +375,10 @@ const ProjectForm = ({
       newErrors.category = "กรุณาระบุหมวดหมู่";
     }
 
+    if (!formData.company) {
+      newErrors.company = "กรุณาเลือกบริษัท";
+    }
+
     // Validate URLs if provided
     if (formData.project_url && !isValidUrl(formData.project_url)) {
       newErrors.project_url = "กรุณาระบุ URL ที่ถูกต้อง";
@@ -380,6 +392,8 @@ const ProjectForm = ({
       newErrors.video_url = "กรุณาระบุ URL ที่ถูกต้อง";
     }
 
+    // console.log('🚨 Validation errors:', newErrors);
+    // console.log('📋 Form data being validated:', formData);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -470,6 +484,52 @@ const ProjectForm = ({
 
       if (error) {
         throw error;
+      }
+
+      // Handle Google Drive folder creation for new projects
+      if (!isEditMode && data) {
+        try {
+          console.log('🗂️ Starting Google Drive integration...');
+          console.log('Project data:', finalFormData);
+          console.log('formData.company:', finalFormData.company);
+          
+          // Create Drive structure
+          const companySlug = getCompanySlug(finalFormData);
+          console.log('Company slug from getCompanySlug:', companySlug);
+          
+          if (!companySlug) {
+            throw new Error('Company slug is missing or invalid');
+          }
+          
+          console.log('Calling createProjectStructure with:', { 
+            projectData: finalFormData, 
+            companySlug 
+          });
+          const finalDriveStructure = await createProjectStructure(finalFormData, companySlug);
+          console.log('Drive structure result:', finalDriveStructure);
+          
+          // Update project with Google Drive folder ID
+          if (finalDriveStructure && finalDriveStructure.success && finalDriveStructure.projectFolderId) {
+            console.log('Updating project with folder ID:', finalDriveStructure.projectFolderId);
+            await updateProject(data.id, {
+              google_drive_folder_id: finalDriveStructure.projectFolderId
+            });
+            
+            toast({
+              title: "🗂️ Google Drive Integration Complete!",
+              description: "Project folder structure created successfully",
+            });
+          } else {
+            console.warn('Drive structure creation failed or incomplete:', finalDriveStructure);
+          }
+        } catch (driveError) {
+          console.error('🚨 Google Drive operations failed:', driveError);
+          toast({
+            title: "⚠️ Google Drive Warning",
+            description: "Project created but some Drive operations failed.",
+            variant: "destructive",
+          });
+        }
       }
 
       toast({
@@ -841,8 +901,8 @@ const ProjectForm = ({
                 )}
               </div>
 
-              {/* Category and Difficulty */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Category, Company, and Difficulty */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-6 rounded-xl border border-orange-200">
                   <label className="block text-gray-800 font-semibold mb-3 flex items-center">
                     <div className="bg-orange-500 p-2 rounded-lg mr-3">
@@ -867,6 +927,35 @@ const ProjectForm = ({
                     <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
                       <AlertCircle className="w-4 h-4 mr-2" />
                       {errors.category}
+                    </p>
+                  )}
+                </div>
+
+                {/* Company Selection */}
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+                  <label className="block text-gray-800 font-semibold mb-3 flex items-center">
+                    <div className="bg-blue-500 p-2 rounded-lg mr-3">
+                      <Layers className="w-4 h-4 text-white" />
+                    </div>
+                    บริษัท *
+                  </label>
+                  <select
+                    name="company"
+                    value={formData.company}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 h-12 shadow-sm"
+                  >
+                    <option value="login">Login Learning</option>
+                    <option value="meta">Meta Tech Academy</option>
+                    <option value="med">Med Solutions</option>
+                    <option value="edtech">EdTech Innovation</option>
+                    <option value="innotech">InnoTech Labs</option>
+                    <option value="w2d">W2D Studio</option>
+                  </select>
+                  {errors.company && (
+                    <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
+                      <AlertCircle className="w-4 h-4 mr-2" />
+                      {errors.company}
                     </p>
                   )}
                 </div>
@@ -912,51 +1001,28 @@ const ProjectForm = ({
                 />
               </div>
 
-              {/* URLs */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-6 rounded-xl border border-cyan-200">
-                  <label className="block text-gray-800 font-semibold mb-3 flex items-center">
-                    <div className="bg-cyan-500 p-2 rounded-lg mr-3">
-                      <Globe className="w-4 h-4 text-white" />
-                    </div>
-                    Drive URL
-                  </label>
-                  <Input
-                    name="project_url"
-                    value={formData.project_url}
-                    onChange={handleInputChange}
-                    placeholder="https://example.com"
-                    className="bg-white border-gray-300 text-gray-800 h-12 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 rounded-xl shadow-sm"
-                  />
-                  {errors.project_url && (
-                    <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
-                      <AlertCircle className="w-4 h-4 mr-2" />
-                      {errors.project_url}
-                    </p>
-                  )}
-                </div>
 
-                <div className="bg-gradient-to-br from-gray-50 to-slate-50 p-6 rounded-xl border border-gray-200">
-                  <label className="block text-gray-800 font-semibold mb-3 flex items-center">
-                    <div className="bg-gray-500 p-2 rounded-lg mr-3">
-                      <Github className="w-4 h-4 text-white" />
-                    </div>
-                    GitHub URL
-                  </label>
-                  <Input
-                    name="github_url"
-                    value={formData.github_url}
-                    onChange={handleInputChange}
-                    placeholder="https://github.com/username/repo"
-                    className="bg-white border-gray-300 text-gray-800 h-12 focus:border-gray-500 focus:ring-2 focus:ring-gray-200 rounded-xl shadow-sm"
-                  />
-                  {errors.github_url && (
-                    <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
-                      <AlertCircle className="w-4 h-4 mr-2" />
-                      {errors.github_url}
-                    </p>
-                  )}
-                </div>
+              {/* URLs */}
+              <div className="bg-gradient-to-br from-gray-50 to-slate-50 p-6 rounded-xl border border-gray-200">
+                <label className="block text-gray-800 font-semibold mb-3 flex items-center">
+                  <div className="bg-gray-500 p-2 rounded-lg mr-3">
+                    <Github className="w-4 h-4 text-white" />
+                  </div>
+                  GitHub URL
+                </label>
+                <Input
+                  name="github_url"
+                  value={formData.github_url}
+                  onChange={handleInputChange}
+                  placeholder="https://github.com/username/repo"
+                  className="bg-white border-gray-300 text-gray-800 h-12 focus:border-gray-500 focus:ring-2 focus:ring-gray-200 rounded-xl shadow-sm"
+                />
+                {errors.github_url && (
+                  <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
+                    <AlertCircle className="w-4 h-4 mr-2" />
+                    {errors.github_url}
+                  </p>
+                )}
               </div>
 
               {/* Video URL */}
@@ -1117,6 +1183,7 @@ const ProjectForm = ({
                           thumbnail_url: "",
                           tags: [],
                           status: "published",
+                          company: "login",
                         });
                         setImagePreview(null);
                         setProjectImage(null);

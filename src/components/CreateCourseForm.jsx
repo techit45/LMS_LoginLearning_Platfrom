@@ -11,13 +11,15 @@ import {
   AlertCircle,
   FileText,
   Image as ImageIcon,
-  Trash2
+  Trash2,
+  Building2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast.jsx';
-import { createCourse } from '@/lib/courseService';
+import { createCourse, updateCourse } from '@/lib/courseService';
 import { uploadCourseImage } from '@/lib/attachmentService';
+import { createCourseStructure } from '@/lib/courseStructureService';
 import CourseImageUpload from '@/components/CourseImageUpload';
 
 const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
@@ -84,6 +86,10 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
       newErrors.max_students = 'กรุณากรอกจำนวนนักเรียนที่มากกว่า 0';
     }
     
+    if (!formData.company) {
+      newErrors.company = 'กรุณาเลือกบริษัท';
+    }
+    
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       toast({
@@ -118,6 +124,31 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
       }
       
       console.log('Course created successfully:', data);
+      
+      // Create Google Drive folder structure
+      try {
+        console.log('🗂️ Creating Google Drive folder structure...');
+        const driveStructure = await createCourseStructure({
+          title: data.title,
+          company: data.company || 'login'
+        });
+        
+        if (driveStructure.courseFolderId) {
+          // Update course with Google Drive folder ID
+          await updateCourse(data.id, {
+            google_drive_folder_id: driveStructure.courseFolderId
+          });
+          console.log('✅ Google Drive folder created and linked to course');
+        }
+      } catch (driveError) {
+        console.error('⚠️ Failed to create Google Drive folder:', driveError);
+        // Don't fail the whole operation, just show warning
+        toast({
+          title: "คำเตือน",
+          description: "สร้างคอร์สสำเร็จ แต่ไม่สามารถสร้างโฟลเดอร์ Google Drive ได้",
+          variant: "warning"
+        });
+      }
 
       toast({
         title: "สร้างคอร์สสำเร็จ! 🎉",
@@ -333,6 +364,35 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
                 <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
                   <AlertCircle className="w-4 h-4 mr-2" />
                   {errors.description}
+                </p>
+              )}
+            </div>
+
+            {/* Company Selection */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+              <label className="block text-gray-800 font-semibold mb-3 flex items-center">
+                <div className="bg-blue-500 p-2 rounded-lg mr-3">
+                  <Building2 className="w-4 h-4 text-white" />
+                </div>
+                บริษัท *
+              </label>
+              <select
+                name="company"
+                value={formData.company}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 h-12 shadow-sm"
+              >
+                <option value="login">Login Learning</option>
+                <option value="meta">Meta Tech Academy</option>
+                <option value="med">Med Solutions</option>
+                <option value="edtech">EdTech Innovation</option>
+                <option value="innotech">InnoTech Labs</option>
+                <option value="w2d">W2D Studio</option>
+              </select>
+              {errors.company && (
+                <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
+                  <AlertCircle className="w-4 h-4 mr-2" />
+                  {errors.company}
                 </p>
               )}
             </div>

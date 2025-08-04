@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { useParams } from 'react-router-dom';
 import SEOHead from '@/components/SEOHead';
-import { BookOpen, Users, Clock, Search, BookOpenText, Filter, Grid3X3, List, Star, Award, ChevronDown } from 'lucide-react';
+import { BookOpen, Users, Clock, Search, BookOpenText, Filter, Grid3X3, List, Star, Award, ChevronDown, Code2, Shield, Database, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
-import { getAllCourses } from '@/lib/courseService';
+import { getAllCourses, getCoursesByCompany } from '@/lib/courseService';
 import { getEmergencyData } from '@/lib/quickFix';
+import { useCompany } from '@/contexts/CompanyContext';
 
 const CoursesPage = () => {
   const { toast } = useToast();
+  const { track } = useParams(); // For Meta tracks like /company/meta/tracks/cyber
+  const { currentCompany, getCompanyUrl, getCompanyTheme } = useCompany();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,24 +33,70 @@ const CoursesPage = () => {
     ));
   };
 
-  const loadCourses = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Add timeout for emergency fallback (increased to 20 seconds)
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Courses loading timeout')), 20000);
-      });
+  // Get company-specific categories
+  const getCompanyCategories = () => {
+    if (!currentCompany) return ['ทั้งหมด'];
+    
+    const categoryMap = {
+      login: ['ทั้งหมด', 'วิศวกรรมคอมพิวเตอร์', 'วิศวกรรมเครื่องกล', 'วิศวกรรมไฟฟ้า', 'วิศวกรรมโยธา'],
+      meta: ['ทั้งหมด', 'Cybersecurity', 'Data Science', 'Web Development', 'AI/Machine Learning'],
+      med: ['ทั้งหมด', 'Medical Devices', 'Health Tech', 'Biomedical Engineering', 'Medical Software'],
+      edtech: ['ทั้งหมด', 'Learning Management', 'Educational Technology', 'Online Teaching', 'Assessment Tools'],
+      innotech: ['ทั้งหมด', 'Research Methods', 'Innovation Lab', 'Prototype Development', 'Tech Commercialization'],
+      w2d: ['ทั้งหมด', 'Web Design', 'Digital Art', 'UX/UI Design', 'Creative Development']
+    };
+    
+    return categoryMap[currentCompany.id] || categoryMap.login;
+  };
+
+  // Filter courses by company and track
+  const filterCoursesByCompany = (coursesData) => {
+    if (!currentCompany) return coursesData;
+    
+    let filtered = coursesData.filter(course => {
+      // If course has company field, filter by it
+      if (course.company) {
+        return course.company === currentCompany.id;
+      }
+      // Otherwise, show all for default company or none for others
+      return currentCompany.id === 'login';
+    });
+
+    // Additional filtering for Meta tracks
+    if (currentCompany.id === 'meta' && track) {
+      const trackMap = {
+        cyber: ['Cybersecurity', 'Security'],
+        data: ['Data Science', 'Analytics', 'Database'],
+        webapp: ['Web Development', 'Frontend', 'Backend'],
+        ai: ['AI/Machine Learning', 'Machine Learning', 'Artificial Intelligence']
+      };
       
-      const { data, error } = await Promise.race([
-        getAllCourses(),
-        timeoutPromise
-      ]);
+      const trackCategories = trackMap[track] || [];
+      filtered = filtered.filter(course => 
+        trackCategories.some(cat => 
+          course.category?.toLowerCase().includes(cat.toLowerCase()) ||
+          course.title?.toLowerCase().includes(cat.toLowerCase())
+        )
+      );
+    }
+
+    return filtered;
+  };
+
+  const loadCourses = async () => {
+    console.log('🔄 Starting course loading...');
+    setLoading(true);
+    
+    try {
+      console.log('📡 Calling getAllCourses...');
+      const { data, error } = await getAllCourses();
       
       if (error) {
-        console.error('Error loading courses:', error);
+        console.error('❌ Database error:', error);
         // Use emergency data instead of showing error
         const emergencyData = getEmergencyData();
-        setCourses(emergencyData.courses);
+        const filteredCourses = filterCoursesByCompany(emergencyData.courses);
+        setCourses(filteredCourses);
         console.log('🚑 Using emergency courses data');
         toast({
           title: "โหลดข้อมูลสำรอง",
@@ -54,13 +104,17 @@ const CoursesPage = () => {
           variant: "default"
         });
       } else {
-        setCourses(data || []);
+        console.log('✅ Courses received:', data?.length || 0);
+        const filteredCourses = filterCoursesByCompany(data || []);
+        console.log('🔍 Filtered courses:', filteredCourses.length);
+        setCourses(filteredCourses);
       }
     } catch (error) {
-      console.error('Error loading courses:', error);
+      console.error('❌ Catch error:', error);
       // Use emergency data on any error
       const emergencyData = getEmergencyData();
-      setCourses(emergencyData.courses);
+      const filteredCourses = filterCoursesByCompany(emergencyData.courses);
+      setCourses(filteredCourses);
       console.log('🚑 Using emergency courses data after error');
       toast({
         title: "โหลดข้อมูลสำรอง",
@@ -68,16 +122,17 @@ const CoursesPage = () => {
         variant: "default"
       });
     } finally {
+      console.log('🏁 Setting loading to false');
       setLoading(false);
     }
-  }, [toast]);
+  };
 
   useEffect(() => {
     loadCourses();
-  }, [loadCourses]);
+  }, []); // Remove loadCourses dependency to prevent infinite loops
 
   // Get unique categories
-  const categories = ['ทั้งหมด', ...new Set(courses.map(course => course.category).filter(Boolean))];
+  const categories = getCompanyCategories();
 
   // Filter and sort courses
   const filteredAndSortedCourses = courses
@@ -122,7 +177,7 @@ const CoursesPage = () => {
         isListView ? 'flex' : ''
       }`}
     >
-      <Link to={`/courses/${course.id}`} className={`block ${isListView ? 'flex w-full' : ''}`}>
+      <Link to={getCompanyUrl(`/courses/${course.id}`)} className={`block ${isListView ? 'flex w-full' : ''}`}>
         <div className={`relative ${isListView ? 'w-80 flex-shrink-0' : ''}`}>
           <img 
             className={`${isListView ? 'w-full h-48' : 'w-full h-48'} object-cover`}
@@ -211,15 +266,23 @@ const CoursesPage = () => {
   return (
     <motion.div initial="initial" animate="in" exit="out" variants={pageVariants} transition={pageTransition} className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       <SEOHead
-        title="คอร์สเรียนทั้งหมด"
-        description="เลือกดูคอร์สเรียนวิศวกรรมที่หลากหลายของเรา ออกแบบมาเพื่อน้องๆ มัธยมโดยเฉพาะ พร้อมพี่เลี้ยงผู้เชี่ยวชาญและโครงงานจริง"
+        title={`คอร์สเรียน${currentCompany ? ` - ${currentCompany.name}` : 'ทั้งหมด'}${track ? ` - ${track.toUpperCase()} Track` : ''}`}
+        description={`เลือกดูคอร์สเรียน${currentCompany ? `ของ ${currentCompany.name}` : 'วิศวกรรมที่หลากหลายของเรา'} ออกแบบมาเพื่อน้องๆ มัธยมโดยเฉพาะ พร้อมพี่เลี้ยงผู้เชี่ยวชาญและโครงงานจริง`}
         image="/images/og-courses.jpg"
-        url="/courses"
+        url={currentCompany ? getCompanyUrl('/courses') : '/courses'}
         type="website"
       />
 
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white">
+      <div className={`bg-gradient-to-r ${
+        currentCompany?.color === 'indigo' ? 'from-indigo-600 via-purple-600 to-pink-600' :
+        currentCompany?.color === 'blue' ? 'from-blue-600 via-cyan-600 to-indigo-600' :
+        currentCompany?.color === 'green' ? 'from-green-600 via-emerald-600 to-teal-600' :
+        currentCompany?.color === 'purple' ? 'from-purple-600 via-pink-600 to-indigo-600' :
+        currentCompany?.color === 'orange' ? 'from-orange-600 via-red-600 to-pink-600' :
+        currentCompany?.color === 'pink' ? 'from-pink-600 via-rose-600 to-purple-600' :
+        'from-indigo-600 via-purple-600 to-pink-600'
+      } text-white`}>
         <div className="max-w-7xl mx-auto px-6 py-16">
           <motion.div
             initial={{ y: -30, opacity: 0 }}
@@ -227,11 +290,34 @@ const CoursesPage = () => {
             transition={{ duration: 0.6 }}
             className="text-center"
           >
+            {/* Track Badge for Meta */}
+            {currentCompany?.id === 'meta' && track && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="inline-flex items-center bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full mb-4"
+              >
+                {track === 'cyber' && <Shield className="w-5 h-5 mr-2" />}
+                {track === 'data' && <Database className="w-5 h-5 mr-2" />}
+                {track === 'webapp' && <Code2 className="w-5 h-5 mr-2" />}
+                {track === 'ai' && <Code2 className="w-5 h-5 mr-2" />}
+                <span className="font-semibold">{track.toUpperCase()} Track</span>
+              </motion.div>
+            )}
+            
             <h1 className="text-4xl lg:text-6xl font-bold mb-4">
-              คอร์สเรียน<span className="text-yellow-300">ทั้งหมด</span>
+              คอร์สเรียน{currentCompany && (
+                <><span className="text-yellow-300">{currentCompany.name}</span></>
+              )}
+              {!currentCompany && <span className="text-yellow-300">ทั้งหมด</span>}
             </h1>
             <p className="text-xl lg:text-2xl text-white/90 max-w-3xl mx-auto">
-              ค้นหาคอร์สที่ใช่ จุดประกายแรงบันดาลใจสู่เส้นทางวิศวะฯ กับ Login Learning
+              {currentCompany ? (
+                `ค้นหาคอร์สที่ใช่ จุดประกายแรงบันดาลใจกับ ${currentCompany.name} ${track ? `- เฉพาะสาย ${track.toUpperCase()}` : ''}`
+              ) : (
+                'ค้นหาคอร์สที่ใช่ จุดประกายแรงบันดาลใจสู่เส้นทางวิศวะฯ กับ Login Learning'
+              )}
             </p>
           </motion.div>
         </div>
@@ -349,7 +435,7 @@ const CoursesPage = () => {
         {/* Course Results */}
         {loading ? (
           <div className="text-center py-16">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <div className="enhanced-spinner h-16 w-16 mx-auto mb-4"></div>
             <p className="text-gray-600 text-lg">กำลังโหลดคอร์สเรียน...</p>
           </div>
         ) : (

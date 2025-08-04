@@ -100,25 +100,58 @@ export const getDashboardStats = async () => {
       totalProjectViews = projectViewData.reduce((sum, project) => sum + (project.view_count || 0), 0);
     }
 
+    // Get today's new users
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const { count: newUsersToday, error: todayUsersError } = await supabase
+      .from('user_profiles')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', today.toISOString());
+
+    if (todayUsersError) {
+      console.warn('Could not fetch today users count:', todayUsersError);
+    }
+
+    // Get draft courses count
+    const { count: draftCourses, error: draftCoursesError } = await supabase
+      .from('courses')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_active', false);
+
+    if (draftCoursesError) {
+      console.warn('Could not fetch draft courses count:', draftCoursesError);
+    }
+
+    // Get featured projects count
+    const { count: featuredProjects, error: featuredProjectsError } = await supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_featured', true);
+
+    if (featuredProjectsError) {
+      console.warn('Could not fetch featured projects count:', featuredProjectsError);
+    }
+
     const stats = {
       // User Statistics
       totalUsers: totalUsers || 0,
       activeUsers: Math.round((totalUsers || 0) * 0.15), // Estimated 15% active
-      newUsersToday: Math.round((newUsersWeek || 0) / 7), // Estimated daily average
+      newUsersToday: newUsersToday || 0,
       userGrowth: userGrowthRate,
       newUsersWeek: newUsersWeek || 0,
 
       // Course Statistics
       totalCourses: totalCourses || 0,
       activeCourses: activeCourses || 0,
-      draftCourses: (totalCourses || 0) - (activeCourses || 0),
+      draftCourses: draftCourses || 0,
       courseEnrollments: totalEnrollments || 0,
 
       // Project Statistics
       totalProjects: totalProjects || 0,
       approvedProjects: approvedProjects || 0,
       pendingApproval: pendingProjects || 0,
-      featuredProjects: Math.round((approvedProjects || 0) * 0.2), // Estimated 20% featured
+      featuredProjects: featuredProjects || 0,
       projectViews: totalProjectViews,
 
       // System Statistics (Mock for now)
@@ -140,6 +173,7 @@ export const getDashboardStats = async () => {
         activeUsers: 0,
         newUsersToday: 0,
         userGrowth: 0,
+        newUsersWeek: 0,
         totalCourses: 0,
         activeCourses: 0,
         draftCourses: 0,

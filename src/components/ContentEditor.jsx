@@ -10,13 +10,20 @@ import {
   FolderOpen,
   Link,
   AlertCircle,
-  Eye
+  Eye,
+  Upload,
+  FileIcon,
+  Trash2,
+  CheckCircle,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useCompany } from '@/contexts/CompanyContext';
 
-const ContentEditor = ({ mode, content, onSave, onClose }) => {
+const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
   const { toast } = useToast();
+  const { currentCompany } = useCompany();
   const [formData, setFormData] = useState({
     title: content?.title || '',
     content_type: content?.content_type || 'video',
@@ -29,6 +36,9 @@ const ContentEditor = ({ mode, content, onSave, onClose }) => {
   });
   
   const [loading, setLoading] = useState(false);
+  const [uploadMode, setUploadMode] = useState('url'); // 'url' or 'file'
+  const [uploading, setUploading] = useState(false);  
+  const [uploadedFile, setUploadedFile] = useState(null);
 
   const contentTypes = [
     { 
@@ -123,6 +133,182 @@ const ContentEditor = ({ mode, content, onSave, onClose }) => {
       ...prev,
       [field]: value
     }));
+  };
+
+  // File upload functions
+  const handleFileUpload = async (file) => {
+    if (!file) return;
+    
+    // Validate file type
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint', 
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'image/jpeg',
+      'image/png',
+      'image/gif'
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "ไฟล์ไม่ถูกต้อง",
+        description: "รองรับเฉพาะไฟล์ PDF, Word, PowerPoint, Excel, รูปภาพ และ Text เท่านั้น",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (10MB max)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({
+        title: "ไฟล์ใหญ่เกินไป",
+        description: "ขนาดไฟล์ต้องไม่เกิน 10 MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // First, get course folder structure to find the lessons folder
+      let targetFolderId = null;
+      let courseData = null;
+      
+      if (courseId) {
+        try {    
+          // Import courseService to get course data
+          const { getCourseByIdAdmin } = await import('../lib/courseService.js');
+          const result = await getCourseByIdAdmin(courseId);
+          
+          if (!result.error && result.data) {
+            courseData = result.data;
+            if (courseData.google_drive_folder_id) {
+              // Use the course's Google Drive folder for upload
+              targetFolderId = courseData.google_drive_folder_id;
+              console.log('🎯 Using course folder:', targetFolderId);
+              console.log('📊 Course data:', { courseData });
+            } else {
+              console.warn('Course has no Google Drive folder, will create structure');
+            }
+          }
+        } catch (courseError) {
+          console.warn('Could not get course folder:', courseError);
+        }
+      }
+
+      // If no course folder found, we need to create/get the folder structure first
+      if (!targetFolderId) {
+        console.log('🏗️ Creating course folder structure...');
+        try {
+          // Create course structure in Google Drive  
+          const { createCourseStructure } = await import('../lib/googleDriveClientService.js');
+          
+          // Use course's company if available, otherwise use current company context
+          let companySlug = 'login'; // default fallback
+          if (courseData?.company) {
+            companySlug = courseData.company;
+            console.log('🏢 Using course company:', companySlug);
+          } else if (currentCompany?.id) {
+            companySlug = currentCompany.id;
+            console.log('🏢 Using context company:', companySlug);
+          }
+          
+          console.log('🏢 Final company for upload:', { companySlug, courseCompany: courseData?.company, currentCompany });
+          
+          const structureResponse = await createCourseStructure({
+            title: `Course ${courseId} Materials`,
+            company: companySlug
+          }, companySlug);
+          
+          if (structureResponse.success && structureResponse.courseFolderId) {
+            targetFolderId = structureResponse.courseFolderId;
+            console.log('✅ Created course folder:', targetFolderId);
+          }
+        } catch (structureError) {
+          console.error('Failed to create course structure:', structureError);
+        }
+      }
+
+      // If still no folder, use the shared drive root as fallback
+      if (!targetFolderId) {
+        targetFolderId = '0AAMvBF62LaLyUk9PVA'; // Shared drive root ID
+        console.log('🔄 Using shared drive root as fallback:', targetFolderId);
+      }
+
+      // Create FormData for upload
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      uploadFormData.append('targetFolderId', targetFolderId);
+      
+      // Call upload API
+      const response = await fetch('http://127.0.0.1:3001/api/drive/simple-upload', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const result = await response.json();
+      console.log('✅ Upload successful:', result);
+      
+      // Set uploaded file info
+      setUploadedFile({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: result.webViewLink || `https://drive.google.com/file/d/${result.id}/view`,
+        id: result.id
+      });
+
+      // Update document_url in form
+      handleInputChange('document_url', result.webViewLink || `https://drive.google.com/file/d/${result.id}/view`);
+
+      toast({
+        title: "อัปโหลดสำเร็จ",
+        description: `ไฟล์ ${file.name} ถูกอัปโหลดไป Google Drive แล้ว`,
+        variant: "default"
+      });
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      
+      // Show more specific error message
+      let errorMessage = "ไม่สามารถอัปโหลดไฟล์ได้ กรุณาลองใหม่";
+      if (error.message.includes('File not found')) {
+        errorMessage = "ไม่พบโฟลเดอร์ปลายทาง กรุณาตรวจสอบการตั้งค่า Google Drive";
+      } else if (error.message.includes('Upload failed')) {
+        errorMessage = "การอัปโหลดล้มเหลว กรุณาตรวจสอบการเชื่อมต่อเครือข่าย";
+      }
+      
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileRemove = () => {
+    setUploadedFile(null);
+    handleInputChange('document_url', '');
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
 
@@ -303,40 +489,153 @@ const ContentEditor = ({ mode, content, onSave, onClose }) => {
             </div>
           )}
           
-          {/* Document URL (for document content) */}
+          {/* Document Upload/URL (for document content) */}
           {formData.content_type === 'document' && (
             <div className="bg-blue-50 p-6 rounded-2xl border-2 border-blue-100">
               <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
                 <FolderOpen className="w-5 h-5 mr-2 text-blue-600" />
-                ลิงค์เอกสาร Google Drive
+                เอกสารเรียน
               </h3>
-              <div>
-                <label className="block text-sm font-semibold text-blue-700 mb-2">
-                  URL เอกสาร Google Drive
-                </label>
-                <div className="relative">
-                  <input
-                    type="url"
-                    value={formData.document_url}
-                    onChange={(e) => handleInputChange('document_url', e.target.value)}
-                    className="w-full p-4 pl-12 border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
-                    placeholder="https://drive.google.com/file/d/... หรือ https://docs.google.com/..."
-                  />
-                  <Link className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-400" />
-                </div>
-                <div className="mt-2 flex items-start space-x-2 text-sm text-blue-600">
-                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium">รูปแบบที่รองรับ:</p>
-                    <ul className="list-disc list-inside text-xs mt-1 space-y-1">
-                      <li>Google Drive: https://drive.google.com/file/d/FILE_ID</li>
-                      <li>Google Docs: https://docs.google.com/document/d/FILE_ID</li>
-                      <li>Google Sheets: https://docs.google.com/spreadsheets/d/FILE_ID</li>
-                      <li>Google Slides: https://docs.google.com/presentation/d/FILE_ID</li>
-                    </ul>
-                  </div>
+
+              {/* Upload Mode Toggle */}
+              <div className="mb-6">
+                <div className="flex bg-blue-100 rounded-lg p-1">
+                  <button
+                    type="button"
+                    onClick={() => setUploadMode('file')}
+                    className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      uploadMode === 'file'
+                        ? 'bg-white text-blue-700 shadow-sm'
+                        : 'text-blue-600 hover:text-blue-700'
+                    }`}
+                  >
+                    <Upload className="w-4 h-4 inline mr-2" />
+                    อัปโหลดไฟล์
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUploadMode('url')}
+                    className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      uploadMode === 'url'
+                        ? 'bg-white text-blue-700 shadow-sm'
+                        : 'text-blue-600 hover:text-blue-700'
+                    }`}
+                  >
+                    <Link className="w-4 h-4 inline mr-2" />
+                    ใส่ลิงค์
+                  </button>
                 </div>
               </div>
+
+              {/* File Upload Mode */}
+              {uploadMode === 'file' && (
+                <div>
+                  {!uploadedFile ? (
+                    <div className="relative">
+                      <input
+                        type="file"
+                        id="document-upload"
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.gif"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            handleFileUpload(file);
+                          }
+                        }}
+                        disabled={uploading}
+                      />
+                      <label
+                        htmlFor="document-upload"
+                        className={`block w-full p-8 border-2 border-dashed border-blue-300 rounded-xl text-center cursor-pointer transition-all hover:border-blue-400 hover:bg-blue-25 ${
+                          uploading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {uploading ? (
+                          <div className="flex flex-col items-center">
+                            <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
+                            <p className="text-blue-700 font-medium">กำลังอัปโหลด...</p>
+                            <p className="text-blue-600 text-sm mt-1">กรุณารอสักครู่</p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center">
+                            <Upload className="w-12 h-12 text-blue-500 mb-4" />
+                            <p className="text-blue-700 font-medium mb-2">คลิกเพื่อเลือกไฟล์เอกสาร</p>
+                            <p className="text-blue-600 text-sm">
+                              รองรับ PDF, Word, PowerPoint, Excel, รูปภาพ และ Text
+                            </p>
+                            <p className="text-blue-500 text-xs mt-1">
+                              ขนาดไฟล์สูงสุด 10 MB
+                            </p>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="bg-white border-2 border-blue-200 rounded-xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="bg-blue-100 p-2 rounded-lg">
+                            <FileIcon className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-blue-900">{uploadedFile.name}</p>
+                            <p className="text-sm text-blue-600">{formatFileSize(uploadedFile.size)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="w-5 h-5 text-green-500" />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleFileRemove}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-blue-100">
+                        <p className="text-xs text-blue-600">
+                          ✅ ไฟล์ถูกอัปโหลดไป Google Drive เรียบร้อยแล้ว
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* URL Input Mode */}
+              {uploadMode === 'url' && (
+                <div>
+                  <label className="block text-sm font-semibold text-blue-700 mb-2">
+                    URL เอกสาร Google Drive
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="url"
+                      value={formData.document_url}
+                      onChange={(e) => handleInputChange('document_url', e.target.value)}
+                      className="w-full p-4 pl-12 border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
+                      placeholder="https://drive.google.com/file/d/... หรือ https://docs.google.com/..."
+                    />
+                    <Link className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-400" />
+                  </div>
+                  <div className="mt-2 flex items-start space-x-2 text-sm text-blue-600">
+                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium">รูปแบบที่รองรับ:</p>
+                      <ul className="list-disc list-inside text-xs mt-1 space-y-1">
+                        <li>Google Drive: https://drive.google.com/file/d/FILE_ID</li>
+                        <li>Google Docs: https://docs.google.com/document/d/FILE_ID</li>
+                        <li>Google Sheets: https://docs.google.com/spreadsheets/d/FILE_ID</li>
+                        <li>Google Slides: https://docs.google.com/presentation/d/FILE_ID</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

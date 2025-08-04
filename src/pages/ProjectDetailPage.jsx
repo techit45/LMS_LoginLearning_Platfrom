@@ -309,7 +309,7 @@ const ProjectDetailPage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600 mx-auto"></div>
+          <div className="enhanced-spinner h-32 w-32 mx-auto"></div>
           <p className="mt-4 text-gray-600">กำลังโหลด...</p>
         </div>
       </div>
