@@ -1,50 +1,29 @@
-import React, { useEffect } from 'react';
-import { useDrag } from 'react-dnd';
+import React, { useState } from 'react';
 import { GripVertical } from 'lucide-react';
-import { ItemTypes } from '@/types/schedule';
-import { theme } from '../../lib/theme';
 
-const DraggableInstructor = ({ instructor }) => {
-  const [{ isDragging }, drag, dragPreview] = useDrag({
-    type: ItemTypes.INSTRUCTOR,
-    item: { 
-      type: ItemTypes.INSTRUCTOR,
+const DraggableInstructor = ({ instructor, onDragStart, onDragEnd }) => {
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragStart = (e) => {
+    setIsDragging(true);
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      type: 'INSTRUCTOR',
       instructor
-    },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+    if (onDragStart) onDragStart(instructor);
+  };
 
-  // Create custom drag preview for instructor
-  useEffect(() => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 160;
-    canvas.height = 40;
-    
-    // Draw compact instructor preview
-    ctx.fillStyle = instructor.color || theme.colors.success[500];
-    ctx.fillRect(0, 0, 160, 40);
-    
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 11px Arial';
-    ctx.fillText('👨‍🏫 ' + instructor.name, 8, 25);
-    
-    canvas.toBlob((blob) => {
-      const url = URL.createObjectURL(blob);
-      const img = new Image();
-      img.onload = () => {
-        dragPreview(img);
-        URL.revokeObjectURL(url);
-      };
-      img.src = url;
-    });
-  }, [dragPreview, instructor]);
+  const handleDragEnd = (e) => {
+    setIsDragging(false);
+    if (onDragEnd) onDragEnd(instructor);
+  };
 
   return (
     <div
-      ref={drag}
+      draggable={true}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       className={`bg-white rounded-lg p-3 border border-gray-200 shadow-sm cursor-move transition-all duration-200 ease-in-out ${
         isDragging ? 'opacity-30 scale-95 shadow-xl' : 'hover:shadow-md hover:scale-[1.02] hover:-translate-y-1'
       }`}

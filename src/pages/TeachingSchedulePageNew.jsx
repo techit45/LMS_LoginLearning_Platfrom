@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { DndProvider, useDrag, useDrop, DragPreviewImage } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+// Removed react-dnd imports - using native HTML5 drag and drop
 import { 
   Calendar, 
   Clock, 

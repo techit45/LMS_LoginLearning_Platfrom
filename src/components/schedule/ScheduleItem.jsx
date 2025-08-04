@@ -1,54 +1,36 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useDrag } from 'react-dnd';
 import { Edit3, Trash2, GripVertical, Plus } from 'lucide-react';
-import { ItemTypes } from '@/types/schedule';
-import { theme, adjustBrightness } from '../../lib/theme';
+import { theme } from '../../lib/theme';
 
 const ScheduleItem = ({ 
   schedule, 
   onEdit, 
   onDelete, 
   onResize, 
-  timeSlots = [] 
+  timeSlots = [],
+  onDragStart,
+  onDragEnd
 }) => {
-  const [{ isDragging }, drag, dragPreview] = useDrag({
-    type: ItemTypes.SCHEDULE_ITEM,
-    item: { 
-      type: ItemTypes.SCHEDULE_ITEM,
-      schedule
-    },
-    canDrag: () => !isResizing,
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
+  const [isDragging, setIsDragging] = useState(false);
 
-  // Create custom drag preview
-  useEffect(() => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 200;
-    canvas.height = 60;
-    
-    // Draw compact preview
-    ctx.fillStyle = schedule.course?.companyColor || theme.colors.primary[500];
-    ctx.fillRect(0, 0, 200, 60);
-    
-    ctx.fillStyle = 'white';
-    ctx.font = '12px Arial';
-    ctx.fillText(schedule.course?.name || 'ไม่ระบุวิชา', 8, 20);
-    ctx.fillText(`${schedule.startTime}-${schedule.endTime}`, 8, 40);
-    
-    canvas.toBlob((blob) => {
-      const url = URL.createObjectURL(blob);
-      const img = new Image();
-      img.onload = () => {
-        dragPreview(img);
-        URL.revokeObjectURL(url);
-      };
-      img.src = url;
-    });
-  }, [dragPreview, schedule]);
+  const handleDragStart = (e) => {
+    if (isResizing) {
+      e.preventDefault();
+      return;
+    }
+    setIsDragging(true);
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      type: 'SCHEDULE_ITEM',
+      schedule
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+    if (onDragStart) onDragStart(schedule);
+  };
+
+  const handleDragEnd = (e) => {
+    setIsDragging(false);
+    if (onDragEnd) onDragEnd(schedule);
+  };
 
   const [isResizing, setIsResizing] = useState(false);
   const [resizeStartX, setResizeStartX] = useState(0);
@@ -118,7 +100,9 @@ const ScheduleItem = ({
       {/* Course Header with Drag Handle */}
       <div className="mb-3 flex items-start space-x-2">
         <div 
-          ref={drag}
+          draggable={!isResizing}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
           className={`flex-shrink-0 p-1 rounded transition-colors ${
             isDragging ? 'bg-blue-200 cursor-grabbing' : 'bg-blue-100 hover:bg-blue-200 cursor-move'
           }`}

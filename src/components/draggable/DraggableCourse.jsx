@@ -1,53 +1,30 @@
-import React, { useEffect } from 'react';
-import { useDrag } from 'react-dnd';
+import React, { useState } from 'react';
 import { GripVertical } from 'lucide-react';
-import { ItemTypes } from '@/types/schedule';
-import { theme } from '../../lib/theme';
 
-const DraggableCourse = ({ course, instructors = [] }) => {
-  const [{ isDragging }, drag, dragPreview] = useDrag({
-    type: ItemTypes.COURSE,
-    item: { 
-      type: ItemTypes.COURSE,
+const DraggableCourse = ({ course, instructors = [], onDragStart, onDragEnd }) => {
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragStart = (e) => {
+    setIsDragging(true);
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      type: 'COURSE',
       course,
       instructors
-    },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+    if (onDragStart) onDragStart(course);
+  };
 
-  // Create custom drag preview for course
-  useEffect(() => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 180;
-    canvas.height = 50;
-    
-    // Draw compact course preview
-    ctx.fillStyle = course.companyColor || theme.colors.primary[500];
-    ctx.fillRect(0, 0, 180, 50);
-    
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 11px Arial';
-    ctx.fillText(course.name.substring(0, 20), 8, 18);
-    ctx.font = '9px Arial';
-    ctx.fillText(course.company, 8, 35);
-    
-    canvas.toBlob((blob) => {
-      const url = URL.createObjectURL(blob);
-      const img = new Image();
-      img.onload = () => {
-        dragPreview(img);
-        URL.revokeObjectURL(url);
-      };
-      img.src = url;
-    });
-  }, [dragPreview, course]);
+  const handleDragEnd = (e) => {
+    setIsDragging(false);
+    if (onDragEnd) onDragEnd(course);
+  };
 
   return (
     <div
-      ref={drag}
+      draggable={true}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       className={`bg-white rounded-lg p-3 border-2 border-dashed border-gray-300 shadow-sm cursor-move transition-all duration-200 ease-in-out ${
         isDragging ? 'opacity-30 scale-95 rotate-2 shadow-xl' : 'hover:border-blue-400 hover:shadow-lg hover:scale-[1.02] hover:-translate-y-1'
       }`}
