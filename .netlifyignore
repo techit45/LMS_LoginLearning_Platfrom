@@ -1,0 +1,36 @@
+# Exclude Table_teaching folder (separate Next.js project)
+Table_teaching/
+
+# Exclude development and documentation folders
+development/
+docs/
+project_guides/
+supabase_setup/
+agents/
+sql_scripts/
+
+# Exclude server-side files
+server.js
+server.log
+googleDriveService.js
+credentials/
+
+# Exclude backup and temporary files
+*.backup
+*.log
+dev.log
+frontend.log
+test-*.txt
+train-simulation.js
+
+# Exclude database migrations and scripts
+database/
+sql_scripts/
+
+# Node modules (should be ignored by default, but just in case)
+node_modules/
+Table_teaching/node_modules/
+
+# Other temporary files
+.claude/
+pages/
