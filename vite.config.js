@@ -205,11 +205,18 @@ export default defineConfig({
 		allowedHosts: true,
 	},
 	resolve: {
-		extensions: ['.jsx', '.js', '.tsx', '.ts', '.json', ],
+		extensions: ['.jsx', '.js', '.tsx', '.ts', '.json', '.mjs'],
 		alias: {
 			'@': path.resolve(__dirname, './src'),
 		},
 		dedupe: ['react', 'react-dom'],
+	},
+	optimizeDeps: {
+		include: ['tailwind-merge', 'clsx'],
+		exclude: [],
+		esbuildOptions: {
+			target: 'esnext'
+		}
 	},
 	build: {
 		outDir: 'dist',
@@ -217,14 +224,20 @@ export default defineConfig({
 		sourcemap: false,
 		rollupOptions: {
 			external: (id) => {
-				// Externalize server-side dependencies
+				// Externalize server-side dependencies only
 				const serverDeps = [
 					'express', 'cors', 'formidable', 'googleapis', 
 					'google-auth-library', 'joi', 'dotenv', 'concurrently'
 				];
+				// Don't externalize frontend dependencies like tailwind-merge
+				const frontendDeps = ['tailwind-merge', 'clsx', 'react', 'react-dom'];
+				if (frontendDeps.some(dep => id.includes(dep))) {
+					return false;
+				}
 				return serverDeps.some(dep => id.includes(dep));
 			},
 			output: {
+				format: 'es',
 				manualChunks: (id) => {
 					if (id.includes('node_modules')) {
 						if (id.includes('react/') || id.includes('react-dom/') || id === 'react' || id === 'react-dom') {
