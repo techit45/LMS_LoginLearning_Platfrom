@@ -242,6 +242,9 @@ export default defineConfig({
 				drop_debugger: true
 			}
 		},
+		modulePreload: {
+			polyfill: false
+		},
 		rollupOptions: {
 			onwarn(warning, warn) {
 				// Suppress warnings about disjoint.js and other d3 modules
@@ -305,11 +308,20 @@ export default defineConfig({
 						if (id.includes('crypto') || id.includes('buffer')) {
 							return 'crypto';
 						}
-						// Split remaining vendor dependencies more granularly
+						// Group smaller utilities together to reduce preload overhead
+						if (id.includes('shallowequal') || id.includes('invariant') || 
+							id.includes('react-fast-compare') || id.includes('scheduler')) {
+							return 'react-utils';
+						}
+						// Only create separate chunks for larger packages
 						if (id.includes('node_modules')) {
-							// Try to identify specific packages that might cause issues
 							const packageName = id.split('node_modules/')[1]?.split('/')[0];
-							if (packageName && packageName.length < 20) {
+							// Only separate if package is likely to be large (>5KB typically)
+							const largePackages = [
+								'react-router', 'react-helmet-async', '@remix-run',
+								'framer-motion', 'swiper'
+							];
+							if (largePackages.some(pkg => packageName?.includes(pkg))) {
 								return `vendor-${packageName.replace(/[^a-zA-Z0-9]/g, '_')}`;
 							}
 						}
