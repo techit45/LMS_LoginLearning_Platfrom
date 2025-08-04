@@ -212,12 +212,6 @@ export default defineConfig({
 		assetsDir: 'assets',
 		sourcemap: false,
 		rollupOptions: {
-			external: [
-				'@babel/parser',
-				'@babel/traverse',
-				'@babel/generator',
-				'@babel/types'
-			],
 			output: {
 				manualChunks: (id) => {
 					if (id.includes('node_modules')) {
@@ -226,6 +220,9 @@ export default defineConfig({
 						}
 						if (id.includes('react-router-dom')) {
 							return 'router';
+						}
+						if (id.includes('@radix-ui')) {
+							return 'radix-ui';
 						}
 						if (id.includes('lucide-react') || id.includes('framer-motion')) {
 							return 'ui';
