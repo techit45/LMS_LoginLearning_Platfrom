@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { ToastProvider } from '@/hooks/use-toast.jsx';
 import ToastDisplay from '@/components/ToastDisplay';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { CompanyProvider } from '@/contexts/CompanyContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -31,6 +32,7 @@ const SettingsPageDatabase = React.lazy(() => import('@/pages/SettingsPageDataba
 const ProjectsPage = React.lazy(() => import('@/pages/ProjectsPage'));
 const ProjectDetailPage = React.lazy(() => import('@/pages/ProjectDetailPage'));
 const SystemDiagnosticPage = React.lazy(() => import('@/pages/SystemDiagnosticPage'));
+const TestDrivePage = React.lazy(() => import('@/pages/TestDrivePage'));
 
 // Admin components (lazy loaded)
 const AdminLayout = React.lazy(() => import('@/components/AdminLayout'));
@@ -41,11 +43,18 @@ const AdminCourseContentPage = React.lazy(() => import('@/pages/AdminCourseConte
 const AdminAssignmentGradingPage = React.lazy(() => import('@/pages/AdminAssignmentGradingPage'));
 const AdminProjectsPage = React.lazy(() => import('@/pages/AdminProjectsPage'));
 const TeachingSchedulePageNew = React.lazy(() => import('@/pages/TeachingSchedulePageNew'));
+const AdminGoogleDrivePage = React.lazy(() => import('@/pages/AdminGoogleDrivePage'));
+const GoogleDriveIntegrationTest = React.lazy(() => import('@/components/GoogleDriveIntegrationTest'));
+
+// Company-specific components
+const CompanySelectionPage = React.lazy(() => import('@/pages/CompanySelectionPage'));
+const CompanyLayout = React.lazy(() => import('@/components/CompanyLayout'));
+const CompanyHomePage = React.lazy(() => import('@/pages/CompanyHomePage'));
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    <div className="enhanced-spinner h-16 w-16"></div>
   </div>
 );
 
@@ -56,28 +65,51 @@ const AppLayout = () => {
   
   // Check for recovery URL and redirect before anything else
   React.useEffect(() => {
-    const currentUrl = location.pathname + location.search + location.hash;
+    // Check if this is a Supabase recovery URL (when access_token is in pathname)
+    const pathname = location.pathname;
+    const search = location.search;
+    const hash = location.hash;
+    
+    // Supabase sometimes sends URLs like /access_token=xxx&type=recovery
+    // We need to handle this special case
+    if (pathname.startsWith('/access_token=')) {
+      console.log('🔍 Detected Supabase recovery URL in pathname');
+      
+      // Extract the query string from pathname
+      const queryString = pathname.substring(1); // Remove leading /
+      const urlParams = new URLSearchParams(queryString);
+      
+      if (urlParams.get('type') === 'recovery' && urlParams.get('access_token')) {
+        console.log('🚀 Valid recovery tokens found, redirecting to reset-password');
+        
+        // Redirect to reset-password with the parameters
+        navigate(`/reset-password?${queryString}`, { replace: true });
+        return;
+      }
+    }
+    
+    // Standard recovery URL check (for URLs with proper structure)
+    const currentUrl = pathname + search + hash;
     const hasAccessToken = currentUrl.includes('access_token=');
     const isRecoveryType = currentUrl.includes('type=recovery');
     
     console.log('🔍 AppLayout recovery check:', {
-      pathname: location.pathname,
+      pathname,
+      search,
+      hash,
       hasAccessToken,
       isRecoveryType
     });
     
     // If this is a recovery URL and not already on reset-password
-    if (hasAccessToken && isRecoveryType && location.pathname !== '/reset-password') {
+    if (hasAccessToken && isRecoveryType && pathname !== '/reset-password') {
       console.log('🚀 AppLayout: Recovery URL detected, redirecting to reset-password');
       
       let params = '';
-      if (location.pathname.includes('access_token=')) {
-        const paramString = location.pathname.substring(1);
-        params = '?' + paramString;
-      } else if (location.search) {
-        params = location.search;
-      } else if (location.hash && location.hash.includes('access_token=')) {
-        const hashContent = location.hash.substring(1);
+      if (search) {
+        params = search;
+      } else if (hash && hash.includes('access_token=')) {
+        const hashContent = hash.substring(1);
         params = '?' + hashContent;
       }
       
@@ -129,6 +161,36 @@ const AppLayout = () => {
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           
+          {/* Company Selection */}
+          <Route path="/companies" element={<CompanySelectionPage />} />
+          
+          {/* Company-specific Routes */}
+          <Route path="/company/:companySlug/*" element={
+            <React.Suspense fallback={<LoadingSpinner />}>
+              <CompanyLayout />
+            </React.Suspense>
+          }>
+            <Route index element={<CompanyHomePage />} />
+            <Route path="about" element={<AboutPage />} />
+            <Route path="courses" element={<CoursesPage />} />
+            <Route path="courses/:courseId" element={<CourseDetailPage />} />
+            <Route path="projects" element={<ProjectsPage />} />
+            <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+            <Route path="contact" element={<ContactPage />} />
+            <Route 
+              path="courses/:courseId/learn" 
+              element={
+                <ProtectedRoute>
+                  <CourseLearningPage />
+                </ProtectedRoute>
+              } 
+            />
+            {/* Meta-specific routes */}
+            <Route path="tracks/:track" element={<CoursesPage />} />
+            <Route path="tracks/:track/courses" element={<CoursesPage />} />
+            <Route path="tracks/:track/projects" element={<ProjectsPage />} />
+          </Route>
+          
           <Route 
             path="/dashboard" 
             element={
@@ -164,6 +226,15 @@ const AppLayout = () => {
           />
           
           <Route 
+            path="/test-drive" 
+            element={
+              <AdminRoute>
+                <TestDrivePage />
+              </AdminRoute>
+            } 
+          />
+          
+          <Route 
             path="/admin/*" 
             element={
               <AdminRoute>
@@ -180,7 +251,12 @@ const AppLayout = () => {
             <Route path="assignments/:assignmentId/grading" element={<AdminAssignmentGradingPage />} />
             <Route path="projects" element={<AdminProjectsPage />} />
             <Route path="teaching-schedule" element={<TeachingSchedulePageNew />} />
+            <Route path="google-drive" element={<AdminGoogleDrivePage />} />
+            <Route path="google-drive-test" element={<GoogleDriveIntegrationTest />} />
           </Route>
+          
+          {/* Catch-all route for Supabase recovery URLs */}
+          <Route path="*" element={null} />
         </Routes>
       </main>
       <Footer />
@@ -207,9 +283,11 @@ function App() {
             }}
           >
             <AuthProvider>
-              <React.Suspense fallback={<LoadingSpinner />}>
-                <AppLayout />
-              </React.Suspense>
+              <CompanyProvider>
+                <React.Suspense fallback={<LoadingSpinner />}>
+                  <AppLayout />
+                </React.Suspense>
+              </CompanyProvider>
             </AuthProvider>
           </Router>
         </ToastProvider>

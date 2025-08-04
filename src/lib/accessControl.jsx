@@ -3,6 +3,8 @@
 // ระบบควบคุมการเข้าถึงฟีเจอร์ต่างๆ
 // ==========================================
 
+import React from 'react';
+
 /**
  * User roles and permissions
  */
@@ -360,7 +362,7 @@ export const withAccessControl = (
 
       return (
         <div className="p-4 text-center text-gray-500">
-          <p>คุณไม่มีสิทธิ์เข้าถึงฟีเจอร์นี้</p>
+          <p>You do not have permission to access this feature</p>
         </div>
       );
     }

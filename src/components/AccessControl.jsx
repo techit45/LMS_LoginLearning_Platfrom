@@ -5,7 +5,7 @@ import {
   hasAnyPermission,
   validateUserAction,
   ROLES,
-} from "@/lib/accessControl";
+} from "@/lib/accessControl.jsx";
 import { AlertTriangle, Lock, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 

@@ -1,7 +1,7 @@
 import { supabase } from "./supabaseClient";
 
 // ตัดฟังก์ชัน progress tracking ออกไปก่อน - ไม่ต้องใช้งาน
-// /**
+/* /**
 //  * Mark content as viewed by the user
 //  * @param {string} contentId - The content ID
 //  * @returns {Promise<{data: Object, error: Error}>}
@@ -330,7 +330,6 @@ const updateCourseCompletionStatus = async (courseId) => {
     console.error("Error in updateCourseCompletionStatus:", error);
     return { data: null, error };
   }
-  */
-  // ตัดฟังก์ชัน progress tracking ออกไปก่อน - ไม่ต้องใช้งาน
+  // ตัดฟังก์ชัน progress tracking ออกไปก่อน - ไม่ต้องใช้งาน */
   return { data: { disabled: true, completed: false, completion_percentage: 0 }, error: null };
 };
