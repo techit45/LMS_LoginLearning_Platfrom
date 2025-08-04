@@ -219,11 +219,7 @@ export default defineConfig({
 			'@radix-ui/react-toast',
 			'lucide-react',
 			'react-helmet-async',
-			'framer-motion',
-			'recharts',
-			'd3-array',
-			'd3-scale',
-			'd3-shape'
+			'framer-motion'
 		],
 		exclude: [],
 		esbuildOptions: {
@@ -259,8 +255,8 @@ export default defineConfig({
 					'express', 'cors', 'formidable', 'googleapis', 
 					'google-auth-library', 'joi', 'dotenv', 'concurrently'
 				];
-				// Don't externalize frontend dependencies including d3 modules
-				const frontendDeps = ['clsx', 'react', 'react-dom', 'd3-', 'recharts'];
+				// Don't externalize frontend dependencies
+				const frontendDeps = ['clsx', 'react', 'react-dom'];
 				if (frontendDeps.some(dep => id.includes(dep))) {
 					return false;
 				}
@@ -284,9 +280,6 @@ export default defineConfig({
 						}
 						if (id.includes('framer-motion')) {
 							return 'animations';
-						}
-						if (id.includes('recharts')) {
-							return 'charts';
 						}
 						if (id.includes('@supabase')) {
 							return 'supabase';

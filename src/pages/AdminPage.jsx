@@ -36,7 +36,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { getDashboardStats, getRecentActivity, getSystemHealth } from '../lib/dashboardService';
-import AdminAnalyticsDashboard from '@/components/AdminAnalyticsDashboard';
+import AdminAnalyticsDashboardSimple from '../components/AdminAnalyticsDashboardSimple';
 
 const AdminPage = () => {
   const { user } = useAuth();
@@ -635,7 +635,7 @@ const AdminPage = () => {
       case 'overview':
         return renderOverview();
       case 'analytics':
-        return <AdminAnalyticsDashboard />;
+        return <AdminAnalyticsDashboardSimple />;
       case 'users':
         return (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
