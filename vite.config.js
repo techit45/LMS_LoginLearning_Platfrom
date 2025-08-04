@@ -219,7 +219,11 @@ export default defineConfig({
 			'@radix-ui/react-toast',
 			'lucide-react',
 			'react-helmet-async',
-			'framer-motion'
+			'framer-motion',
+			'recharts',
+			'd3-array',
+			'd3-scale',
+			'd3-shape'
 		],
 		exclude: [],
 		esbuildOptions: {
@@ -240,14 +244,23 @@ export default defineConfig({
 		},
 		target: 'esnext',
 		rollupOptions: {
+			onwarn(warning, warn) {
+				// Suppress warnings about disjoint.js and other d3 modules
+				if (warning.code === 'CIRCULAR_DEPENDENCY' || 
+					warning.message.includes('disjoint.js') ||
+					warning.message.includes('d3-')) {
+					return;
+				}
+				warn(warning);
+			},
 			external: (id) => {
 				// Externalize server-side dependencies only
 				const serverDeps = [
 					'express', 'cors', 'formidable', 'googleapis', 
 					'google-auth-library', 'joi', 'dotenv', 'concurrently'
 				];
-				// Don't externalize frontend dependencies
-				const frontendDeps = ['clsx', 'react', 'react-dom'];
+				// Don't externalize frontend dependencies including d3 modules
+				const frontendDeps = ['clsx', 'react', 'react-dom', 'd3-', 'recharts'];
 				if (frontendDeps.some(dep => id.includes(dep))) {
 					return false;
 				}
