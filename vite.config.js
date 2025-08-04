@@ -223,9 +223,9 @@ export default defineConfig({
 		],
 		exclude: [],
 		esbuildOptions: {
-			target: 'esnext',
+			target: 'es2020',
 			supported: {
-				'top-level-await': true
+				'top-level-await': false
 			}
 		},
 		force: true
@@ -234,11 +234,14 @@ export default defineConfig({
 		outDir: 'dist',
 		assetsDir: 'assets',
 		sourcemap: false,
-		commonjsOptions: {
-			esmExternals: true,
-			transformMixedEsModules: true
+		target: 'es2020',
+		minify: 'terser',
+		terserOptions: {
+			compress: {
+				drop_console: true,
+				drop_debugger: true
+			}
 		},
-		target: 'esnext',
 		rollupOptions: {
 			onwarn(warning, warn) {
 				// Suppress warnings about disjoint.js and other d3 modules
@@ -295,6 +298,20 @@ export default defineConfig({
 						}
 						if (id.includes('promptpay-qr') || id.includes('qrcode')) {
 							return 'qr';
+						}
+						if (id.includes('joi') || id.includes('validator')) {
+							return 'validation';
+						}
+						if (id.includes('crypto') || id.includes('buffer')) {
+							return 'crypto';
+						}
+						// Split remaining vendor dependencies more granularly
+						if (id.includes('node_modules')) {
+							// Try to identify specific packages that might cause issues
+							const packageName = id.split('node_modules/')[1]?.split('/')[0];
+							if (packageName && packageName.length < 20) {
+								return `vendor-${packageName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+							}
 						}
 						return 'vendor-misc';
 					}
