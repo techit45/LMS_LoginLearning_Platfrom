@@ -3,10 +3,10 @@ import { Helmet } from "react-helmet-async";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { LogIn, Mail, Lock, AlertCircle, CheckCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../hooks/use-toast";
 import { loginSchema } from "../lib/validationSchemas";
 import { supabase } from "../lib/supabaseClient";
 

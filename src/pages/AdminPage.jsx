@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   Users, 
   BookOpenText, 
@@ -32,8 +32,8 @@ import {
   Cloud
 } from 'lucide-react';
 // Recharts import removed to fix ESM module issues
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '../components/ui/button';
+import { useToast } from '../hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { getDashboardStats, getRecentActivity, getSystemHealth } from '../lib/dashboardService';
 import AdminAnalyticsDashboardSimple from '../components/AdminAnalyticsDashboardSimple';
