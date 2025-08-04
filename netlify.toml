@@ -56,6 +56,17 @@
   [headers.values]
     Content-Type = "application/javascript; charset=utf-8"
 
+# Handle ES modules specifically
+[[headers]]
+  for = "*.mjs"
+  [headers.values]
+    Content-Type = "application/javascript; charset=utf-8"
+
+[[headers]]
+  for = "/assets/*.mjs"
+  [headers.values]
+    Content-Type = "application/javascript; charset=utf-8"
+
 # Cache images
 [[headers]]
   for = "/images/*"

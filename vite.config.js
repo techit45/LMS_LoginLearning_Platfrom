@@ -212,16 +212,34 @@ export default defineConfig({
 		dedupe: ['react', 'react-dom'],
 	},
 	optimizeDeps: {
-		include: ['tailwind-merge', 'clsx'],
+		include: [
+			'tailwind-merge', 
+			'clsx',
+			'@radix-ui/react-slot',
+			'@radix-ui/react-dialog',
+			'@radix-ui/react-toast',
+			'lucide-react',
+			'react-helmet-async',
+			'framer-motion'
+		],
 		exclude: [],
 		esbuildOptions: {
-			target: 'esnext'
-		}
+			target: 'esnext',
+			supported: {
+				'top-level-await': true
+			}
+		},
+		force: true
 	},
 	build: {
 		outDir: 'dist',
 		assetsDir: 'assets',
 		sourcemap: false,
+		commonjsOptions: {
+			esmExternals: true,
+			transformMixedEsModules: true
+		},
+		target: 'esnext',
 		rollupOptions: {
 			external: (id) => {
 				// Externalize server-side dependencies only
