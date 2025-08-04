@@ -217,8 +217,12 @@ export default defineConfig({
 		sourcemap: false,
 		rollupOptions: {
 			external: (id) => {
-				// Don't externalize React - we need it bundled
-				return false;
+				// Externalize server-side dependencies
+				const serverDeps = [
+					'express', 'cors', 'formidable', 'googleapis', 
+					'google-auth-library', 'joi', 'dotenv', 'concurrently'
+				];
+				return serverDeps.some(dep => id.includes(dep));
 			},
 			output: {
 				manualChunks: (id) => {
@@ -243,6 +247,18 @@ export default defineConfig({
 						}
 						if (id.includes('@supabase')) {
 							return 'supabase';
+						}
+						if (id.includes('clsx') || id.includes('tailwind-merge')) {
+							return 'utils';
+						}
+						if (id.includes('dompurify')) {
+							return 'sanitizer';
+						}
+						if (id.includes('swiper')) {
+							return 'slider';
+						}
+						if (id.includes('promptpay-qr') || id.includes('qrcode')) {
+							return 'qr';
 						}
 						return 'vendor-misc';
 					}
