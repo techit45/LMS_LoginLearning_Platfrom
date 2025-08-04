@@ -1,8 +1,9 @@
+import './lib/reactCompat'; // Load React compatibility layer first
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from '@/App';
-import '@/index.css';
-import { initializeApp } from '@/utils/envValidation';
+import App from './App';
+import './index.css';
+import { initializeApp } from './utils/envValidation';
 
 // Validate environment before starting app
 const isValidEnvironment = initializeApp();

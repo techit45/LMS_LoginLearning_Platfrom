@@ -209,16 +209,21 @@ export default defineConfig({
 		alias: {
 			'@': path.resolve(__dirname, './src'),
 		},
+		dedupe: ['react', 'react-dom'],
 	},
 	build: {
 		outDir: 'dist',
 		assetsDir: 'assets',
 		sourcemap: false,
 		rollupOptions: {
+			external: (id) => {
+				// Don't externalize React - we need it bundled
+				return false;
+			},
 			output: {
 				manualChunks: (id) => {
 					if (id.includes('node_modules')) {
-						if (id.includes('react') || id.includes('react-dom')) {
+						if (id.includes('react/') || id.includes('react-dom/') || id === 'react' || id === 'react-dom') {
 							return 'react-vendor';
 						}
 						if (id.includes('react-router-dom')) {
