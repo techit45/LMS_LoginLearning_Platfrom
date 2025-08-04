@@ -31,7 +31,7 @@ import {
   Wifi,
   Cloud
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+// Recharts import removed to fix ESM module issues
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
@@ -336,38 +336,12 @@ const AdminPage = () => {
             <TrendingUp className="w-5 h-5 mr-2 text-blue-600" />
             การเติบโตของผู้ใช้ (7 วันล่าสุด)
           </h2>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData.userGrowth}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="date" stroke="#666" fontSize={12} />
-                <YAxis stroke="#666" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="users" 
-                  stroke="#3b82f6" 
-                  strokeWidth={3}
-                  dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                  name="ผู้ใช้ใหม่"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="enrollments" 
-                  stroke="#10b981" 
-                  strokeWidth={3}
-                  dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-                  name="การลงทะเบียน"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
+            <div className="text-center">
+              <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-500">Charts temporarily disabled</p>
+              <p className="text-sm text-gray-400">Will be restored once module issues are resolved</p>
+            </div>
           </div>
         </div>
 
@@ -377,33 +351,12 @@ const AdminPage = () => {
             <BookOpenText className="w-5 h-5 mr-2 text-green-600" />
             สถานะคอร์สเรียน
           </h2>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chartData.courseStats}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={80}
-                  dataKey="value"
-                  label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
-                  labelLine={false}
-                >
-                  {chartData.courseStats.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
+            <div className="text-center">
+              <BookOpenText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-500">Charts temporarily disabled</p>
+              <p className="text-sm text-gray-400">Will be restored once module issues are resolved</p>
+            </div>
           </div>
         </div>
       </div>
@@ -414,27 +367,12 @@ const AdminPage = () => {
           <Code2 className="w-5 h-5 mr-2 text-purple-600" />
           สถิติโครงงาน
         </h2>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData.projectStats} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" stroke="#666" fontSize={12} />
-              <YAxis stroke="#666" fontSize={12} />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'white', 
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                }}
-              />
-              <Bar 
-                dataKey="count" 
-                radius={[4, 4, 0, 0]}
-                fill="#8b5cf6"
-              />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
+          <div className="text-center">
+            <Code2 className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+            <p className="text-gray-500">Charts temporarily disabled</p>
+            <p className="text-sm text-gray-400">Will be restored once module issues are resolved</p>
+          </div>
         </div>
       </div>
 
