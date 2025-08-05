@@ -16,7 +16,7 @@ import { Input } from '../components/ui/input';
 import { useToast } from '../hooks/use-toast.jsx';
 import { supabase } from '../lib/supabaseClient';
 import SEOHead from '../components/SEOHead';
-import Joi from 'joi';
+import { resetPasswordSchema } from '../lib/validationSchemas';
 
 const ResetPasswordPageNew = () => {
   const [formData, setFormData] = useState({
@@ -34,26 +34,7 @@ const ResetPasswordPageNew = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Password validation schema
-  const passwordSchema = Joi.object({
-    password: Joi.string()
-      .min(8)
-      .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-      .required()
-      .messages({
-        'string.empty': 'กรุณากรอกรหัสผ่าน',
-        'string.min': 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร',
-        'string.pattern.base': 'รหัสผ่านต้องมีตัวพิมพ์เล็ก, พิมพ์ใหญ่, และตัวเลข',
-        'any.required': 'กรุณากรอกรหัสผ่าน'
-      }),
-    confirmPassword: Joi.string()
-      .valid(Joi.ref('password'))
-      .required()
-      .messages({
-        'any.only': 'รหัสผ่านไม่ตรงกัน',
-        'any.required': 'กรุณายืนยันรหัสผ่าน'
-      })
-  });
+  // Using custom validation schema
 
   // ✅ SIMPLE SESSION CHECK - NO COMPLEX LISTENERS
   useEffect(() => {
@@ -115,7 +96,7 @@ const ResetPasswordPageNew = () => {
   };
 
   const validateForm = () => {
-    const { error } = passwordSchema.validate(formData, { abortEarly: false });
+    const { error } = resetPasswordSchema.validate(formData);
     
     if (error) {
       const newErrors = {};

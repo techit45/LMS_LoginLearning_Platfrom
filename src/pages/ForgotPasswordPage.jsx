@@ -14,7 +14,7 @@ import { Input } from '../components/ui/input';
 import { useToast } from '../hooks/use-toast.jsx';
 import { supabase } from '../lib/supabaseClient';
 import SEOHead from '../components/SEOHead';
-import Joi from 'joi';
+import { forgotPasswordSchema } from '../lib/validationSchemas';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
@@ -25,17 +25,7 @@ const ForgotPasswordPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Email validation schema
-  const emailSchema = Joi.object({
-    email: Joi.string()
-      .email({ tlds: { allow: false } })
-      .required()
-      .messages({
-        'string.empty': 'กรุณากรอกอีเมล',
-        'string.email': 'รูปแบบอีเมลไม่ถูกต้อง',
-        'any.required': 'กรุณากรอกอีเมล'
-      })
-  });
+  // Email validation using custom schema
 
   const handleInputChange = (e) => {
     setEmail(e.target.value);
@@ -47,7 +37,7 @@ const ForgotPasswordPage = () => {
   };
 
   const validateForm = () => {
-    const { error } = emailSchema.validate({ email }, { abortEarly: false });
+    const { error } = forgotPasswordSchema.validate({ email });
     
     if (error) {
       const newErrors = {};

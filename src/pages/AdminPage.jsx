@@ -35,8 +35,9 @@ import {
 import { Button } from '../components/ui/button';
 import { useToast } from '../hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
-import { getDashboardStats, getRecentActivity, getSystemHealth } from '../lib/dashboardService';
+import { getDashboardStats, getRecentActivity, getSystemHealth, getUserGrowthData } from '../lib/dashboardService';
 import AdminAnalyticsDashboardSimple from '../components/AdminAnalyticsDashboardSimple';
+import SimpleCharts from '../components/SimpleCharts';
 
 const AdminPage = () => {
   const { user } = useAuth();
@@ -51,6 +52,11 @@ const AdminPage = () => {
     userGrowth: [],
     courseStats: [],
     projectStats: []
+  });
+  const [realChartData, setRealChartData] = useState({
+    userGrowthData: [],
+    courseStatsData: [],
+    projectStatsData: []
   });
 
   // Load dashboard data from real database
@@ -87,6 +93,7 @@ const AdminPage = () => {
         // Generate chart data
         if (stats) {
           generateChartData(stats);
+          await loadRealChartData(stats);
         }
 
       } catch (error) {
@@ -103,6 +110,47 @@ const AdminPage = () => {
 
     loadDashboardData();
   }, [toast]);
+
+  // Load real chart data from database
+  const loadRealChartData = async (stats) => {
+    try {
+      // Get real user growth data
+      const { data: userGrowthData, error: growthError } = await getUserGrowthData();
+      
+      if (!growthError && userGrowthData) {
+        // Take last 7 days for display
+        const recentGrowthData = userGrowthData.slice(-7);
+        
+        setRealChartData(prevData => ({
+          ...prevData,
+          userGrowthData: recentGrowthData
+        }));
+      }
+
+      // Course statistics for pie chart
+      const courseStatsData = [
+        { name: 'เปิดใช้งาน', value: stats.activeCourses, count: stats.activeCourses },
+        { name: 'ร่าง', value: stats.draftCourses, count: stats.draftCourses },
+        { name: 'ปิดใช้งาน', value: Math.max(0, stats.totalCourses - stats.activeCourses - stats.draftCourses), count: Math.max(0, stats.totalCourses - stats.activeCourses - stats.draftCourses) }
+      ].filter(item => item.value > 0); // Only show categories with data
+
+      // Project statistics for bar chart
+      const projectStatsData = [
+        { name: 'อนุมัติแล้ว', count: stats.approvedProjects },
+        { name: 'รออนุมัติ', count: stats.pendingApproval },
+        { name: 'แนะนำ', count: stats.featuredProjects }
+      ];
+
+      setRealChartData(prevData => ({
+        ...prevData,
+        courseStatsData,
+        projectStatsData
+      }));
+
+    } catch (error) {
+      console.error('Error loading real chart data:', error);
+    }
+  };
 
   // Generate chart data for analytics
   const generateChartData = (stats) => {
@@ -336,13 +384,10 @@ const AdminPage = () => {
             <TrendingUp className="w-5 h-5 mr-2 text-blue-600" />
             การเติบโตของผู้ใช้ (7 วันล่าสุด)
           </h2>
-          <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-            <div className="text-center">
-              <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-500">Charts temporarily disabled</p>
-              <p className="text-sm text-gray-400">Will be restored once module issues are resolved</p>
-            </div>
-          </div>
+          <SimpleCharts.BarChart 
+            data={realChartData.userGrowthData}
+            height={200}
+          />
         </div>
 
         {/* Course Status Distribution */}
@@ -351,13 +396,10 @@ const AdminPage = () => {
             <BookOpenText className="w-5 h-5 mr-2 text-green-600" />
             สถานะคอร์สเรียน
           </h2>
-          <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-            <div className="text-center">
-              <BookOpenText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-500">Charts temporarily disabled</p>
-              <p className="text-sm text-gray-400">Will be restored once module issues are resolved</p>
-            </div>
-          </div>
+          <SimpleCharts.PieChart 
+            data={realChartData.courseStatsData}
+            size={200}
+          />
         </div>
       </div>
 
@@ -367,13 +409,10 @@ const AdminPage = () => {
           <Code2 className="w-5 h-5 mr-2 text-purple-600" />
           สถิติโครงงาน
         </h2>
-        <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-          <div className="text-center">
-            <Code2 className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-500">Charts temporarily disabled</p>
-            <p className="text-sm text-gray-400">Will be restored once module issues are resolved</p>
-          </div>
-        </div>
+        <SimpleCharts.BarChart 
+          data={realChartData.projectStatsData}
+          height={240}
+        />
       </div>
 
       {/* Two Column Layout */}

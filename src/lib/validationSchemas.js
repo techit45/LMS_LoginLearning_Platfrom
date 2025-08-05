@@ -1,111 +1,215 @@
-import Joi from 'joi';
+// Custom validation schemas (replacing Joi for browser compatibility)
 
-export const loginSchema = Joi.object({
-  email: Joi.string().email({ tlds: { allow: false } }).required().messages({
-    'string.empty': 'กรุณากรอกอีเมล',
-    'string.email': 'รูปแบบอีเมลไม่ถูกต้อง',
-    'any.required': 'กรุณากรอกอีเมล'
-  }),
-  password: Joi.string().min(8).required().messages({
-    'string.empty': 'กรุณากรอกรหัสผ่าน',
-    'string.min': 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร',
-    'any.required': 'กรุณากรอกรหัสผ่าน'
-  })
+const createValidationError = (message, path) => ({
+  error: { details: [{ message, path }] }
 });
 
-export const signupSchema = Joi.object({
-  fullName: Joi.string().trim().min(3).required().messages({
-    'string.empty': 'กรุณากรอกชื่อ-นามสกุล',
-    'string.min': 'ชื่อต้องมีอย่างน้อย 3 ตัวอักษร',
-    'any.required': 'กรุณากรอกชื่อ-นามสกุล'
-  }),
-  email: Joi.string().email({ tlds: { allow: false } }).required().messages({
-    'string.empty': 'กรุณากรอกอีเมล',
-    'string.email': 'รูปแบบอีเมลไม่ถูกต้อง',
-    'any.required': 'กรุณากรอกอีเมล'
-  }),
-  password: Joi.string()
-    .min(8)
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .required()
-    .messages({
-      'string.empty': 'กรุณากรอกรหัสผ่าน',
-      'string.min': 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร',
-      'string.pattern.base': 'รหัสผ่านต้องมีตัวพิมพ์เล็ก, พิมพ์ใหญ่, และตัวเลข',
-      'any.required': 'กรุณากรอกรหัสผ่าน'
-    })
-});
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
 
-export const courseSchema = Joi.object({
-  title: Joi.string().trim().min(5).required().messages({
-    'string.empty': 'กรุณากรอกชื่อคอร์ส',
-    'string.min': 'ชื่อคอร์สต้องมีอย่างน้อย 5 ตัวอักษร',
-    'any.required': 'กรุณากรอกชื่อคอร์ส'
-  }),
-  description: Joi.string().trim().min(20).required().messages({
-    'string.empty': 'กรุณากรอกคำอธิบายคอร์ส',
-    'string.min': 'คำอธิบายต้องมีอย่างน้อย 20 ตัวอักษร',
-    'any.required': 'กรุณากรอกคำอธิบายคอร์ส'
-  }),
-  category: Joi.string().required().messages({
-    'string.empty': 'กรุณาเลือกหมวดหมู่',
-    'any.required': 'กรุณาเลือกหมวดหมู่'
-  }),
-  level: Joi.string().valid('beginner', 'intermediate', 'advanced').default('beginner').messages({
-    'any.only': 'ระดับความยากต้องเป็น beginner, intermediate, หรือ advanced'
-  }),
-  duration_hours: Joi.number().integer().min(1).required().messages({
-    'number.base': 'ระยะเวลาต้องเป็นตัวเลข',
-    'number.integer': 'ระยะเวลาต้องเป็นจำนวนเต็ม',
-    'number.min': 'ระยะเวลาต้องมากกว่า 0 ชั่วโมง',
-    'any.required': 'กรุณากรอกระยะเวลาของคอร์ส'
-  }),
-  price: Joi.number().min(0).default(0).messages({
-    'number.base': 'ราคาต้องเป็นตัวเลข',
-    'number.min': 'ราคาต้องไม่น้อยกว่า 0'
-  }),
-  max_students: Joi.number().integer().min(1).required().messages({
-    'number.base': 'จำนวนนักเรียนต้องเป็นตัวเลข',
-    'number.integer': 'จำนวนนักเรียนต้องเป็นจำนวนเต็ม',
-    'number.min': 'จำนวนนักเรียนต้องมากกว่า 0',
-    'any.required': 'กรุณากรอกจำนวนนักเรียนสูงสุด'
-  }),
-  is_active: Joi.boolean().default(true),
-  is_featured: Joi.boolean().default(false),
-  thumbnail_url: Joi.string().uri({ allowRelative: true }).allow('', null).messages({
-    'string.uri': 'URL รูปภาพไม่ถูกต้อง'
-  }),
-  instructor_name: Joi.string().allow('', null),
-  instructor_email: Joi.string().email({ tlds: { allow: false } }).allow('', null).messages({
-    'string.email': 'รูปแบบอีเมลผู้สอนไม่ถูกต้อง'
-  })
-});
+const validatePassword = (password) => {
+  return password && password.length >= 8;
+};
 
-export const projectSchema = Joi.object({
-  title: Joi.string().trim().min(5).required().messages({
-    'string.empty': 'กรุณากรอกชื่อโครงงาน',
-    'string.min': 'ชื่อโครงงานต้องมีอย่างน้อย 5 ตัวอักษร',
-    'any.required': 'กรุณากรอกชื่อโครงงาน'
-  }),
-  description: Joi.string().trim().min(20).required().messages({
-    'string.empty': 'กรุณากรอกคำอธิบายโครงงาน',
-    'string.min': 'คำอธิบายต้องมีอย่างน้อย 20 ตัวอักษร',
-    'any.required': 'กรุณากรอกคำอธิบายโครงงาน'
-  }),
-  category: Joi.string().required().messages({
-    'string.empty': 'กรุณาเลือกหมวดหมู่',
-    'any.required': 'กรุณาเลือกหมวดหมู่'
-  }),
-  short_description: Joi.string().allow('', null),
-  difficulty_level: Joi.string().valid('beginner', 'intermediate', 'advanced').default('beginner'),
-  demo_url: Joi.string().trim().uri({ allowRelative: true }).allow('', null).messages({
-    'string.uri': 'รูปแบบลิงก์โครงงานไม่ถูกต้อง'
-  }),
-  github_url: Joi.string().trim().uri({ allowRelative: true }).allow('', null).messages({
-    'string.uri': 'รูปแบบลิงก์ GitHub ไม่ถูกต้อง'
-  }),
-  thumbnail_url: Joi.string().allow('', null),
-  technologies: Joi.array().items(Joi.string()).default([]),
-  tags: Joi.array().items(Joi.string()).default([]),
-  is_featured: Joi.boolean().default(false)
-});
+const validateStrongPassword = (password) => {
+  const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
+  return password && password.length >= 8 && strongPasswordRegex.test(password);
+};
+
+const validateUrl = (url) => {
+  if (!url || url === '') return true; // Allow empty
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const loginSchema = {
+  validate: (data) => {
+    const errors = [];
+
+    if (!data.email) {
+      errors.push({ message: 'กรุณากรอกอีเมล', path: ['email'] });
+    } else if (!validateEmail(data.email)) {
+      errors.push({ message: 'รูปแบบอีเมลไม่ถูกต้อง', path: ['email'] });
+    }
+
+    if (!data.password) {
+      errors.push({ message: 'กรุณากรอกรหัสผ่าน', path: ['password'] });
+    } else if (!validatePassword(data.password)) {
+      errors.push({ message: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร', path: ['password'] });
+    }
+
+    if (errors.length > 0) {
+      return { error: { details: errors } };
+    }
+
+    return { value: data };
+  }
+};
+
+export const signupSchema = {
+  validate: (data) => {
+    const errors = [];
+
+    if (!data.fullName || data.fullName.trim().length < 3) {
+      errors.push({ message: 'ชื่อต้องมีอย่างน้อย 3 ตัวอักษร', path: ['fullName'] });
+    }
+
+    if (!data.email) {
+      errors.push({ message: 'กรุณากรอกอีเมล', path: ['email'] });
+    } else if (!validateEmail(data.email)) {
+      errors.push({ message: 'รูปแบบอีเมลไม่ถูกต้อง', path: ['email'] });
+    }
+
+    if (!data.password) {
+      errors.push({ message: 'กรุณากรอกรหัสผ่าน', path: ['password'] });
+    } else if (!validateStrongPassword(data.password)) {
+      errors.push({ message: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร และมีตัวพิมพ์เล็ก, พิมพ์ใหญ่, และตัวเลข', path: ['password'] });
+    }
+
+    if (errors.length > 0) {
+      return { error: { details: errors } };
+    }
+
+    return { value: data };
+  }
+};
+
+export const courseSchema = {
+  validate: (data) => {
+    const errors = [];
+
+    if (!data.title || data.title.trim().length < 5) {
+      errors.push({ message: 'ชื่อคอร์สต้องมีอย่างน้อย 5 ตัวอักษร', path: ['title'] });
+    }
+
+    if (!data.description || data.description.trim().length < 20) {
+      errors.push({ message: 'คำอธิบายต้องมีอย่างน้อย 20 ตัวอักษร', path: ['description'] });
+    }
+
+    if (!data.category) {
+      errors.push({ message: 'กรุณาเลือกหมวดหมู่', path: ['category'] });
+    }
+
+    if (data.duration_hours && (isNaN(data.duration_hours) || data.duration_hours < 1)) {
+      errors.push({ message: 'ระยะเวลาต้องเป็นตัวเลขมากกว่า 0', path: ['duration_hours'] });
+    }
+
+    if (data.max_students && (isNaN(data.max_students) || data.max_students < 1)) {
+      errors.push({ message: 'จำนวนนักเรียนต้องเป็นตัวเลขมากกว่า 0', path: ['max_students'] });
+    }
+
+    if (data.thumbnail_url && !validateUrl(data.thumbnail_url)) {
+      errors.push({ message: 'URL รูปภาพไม่ถูกต้อง', path: ['thumbnail_url'] });
+    }
+
+    if (data.instructor_email && !validateEmail(data.instructor_email)) {
+      errors.push({ message: 'รูปแบบอีเมลผู้สอนไม่ถูกต้อง', path: ['instructor_email'] });
+    }
+
+    if (errors.length > 0) {
+      return { error: { details: errors } };
+    }
+
+    // Set defaults
+    const value = {
+      ...data,
+      level: data.level || 'beginner',
+      price: data.price || 0,
+      is_active: data.is_active !== undefined ? data.is_active : true,
+      is_featured: data.is_featured !== undefined ? data.is_featured : false
+    };
+
+    return { value };
+  }
+};
+
+export const projectSchema = {
+  validate: (data) => {
+    const errors = [];
+
+    if (!data.title || data.title.trim().length < 5) {
+      errors.push({ message: 'ชื่อโครงงานต้องมีอย่างน้อย 5 ตัวอักษร', path: ['title'] });
+    }
+
+    if (!data.description || data.description.trim().length < 20) {
+      errors.push({ message: 'คำอธิบายต้องมีอย่างน้อย 20 ตัวอักษร', path: ['description'] });
+    }
+
+    if (!data.category) {
+      errors.push({ message: 'กรุณาเลือกหมวดหมู่', path: ['category'] });
+    }
+
+    if (data.demo_url && !validateUrl(data.demo_url)) {
+      errors.push({ message: 'รูปแบบลิงก์โครงงานไม่ถูกต้อง', path: ['demo_url'] });
+    }
+
+    if (data.github_url && !validateUrl(data.github_url)) {
+      errors.push({ message: 'รูปแบบลิงก์ GitHub ไม่ถูกต้อง', path: ['github_url'] });
+    }
+
+    if (errors.length > 0) {
+      return { error: { details: errors } };
+    }
+
+    // Set defaults
+    const value = {
+      ...data,
+      difficulty_level: data.difficulty_level || 'beginner',
+      technologies: data.technologies || [],
+      tags: data.tags || [],
+      is_featured: data.is_featured !== undefined ? data.is_featured : false
+    };
+
+    return { value };
+  }
+};
+
+// Password reset schema
+export const resetPasswordSchema = {
+  validate: (data) => {
+    const errors = [];
+
+    if (!data.password) {
+      errors.push({ message: 'กรุณากรอกรหัสผ่านใหม่', path: ['password'] });
+    } else if (!validateStrongPassword(data.password)) {
+      errors.push({ message: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร และมีตัวพิมพ์เล็ก, พิมพ์ใหญ่, และตัวเลข', path: ['password'] });
+    }
+
+    if (!data.confirmPassword) {
+      errors.push({ message: 'กรุณายืนยันรหัสผ่าน', path: ['confirmPassword'] });
+    } else if (data.password !== data.confirmPassword) {
+      errors.push({ message: 'รหัสผ่านไม่ตรงกัน', path: ['confirmPassword'] });
+    }
+
+    if (errors.length > 0) {
+      return { error: { details: errors } };
+    }
+
+    return { value: data };
+  }
+};
+
+// Forgot password schema
+export const forgotPasswordSchema = {
+  validate: (data) => {
+    const errors = [];
+
+    if (!data.email) {
+      errors.push({ message: 'กรุณากรอกอีเมล', path: ['email'] });
+    } else if (!validateEmail(data.email)) {
+      errors.push({ message: 'รูปแบบอีเมลไม่ถูกต้อง', path: ['email'] });
+    }
+
+    if (errors.length > 0) {
+      return { error: { details: errors } };
+    }
+
+    return { value: data };
+  }
+};
