@@ -1,17 +1,29 @@
 // Google Drive Integration Client Service (Frontend)
 
-// Detect if we're in production (Vercel deployment)
-const isProduction = window.location.hostname !== 'localhost' && 
-                     window.location.hostname !== '127.0.0.1' && 
-                     !window.location.hostname.includes('localhost');
+// More reliable production detection
+const isLocalhost = window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1' ||
+                   window.location.port === '5173' ||
+                   window.location.port === '5174';
 
-const BASE_URL = isProduction
-  ? '/api/drive'  // Production (Vercel) - use relative path
-  : 'http://127.0.0.1:3001/api/drive';  // Local development
+// Force production path if hostname contains vercel.app
+const isVercelProduction = window.location.hostname.includes('vercel.app');
+
+let BASE_URL;
+if (isVercelProduction) {
+  BASE_URL = '/api/drive';  // Force Vercel production path
+} else if (isLocalhost) {
+  BASE_URL = 'http://127.0.0.1:3001/api/drive';  // Local development
+} else {
+  BASE_URL = '/api/drive';  // Other production environments
+}
 
 console.log('🔧 Google Drive API Configuration:', {
   hostname: window.location.hostname,
-  isProduction,
+  port: window.location.port,
+  origin: window.location.origin,
+  isLocalhost,
+  isVercelProduction,
   BASE_URL
 });
 
