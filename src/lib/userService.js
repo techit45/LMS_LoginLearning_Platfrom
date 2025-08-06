@@ -415,31 +415,31 @@ export const getProfileCompletionPercentage = (profile) => {
  */
 export const getAllUsersForAdmin = async () => {
   try {
-    // Get all user profiles with enrollment and achievement counts
+    console.log('🔍 getAllUsersForAdmin: Fetching user profiles...');
+    
+    // Simple query without joins to avoid RLS conflicts
     const { data: profiles, error: profilesError } = await supabase
       .from('user_profiles')
-      .select(`
-        *,
-        enrollments(count),
-        achievements(count)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (profilesError) {
-      console.error('Error fetching user profiles:', profilesError);
+      console.error('❌ Error fetching user profiles:', profilesError);
       return { data: [], error: profilesError };
     }
 
-    // Transform the data to include counts
+    console.log(`✅ Found ${profiles.length} user profiles:`, profiles.map(p => ({ email: p.email, name: p.full_name, role: p.role })));
+
+    // Return simple user data without complex joins
     const usersWithStats = profiles.map(profile => ({
       ...profile,
-      enrollment_count: profile.enrollments?.[0]?.count || 0,
-      achievement_count: profile.achievements?.[0]?.count || 0
+      enrollment_count: 0, // Set to 0 for now to avoid RLS issues
+      achievement_count: 0  // Set to 0 for now to avoid RLS issues
     }));
 
     return { data: usersWithStats, error: null };
   } catch (error) {
-    console.error('Error fetching users for admin:', error);
+    console.error('❌ Error fetching users for admin:', error);
     return { data: [], error };
   }
 };

@@ -24,7 +24,7 @@ import {
 import { Button } from '../components/ui/button';
 import { getProjectById, permanentlyDeleteProject } from '../lib/projectService';
 import { trackProjectView, toggleProjectLike, getUserProjectLikes, getProjectLikeCount, getProjectComments, addProjectComment, getProjectCommentCount } from '../lib/projectInteractionService';
-import { useToast } from '../hooks/use-toast.jsx';
+import { useToast } from "../hooks/use-toast.jsx"
 import { useAuth } from '../contexts/AuthContext';
 import ProjectForm from '../components/ProjectForm';
 

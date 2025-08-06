@@ -13,7 +13,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Input } from '../components/ui/input';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from "../hooks/use-toast.jsx"
 import { 
   getAssignmentSubmissions, 
   updateSubmissionGrade,

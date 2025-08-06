@@ -565,7 +565,17 @@ export const getInstructorWeeklySchedules = async (instructorId, year, weekNumbe
   try {
     const { data, error } = await supabase
       .from('weekly_schedules')
-      .select('*')
+      .select(`
+        *,
+        course:teaching_courses!course_id (
+          id,
+          name,
+          company,
+          location,
+          company_color,
+          duration_hours
+        )
+      `)
       .eq('instructor_id', instructorId)
       .eq('year', year)
       .eq('week_number', weekNumber)

@@ -26,9 +26,9 @@ const setCachedData = (key, data) => {
  */
 export const getAllProjects = async () => {
   try {
-    // Add timeout for emergency fallback (increased for real data)
+    // Add timeout for emergency fallback (reduced for better UX)
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('getAllProjects timeout')), 15000); // 15 seconds for real data
+      setTimeout(() => reject(new Error('getAllProjects timeout')), 3000); // 3 seconds for better UX
     });
     
     const queryPromise = supabase
@@ -63,8 +63,7 @@ export const getAllProjects = async () => {
       console.error('Error fetching projects:', error);
       // Return emergency data instead of error
       const emergencyData = getEmergencyData();
-      console.log('🚑 Database timeout - Using emergency projects data in getAllProjects');
-      console.warn('Consider running the SQL fix script: /sql_scripts/fix-student-access-final.sql');
+      console.log('🚑 Database error - Using emergency projects data in getAllProjects');
       return { data: emergencyData.projects, error: null };
     }
 
@@ -74,7 +73,6 @@ export const getAllProjects = async () => {
     // Return emergency data on any error
     const emergencyData = getEmergencyData();
     console.log('🚑 Database error - Using emergency projects data after error in getAllProjects');
-    console.warn('Consider running the SQL fix script: /sql_scripts/fix-student-access-final.sql');
     return { data: emergencyData.projects, error: null };
   }
 };

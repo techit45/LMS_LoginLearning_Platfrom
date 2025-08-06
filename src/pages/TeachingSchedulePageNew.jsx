@@ -25,7 +25,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from "../hooks/use-toast.jsx"
 import { useAuth } from '../contexts/AuthContext';
 import { getWeekRange, getCurrentDays, getTimeSlots, getISOWeek } from '../lib/weekUtils';
 import { 
@@ -495,11 +495,12 @@ const InstructorTimeSlot = ({ instructor, dayId, timeSlot, schedule, onDrop, onE
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: [ItemTypes.COURSE, ItemTypes.SCHEDULE_ITEM],
     drop: (item) => {
-      console.log(`🎯 InstructorTimeSlot DROP: ${timeSlot}, instructor: ${(instructor.full_name || instructor.name || instructor.email)}, isSpannedSlot: ${isSpannedSlot}, hasSchedule: ${!!schedule}`);
+      // Only log significant drops for debugging
+      // console.log(`🎯 InstructorTimeSlot DROP: ${timeSlot}, instructor: ${(instructor.full_name || instructor.name || instructor.email)}, isSpannedSlot: ${isSpannedSlot}, hasSchedule: ${!!schedule}`);
       
       // If this slot has a spanning schedule and we're dropping the same item, allow repositioning
       if (schedule && item.schedule && item.schedule.id === schedule.id) {
-        console.log('🔄 Allowing repositioning of same schedule item');
+        // console.log('🔄 Allowing repositioning of same schedule item');
         return onDrop(item, dayId, timeSlot, instructor);
       }
       
@@ -514,7 +515,8 @@ const InstructorTimeSlot = ({ instructor, dayId, timeSlot, schedule, onDrop, onE
       
       const canDropHere = !schedule || (item.schedule && item.schedule.id === schedule.id) || item.type === ItemTypes.COURSE;
       
-      console.log(`🎯 canDrop check: ${timeSlot}, canDrop: ${canDropHere}, hasSchedule: ${!!schedule}, itemType: ${item.type}`);
+      // Only log when debugging specific issues (reduce console spam)
+      // console.log(`🎯 canDrop check: ${timeSlot}, canDrop: ${canDropHere}, hasSchedule: ${!!schedule}, itemType: ${item.type}`);
       
       return canDropHere;
     },
@@ -1405,12 +1407,13 @@ const TeachingSchedulePageNew = () => {
   }, [scheduleType]);
 
   const handleDrop = useCallback(async (item, dayId, timeSlot, instructor = null) => {
-    console.log('🎯 DROP SUCCESS:', { 
-      course: item.course?.name, 
-      instructor: instructor?.name || instructor?.full_name, 
-      time: timeSlot,
-      dayId: dayId
-    });
+    // Only log successful drops for important debugging
+    // console.log('🎯 DROP SUCCESS:', { 
+    //   course: item.course?.name, 
+    //   instructor: instructor?.name || instructor?.full_name, 
+    //   time: timeSlot,
+    //   dayId: dayId
+    // });
     
     if (item.type === ItemTypes.COURSE && instructor) {
       const weekInfo = getWeekInfo(currentWeek);
@@ -1446,7 +1449,7 @@ const TeachingSchedulePageNew = () => {
           return;
         }
 
-        console.log('✅ Schedule created successfully:', data);
+        // console.log('✅ Schedule created successfully:', data);
         
         // Update state directly instead of full reload
         const newKey = `${instructor.id}-${dayId}-${timeSlot}`;

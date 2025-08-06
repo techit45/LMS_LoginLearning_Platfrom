@@ -5,7 +5,7 @@ import SEOHead from '../components/SEOHead';
 import { BookOpen, Users, Clock, Search, BookOpenText, Filter, Grid3X3, List, Star, Award, ChevronDown, Code2, Shield, Database, Palette } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from "../hooks/use-toast.jsx"
 import { Link } from 'react-router-dom';
 import { getAllCourses, getCoursesByCompany } from '../lib/courseService';
 import { getEmergencyData } from '../lib/quickFix';
@@ -58,8 +58,9 @@ const CoursesPage = () => {
       if (course.company) {
         return course.company === currentCompany.id;
       }
-      // Otherwise, show all for default company or none for others
-      return currentCompany.id === 'login';
+      // For legacy data without company field, show for all contexts
+      // This ensures backward compatibility for existing courses
+      return true;
     });
 
     // Additional filtering for Meta tracks

@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 // Recharts import removed to fix ESM module issues
 import { Button } from '../components/ui/button';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from "../hooks/use-toast.jsx"
 import { Link, useNavigate } from 'react-router-dom';
 import { getDashboardStats, getRecentActivity, getSystemHealth, getUserGrowthData } from '../lib/dashboardService';
 import AdminAnalyticsDashboardSimple from '../components/AdminAnalyticsDashboardSimple';

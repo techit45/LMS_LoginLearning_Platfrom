@@ -10,7 +10,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from "../hooks/use-toast.jsx"
 import { supabase } from '../lib/supabaseClient';
 
 const GradingModal = ({ submission, assignment, onSave, onClose }) => {

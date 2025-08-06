@@ -20,7 +20,9 @@ import {
   X,
   Code2,
   Calendar,
-  Cloud
+  Cloud,
+  Clock,
+  MapPin
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../contexts/AuthContext';
@@ -74,6 +76,18 @@ const AdminLayout = () => {
       icon: Calendar,
       path: '/admin/teaching-schedule',
       description: 'จัดการตารางเรียนอาจารย์'
+    },
+    {
+      title: 'จัดการเวลาทำงาน',
+      icon: Clock,
+      path: '/admin/time-management',
+      description: 'ลงเวลา อนุมัติใบลา และรายงานเวลาทำงาน'
+    },
+    {
+      title: 'จัดการตำแหน่งบริษัท',
+      icon: MapPin,
+      path: '/admin/location-management',
+      description: 'ตำแหน่งบริษัท การลงทะเบียน GPS'
     },
     {
       title: 'Google Drive',

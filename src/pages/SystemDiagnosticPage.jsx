@@ -16,7 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { useToast } from "../hooks/use-toast";
+import { useToast } from "../hooks/use-toast.jsx"
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import {

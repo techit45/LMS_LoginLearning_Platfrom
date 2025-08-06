@@ -11,7 +11,7 @@ import {
   Trophy
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from "../hooks/use-toast.jsx"
 import { startQuizAttempt, submitQuizAttempt } from '../lib/quizService';
 
 const QuizPlayer = ({ quiz, onComplete, onClose }) => {

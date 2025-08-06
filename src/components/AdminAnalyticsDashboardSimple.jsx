@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { getDashboardStats, getUserGrowthData } from '../lib/dashboardService';
 import SimpleCharts from './SimpleCharts';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from "../hooks/use-toast.jsx"
 
 // Analytics Dashboard with real data from Supabase
 const AdminAnalyticsDashboardSimple = () => {

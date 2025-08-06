@@ -6,8 +6,9 @@ import { useNavigate } from 'react-router-dom';
 import { Users, UserPlus, Search, Edit, Trash2, ArrowLeft, GraduationCap, Shield, UserCheck, BookOpen, Crown } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from "../hooks/use-toast.jsx"
 import { getAllUsersForAdmin, updateUserRole } from '../lib/userService';
+import { supabase } from '../lib/supabaseClient';
 
 const AdminUsersPage = () => {
   const { toast } = useToast();
@@ -21,6 +22,8 @@ const AdminUsersPage = () => {
     const loadUsers = async () => {
       try {
         setLoading(true);
+        
+        
         const { data: userList, error } = await getAllUsersForAdmin();
         
         if (error) {

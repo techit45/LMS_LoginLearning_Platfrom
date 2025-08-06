@@ -6,7 +6,7 @@ import { LogIn, Mail, Lock, AlertCircle, CheckCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { useAuth } from "../contexts/AuthContext";
-import { useToast } from "../hooks/use-toast";
+import { useToast } from "../hooks/use-toast.jsx"
 import { loginSchema } from "../lib/validationSchemas";
 import { supabase } from "../lib/supabaseClient";
 

@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { useToast } from '../hooks/use-toast.jsx';
+import { useToast } from "../hooks/use-toast.jsx"
 import { getAllCoursesAdmin, toggleCourseStatus, getCourseStats, toggleCourseFeatured, deleteCourseCompletely } from '../lib/courseService';
 import { Link } from 'react-router-dom';
 import CreateCourseForm from '../components/CreateCourseForm';

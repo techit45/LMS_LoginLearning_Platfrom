@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Upload, Calendar, Save, FileText, Link as LinkIcon } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from "../hooks/use-toast.jsx"
 import { createAssignmentForContent } from '../lib/assignmentService';
 
 const QuickAssignmentSetup = ({ isOpen, onClose, contentId, courseId }) => {

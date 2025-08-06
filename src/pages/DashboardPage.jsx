@@ -19,10 +19,15 @@ import {
   FileText,
   Settings,
   ArrowRight,
+  Clock,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { useToast } from "../hooks/use-toast";
+import { useToast } from "../hooks/use-toast.jsx"
 import { useNavigate } from "react-router-dom";
+import TimeClockWidget from "../components/TimeClockWidget";
+import TeachingScheduleWidget from "../components/TeachingScheduleWidget";
+import WorkSummaryReport from "../components/WorkSummaryReport";
+import PersonalPayrollView from "../components/PersonalPayrollView";
 
 const DashboardPage = () => {
   const { user, isAdmin } = useAuth();
@@ -111,11 +116,18 @@ const DashboardPage = () => {
 
   const dashboardItems = [
     {
-      name: "คอร์สของฉัน",
+      name: "คอร์สเรียน",
       icon: BookOpen,
       color: "blue",
-      description: "ดูคอร์สที่คุณกำลังเรียนและติดตามความคืบหน้า",
+      description: "เรียนรู้และค้นหาคอร์สใหม่ๆ ที่น่าสนใจ",
       path: "/courses",
+    },
+    {
+      name: "โครงงาน",
+      icon: Wrench,
+      color: "red",
+      description: "ดูโครงงานจากนักเรียนและอาจารย์",
+      path: "/projects",
     },
     {
       name: "โปรไฟล์ของฉัน",
@@ -194,12 +206,83 @@ const DashboardPage = () => {
           )}
         </motion.div>
 
+        {/* Time Clock & Teaching Schedule Section - เฉพาะสำหรับอาจารย์และแอดมิน */}
+        {(user?.user_metadata?.role === 'instructor' || isAdmin) && (
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="mb-12"
+          >
+            <div className="flex items-center mb-6">
+              <Clock className="w-6 h-6 text-indigo-500 mr-3" />
+              <h2 className="text-2xl font-bold text-green-900">
+                ระบบลงเวลาและตารางสอน
+              </h2>
+            </div>
+            
+            {/* Grid Layout for Time Clock and Teaching Schedule */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
+              {/* Time Clock Widget */}
+              <div className="flex justify-center xl:justify-end">
+                <TimeClockWidget 
+                  showSessionDetails={true}
+                  compact={false}
+                />
+              </div>
+              
+              {/* Teaching Schedule Widget */}
+              <div className="flex justify-center xl:justify-start">
+                <TeachingScheduleWidget />
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Work Summary Section - เฉพาะสำหรับอาจารย์และแอดมิน */}
+        {(user?.user_metadata?.role === 'instructor' || isAdmin) && (
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="mb-12"
+          >
+            <div className="flex items-center mb-6">
+              <BarChart2 className="w-6 h-6 text-purple-500 mr-3" />
+              <h2 className="text-2xl font-bold text-green-900">
+                สรุปผลการทำงานรายเดือน
+              </h2>
+            </div>
+            
+            {/* Work Summary Report */}
+            <WorkSummaryReport 
+              userId={user?.id}
+              showExport={true}
+            />
+          </motion.div>
+        )}
+
+        {/* Personal Payroll Section - เฉพาะสำหรับอาจารย์และแอดมิน */}
+        {(user?.user_metadata?.role === 'instructor' || isAdmin) && (
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.25 }}
+            className="mb-12"
+          >
+            <PersonalPayrollView />
+          </motion.div>
+        )}
+
         {/* Quick Actions Section - แสดงเฉพาะสำหรับ Admin */}
         {isAdmin && (
           <motion.div
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            transition={{ 
+              duration: 0.5, 
+              delay: (user?.user_metadata?.role === 'instructor' || isAdmin) ? 0.2 : 0.15 
+            }}
             className="mb-12"
           >
             <div className="flex items-center mb-6">
@@ -247,7 +330,12 @@ const DashboardPage = () => {
         <motion.div
           initial={{ y: 30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: isAdmin ? 0.5 : 0.2 }}
+          transition={{ 
+            duration: 0.5, 
+            delay: isAdmin ? 
+              ((user?.user_metadata?.role === 'instructor' || isAdmin) ? 0.5 : 0.2) : 
+              ((user?.user_metadata?.role === 'instructor') ? 0.2 : 0.15)
+          }}
         >
           <div className="flex items-center mb-6">
             <LayoutDashboard className="w-6 h-6 text-blue-500 mr-3" />
@@ -262,7 +350,10 @@ const DashboardPage = () => {
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{
                   duration: 0.4,
-                  delay: (isAdmin ? 0.55 : 0.25) + index * 0.05,
+                  delay: (isAdmin ? 
+                    ((user?.user_metadata?.role === 'instructor' || isAdmin) ? 0.55 : 0.25) : 
+                    ((user?.user_metadata?.role === 'instructor') ? 0.25 : 0.2)
+                  ) + index * 0.05,
                 }}
                 className={`glass-effect p-6 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 cursor-pointer ${
                   item.gridSpan || ""

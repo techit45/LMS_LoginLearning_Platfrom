@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import SEOHead from '../components/SEOHead';
 import { motion } from 'framer-motion';
 import { Button } from '../components/ui/button';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from "../hooks/use-toast.jsx"
 import { ArrowLeft, BookOpen, Clock, Users, Award, ShoppingCart, Star, UserCheck, AlertCircle, MessageSquare, Plus } from 'lucide-react';
 import { getCourseById, getCourseImages } from '../lib/courseService';
 import { enrollInCourse, isUserEnrolled } from '../lib/enrollmentService';

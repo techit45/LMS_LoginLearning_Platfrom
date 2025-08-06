@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
-import { useToast } from '../hooks/use-toast.jsx';
+import { useToast } from "../hooks/use-toast.jsx"
 
 const ToastDisplay = () => {
   const { toasts, removeToast } = useToast();

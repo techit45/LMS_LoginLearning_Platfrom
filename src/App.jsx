@@ -4,7 +4,7 @@ import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { HashRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Toaster } from './components/ui/toaster';
-import { ToastProvider } from './hooks/use-toast.jsx';
+import { ToastProvider } from "./hooks/use-toast.jsx"
 import ToastDisplay from './components/ToastDisplay';
 import { AuthProvider } from './contexts/AuthContext';
 import { CompanyProvider } from './contexts/CompanyContext';
@@ -37,7 +37,9 @@ const TestDrivePage = React.lazy(() => import('./pages/TestDrivePage'));
 // Admin components (lazy loaded)
 const AdminLayout = React.lazy(() => import('./components/AdminLayout'));
 const AdminPage = React.lazy(() => import('./pages/AdminPage'));
-const AdminUsersPage = React.lazy(() => import('./pages/AdminUsersPage'));
+// Temporarily import AdminUsersPage directly to debug lazy loading issue
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminUsersPageSimple from './pages/AdminUsersPageSimple';
 const AdminCoursesPage = React.lazy(() => import('./pages/AdminCoursesPage'));
 const AdminCourseContentPage = React.lazy(() => import('./pages/AdminCourseContentPage'));
 const AdminAssignmentGradingPage = React.lazy(() => import('./pages/AdminAssignmentGradingPage'));
@@ -45,6 +47,18 @@ const AdminProjectsPage = React.lazy(() => import('./pages/AdminProjectsPage'));
 const TeachingSchedulePageNew = React.lazy(() => import('./pages/TeachingSchedulePageNew'));
 const AdminGoogleDrivePage = React.lazy(() => import('./pages/AdminGoogleDrivePage'));
 const GoogleDriveIntegrationTest = React.lazy(() => import('./components/GoogleDriveIntegrationTest'));
+
+// Time Tracking components (direct import to avoid lazy load issues)
+import TimeClockWidget from './components/TimeClockWidget';
+import TimesheetView from './components/TimesheetView';
+import LeaveRequestForm from './components/LeaveRequestForm';
+import AttendanceCalendar from './components/AttendanceCalendar';
+import AdminTimeManagement from './components/AdminTimeManagement';
+import TimeTrackingDebug from './components/TimeTrackingDebug';
+
+// Location Management components
+import LocationRegistration from './components/LocationRegistration';
+import AdminLocationManagement from './components/AdminLocationManagement';
 
 // Company-specific components
 const CompanySelectionPage = React.lazy(() => import('./pages/CompanySelectionPage'));
@@ -216,6 +230,48 @@ const AppLayout = () => {
             } 
           />
           
+          {/* Time Tracking Routes */}
+          <Route 
+            path="/time-clock" 
+            element={
+              <ProtectedRoute>
+                <TimeClockWidget />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/timesheet" 
+            element={
+              <ProtectedRoute>
+                <TimesheetView />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/leave-request" 
+            element={
+              <ProtectedRoute>
+                <LeaveRequestForm />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/attendance" 
+            element={
+              <ProtectedRoute>
+                <AttendanceCalendar />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/location-registration" 
+            element={
+              <ProtectedRoute>
+                <LocationRegistration />
+              </ProtectedRoute>
+            } 
+          />
+          
           <Route 
             path="/system-diagnostic" 
             element={
@@ -246,11 +302,15 @@ const AppLayout = () => {
           >
             <Route index element={<AdminPage />} />
             <Route path="users" element={<AdminUsersPage />} />
+            <Route path="users-simple" element={<AdminUsersPageSimple />} />
             <Route path="courses" element={<AdminCoursesPage />} />
             <Route path="courses/:courseId/content" element={<AdminCourseContentPage />} />
             <Route path="assignments/:assignmentId/grading" element={<AdminAssignmentGradingPage />} />
             <Route path="projects" element={<AdminProjectsPage />} />
             <Route path="teaching-schedule" element={<TeachingSchedulePageNew />} />
+            <Route path="time-management" element={<AdminTimeManagement />} />
+            <Route path="time-debug" element={<TimeTrackingDebug />} />
+            <Route path="location-management" element={<AdminLocationManagement />} />
             <Route path="google-drive" element={<AdminGoogleDrivePage />} />
             <Route path="google-drive-test" element={<GoogleDriveIntegrationTest />} />
           </Route>

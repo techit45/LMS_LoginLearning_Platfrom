@@ -18,7 +18,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { useToast } from "../hooks/use-toast.jsx";
+import { useToast } from "../hooks/use-toast.jsx"
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getFeaturedCourses } from "../lib/courseService";

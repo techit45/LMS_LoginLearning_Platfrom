@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import SEOHead from "../components/SEOHead";
 import { Code2, Plus, Star, Lightbulb } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { useToast } from "../hooks/use-toast.jsx";
+import { useToast } from "../hooks/use-toast.jsx"
 import { useAuth } from "../contexts/AuthContext";
 import { useCompany } from "../contexts/CompanyContext";
 import { getAllProjects, getFeaturedProjects } from "../lib/projectService";
@@ -37,8 +37,9 @@ const ProjectsPage = () => {
       if (project.company) {
         return project.company === currentCompany.id;
       }
-      // Otherwise, show all for default company or none for others
-      return currentCompany.id === "login";
+      // For legacy data without company field, show for all contexts
+      // This ensures backward compatibility for existing projects
+      return true;
     });
 
     // Additional filtering for Meta tracks
@@ -72,15 +73,8 @@ const ProjectsPage = () => {
   const loadProjects = useCallback(async () => {
     setLoading(true);
     try {
-      // Add timeout for emergency fallback
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Projects loading timeout")), 8000);
-      });
-
-      const { data, error } = await Promise.race([
-        getAllProjects(),
-        timeoutPromise,
-      ]);
+      // Try direct query first
+      const { data, error } = await getAllProjects();
 
       if (error) {
         console.error("Error loading projects:", error);
@@ -120,18 +114,8 @@ const ProjectsPage = () => {
   const loadFeaturedProjects = useCallback(async () => {
     setFeaturedLoading(true);
     try {
-      // Add timeout for emergency fallback
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(
-          () => reject(new Error("Featured projects loading timeout")),
-          8000
-        );
-      });
-
-      const { data, error } = await Promise.race([
-        getFeaturedProjects(),
-        timeoutPromise,
-      ]);
+      // Try direct query for featured projects
+      const { data, error } = await getFeaturedProjects();
 
       if (error) {
         console.error("Error loading featured projects:", error);

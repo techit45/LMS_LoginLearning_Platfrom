@@ -7,7 +7,7 @@ import {
   Info
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from "../hooks/use-toast.jsx"
 
 const AssignmentEditor = ({ initialAssignment, onSave }) => {
   const { toast } = useToast();

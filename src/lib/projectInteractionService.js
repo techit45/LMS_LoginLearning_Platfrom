@@ -47,9 +47,16 @@ export const trackProjectView = async (projectId) => {
         console.warn('project_views table does not exist. Please run: sql_scripts/create-project-interactions-table.sql');
         
         try {
+          // Get current view count and increment it
+          const { data: project } = await supabase
+            .from('projects')
+            .select('view_count')
+            .eq('id', projectId)
+            .single();
+          
           await supabase
             .from('projects')
-            .update({ view_count: supabase.raw('view_count + 1') })
+            .update({ view_count: (project?.view_count || 0) + 1 })
             .eq('id', projectId);
         } catch (updateError) {
           console.warn('Could not update view count:', updateError.message);
@@ -72,9 +79,16 @@ export const trackProjectView = async (projectId) => {
       
       // Fallback: try to update project view count directly
       try {
+        // Get current view count and increment it  
+        const { data: project } = await supabase
+          .from('projects')
+          .select('view_count')
+          .eq('id', projectId)
+          .single();
+          
         await supabase
           .from('projects')
-          .update({ view_count: supabase.raw('view_count + 1') })
+          .update({ view_count: (project?.view_count || 0) + 1 })
           .eq('id', projectId);
         console.log('Updated view count directly on projects table');
       } catch (updateError) {
