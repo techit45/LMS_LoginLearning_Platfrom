@@ -40,7 +40,7 @@ import { Button } from '../components/ui/button';
 import { listFiles } from '../lib/googleDriveClientService';
 
 const AdminGoogleDrivePage = () => {
-  const DEFAULT_FOLDER = (import.meta.env.VITE_GOOGLE_DRIVE_DEFAULT_FOLDER || '0AGsgoalwMlzkUk9PVA').trim();
+  const DEFAULT_FOLDER = (import.meta.env.VITE_GOOGLE_DRIVE_DEFAULT_FOLDER || '0AAMvBF62LaLyUk9PVA').trim();
   const IS_SHARED_DRIVE = import.meta.env.VITE_GOOGLE_DRIVE_IS_SHARED_DRIVE === 'true';
   
   const [files, setFiles] = useState([]);
