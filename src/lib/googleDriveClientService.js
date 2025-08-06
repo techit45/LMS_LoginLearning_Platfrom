@@ -3,27 +3,29 @@
 // CACHE BUSTER: Build timestamp
 const BUILD_TIMESTAMP = new Date().toISOString();
 
-// PRODUCTION FIX - Force Vercel API path
-const BASE_URL = window.location.hostname.includes('vercel.app')
-  ? '/api/drive'  // Force Vercel production path
-  : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://127.0.0.1:3001/api/drive'  // Local development only
-    : '/api/drive';  // All other production
+// EMERGENCY PRODUCTION FIX - FORCE VERCEL PATH
+const BASE_URL = '/api/drive';  // HARDCODED FOR PRODUCTION ONLY
+
+// Override for localhost only  
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  window.__DRIVE_BASE_URL = 'http://127.0.0.1:3001/api/drive';
+} else {
+  window.__DRIVE_BASE_URL = '/api/drive';  // FORCE PRODUCTION PATH
+}
 
 // Enhanced logging for cache debugging
-console.warn('🚨 VERCEL CACHE DEBUG:', {
+console.warn('🚨 EMERGENCY VERCEL FIX:', {
   buildTimestamp: BUILD_TIMESTAMP,
   hostname: window.location.hostname,
   BASE_URL,
+  globalURL: window.__DRIVE_BASE_URL,
   isVercel: window.location.hostname.includes('vercel.app'),
-  userAgent: navigator.userAgent,
   timestamp: new Date().toISOString()
 });
 
-// Force console visibility
-console.log('%c🚨 VERCEL DEPLOYMENT CHECK', 'color: red; font-size: 20px; font-weight: bold;');
-console.log('%cBuild Time: ' + BUILD_TIMESTAMP, 'color: blue; font-size: 16px;');
-console.log('%cBASE_URL: ' + BASE_URL, 'color: green; font-size: 16px;');
+// Force console visibility with different message
+console.log('%c🚨 EMERGENCY DEPLOYMENT', 'color: red; font-size: 20px; font-weight: bold;');
+console.log('%cHARDCODED BASE_URL: ' + window.__DRIVE_BASE_URL, 'color: green; font-size: 16px;');
 
 // Company folder mapping
 const COMPANY_FOLDERS = {
@@ -39,8 +41,9 @@ const COMPANY_FOLDERS = {
 // API Helper function
 const apiCall = async (endpoint, options = {}) => {
   try {
-    console.log(`🌐 API Call: ${endpoint}`, options);
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const API_URL = window.__DRIVE_BASE_URL || '/api/drive';  // Use global or fallback
+    console.log(`🌐 API Call: ${endpoint}`, { API_URL, options });
+    const response = await fetch(`${API_URL}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -101,7 +104,8 @@ export const uploadFileToFolder = async (file, targetFolderId) => {
   formData.append('targetFolderId', targetFolderId);
 
   try {
-    const response = await fetch(`${BASE_URL}/simple-upload`, {
+    const API_URL = window.__DRIVE_BASE_URL || '/api/drive';
+    const response = await fetch(`${API_URL}/simple-upload`, {
       method: 'POST',
       body: formData,
     });
@@ -307,7 +311,8 @@ export const getFolderContents = async (folderId) => {
   try {
     console.log(`📋 Getting folder contents: ${folderId}`);
     
-    const response = await fetch(`${BASE_URL}/folder-contents/${folderId}`, {
+    const API_URL = window.__DRIVE_BASE_URL || '/api/drive';
+    const response = await fetch(`${API_URL}/folder-contents/${folderId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
