@@ -27,29 +27,47 @@ export default async function handler(req, res) {
     const auth = new google.auth.JWT({
       email: serviceAccount.client_email,
       key: serviceAccount.private_key,
-      scopes: ['https://www.googleapis.com/auth/drive']
+      scopes: [
+        'https://www.googleapis.com/auth/drive',
+        'https://www.googleapis.com/auth/drive.file'
+      ]
     });
 
     const drive = google.drive({ version: 'v3', auth });
     
-    const { name, parentId } = req.body;
+    const { folderName, parentFolderId, type = 'project' } = req.body;
     
-    const fileMetadata = {
-      name: name,
+    if (!folderName || !parentFolderId) {
+      return res.status(400).json({ error: 'Folder name and parent folder ID are required' });
+    }
+
+    // Add icon prefix based on type
+    const iconPrefix = type === 'project' ? '🔧' : '📖';
+    const finalFolderName = `${iconPrefix} ${folderName}`;
+    
+    const folderMetadata = {
+      name: finalFolderName,
       mimeType: 'application/vnd.google-apps.folder',
-      parents: parentId ? [parentId] : [process.env.GOOGLE_DRIVE_FOLDER_ID]
+      parents: [parentFolderId]
     };
 
     const response = await drive.files.create({
-      requestBody: fileMetadata,
-      fields: 'id, name, webViewLink',
+      requestBody: folderMetadata,
+      fields: 'id, name, webViewLink, parents',
       supportsAllDrives: true,
       supportsTeamDrives: true
     });
 
-    res.status(200).json(response.data);
+    res.status(200).json({
+      success: true,
+      folder: response.data
+    });
+
   } catch (error) {
-    console.error('Error creating folder:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Error creating topic folder:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: 'Failed to create topic folder'
+    });
   }
 }

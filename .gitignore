@@ -5,10 +5,13 @@ node_modules/
 
 # Environment variables
 .env
+.env.*
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.vercel
+.env.base64
 
 # Build outputs
 dist/

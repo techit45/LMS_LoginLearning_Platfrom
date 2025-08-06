@@ -1,4 +1,12 @@
 import { google } from 'googleapis';
+import formidable from 'formidable';
+import fs from 'fs';
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -27,29 +35,59 @@ export default async function handler(req, res) {
     const auth = new google.auth.JWT({
       email: serviceAccount.client_email,
       key: serviceAccount.private_key,
-      scopes: ['https://www.googleapis.com/auth/drive']
+      scopes: [
+        'https://www.googleapis.com/auth/drive',
+        'https://www.googleapis.com/auth/drive.file'
+      ]
     });
 
     const drive = google.drive({ version: 'v3', auth });
-    
-    const { name, parentId } = req.body;
-    
+
+    // Parse form data
+    const form = formidable({
+      maxFileSize: 100 * 1024 * 1024, // 100MB
+      keepExtensions: true
+    });
+
+    const [fields, files] = await form.parse(req);
+    const file = files.file?.[0];
+    const folderId = fields.folderId?.[0] || process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+    if (!file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
     const fileMetadata = {
-      name: name,
-      mimeType: 'application/vnd.google-apps.folder',
-      parents: parentId ? [parentId] : [process.env.GOOGLE_DRIVE_FOLDER_ID]
+      name: file.originalFilename || file.newFilename,
+      parents: [folderId]
+    };
+
+    const media = {
+      mimeType: file.mimetype,
+      body: fs.createReadStream(file.filepath)
     };
 
     const response = await drive.files.create({
       requestBody: fileMetadata,
-      fields: 'id, name, webViewLink',
+      media,
+      fields: 'id, name, size, createdTime, webViewLink, parents',
       supportsAllDrives: true,
       supportsTeamDrives: true
     });
 
-    res.status(200).json(response.data);
+    // Clean up temporary file
+    fs.unlinkSync(file.filepath);
+
+    res.status(200).json({
+      success: true,
+      file: response.data
+    });
+
   } catch (error) {
-    console.error('Error creating folder:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Upload error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: 'Google Drive upload failed'
+    });
   }
 }
