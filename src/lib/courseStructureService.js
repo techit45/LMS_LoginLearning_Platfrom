@@ -34,7 +34,10 @@ export const createCourseStructure = async (courseData, chapters = []) => {
     console.log('📋 Structure data:', structureData);
 
     // Call server API to create Google Drive structure
-    const response = await fetch('http://127.0.0.1:3001/api/drive/create-course-structure', {
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'https://google-drive-api-server.onrender.com/api/drive' 
+      : 'https://google-drive-api-server.onrender.com/api/drive';
+    const response = await fetch(`${API_BASE}/create-course-structure`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -86,7 +89,7 @@ export const addChapterFolder = async (chapterTitle, parentFolderId) => {
   try {
     console.log('📚 Adding chapter folder:', chapterTitle);
 
-    const response = await fetch('http://127.0.0.1:3001/api/drive/create-chapter-folder', {
+    const response = await fetch('https://google-drive-api-server.onrender.com/api/drive/create-chapter-folder', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

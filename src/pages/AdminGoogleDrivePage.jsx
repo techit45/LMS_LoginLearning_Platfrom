@@ -64,7 +64,9 @@ const AdminGoogleDrivePage = () => {
   const fileInputRef = useRef(null);
 
   // Production API base URL
-  const API_BASE = window.location.hostname.includes('vercel.app') ? '/api/drive' : 'http://127.0.0.1:3001/api/drive';
+  const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://127.0.0.1:3001/api/drive' 
+    : 'https://google-drive-api-server.onrender.com/api/drive';
 
   // Load files from current folder
   const loadFiles = async (folderId = currentFolder) => {

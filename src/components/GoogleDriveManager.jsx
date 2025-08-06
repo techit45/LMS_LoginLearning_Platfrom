@@ -33,8 +33,10 @@ const GoogleDriveManager = ({
   const loadFiles = async (folderId = currentFolder) => {
     setLoading(true);
     try {
-      // Use production API path
-      const API_BASE = window.location.hostname.includes('vercel.app') ? '/api/drive' : 'http://127.0.0.1:3001/api/drive';
+      // Use Render.com external server
+      const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+        ? 'http://127.0.0.1:3001/api/drive' 
+        : 'https://google-drive-api-server.onrender.com/api/drive';
       const response = await fetch(`${API_BASE}/list?folderId=${folderId}`);
       if (!response.ok) throw new Error('Failed to load files');
       

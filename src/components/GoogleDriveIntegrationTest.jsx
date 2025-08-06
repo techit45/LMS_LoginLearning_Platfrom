@@ -48,7 +48,7 @@ const GoogleDriveIntegrationTest = () => {
     clearResults();
 
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/drive/create-course-structure', {
+      const response = await fetch('https://google-drive-api-server.onrender.com/api/drive/create-course-structure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(courseData)
@@ -93,7 +93,7 @@ const GoogleDriveIntegrationTest = () => {
     clearResults();
 
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/drive/create-topic-folder', {
+      const response = await fetch('https://google-drive-api-server.onrender.com/api/drive/create-topic-folder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(topicData)
@@ -136,7 +136,7 @@ const GoogleDriveIntegrationTest = () => {
       formData.append('file', uploadData.file);
       formData.append('targetFolderId', uploadData.targetFolderId);
 
-      const response = await fetch('http://127.0.0.1:3001/api/drive/simple-upload', {
+      const response = await fetch('https://google-drive-api-server.onrender.com/api/drive/simple-upload', {
         method: 'POST',
         body: formData
       });

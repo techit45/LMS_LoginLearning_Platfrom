@@ -12,7 +12,7 @@ function GoogleDriveTest() {
   const loadFiles = async (folderId = currentFolder) => {
     setLoading(true);
     try {
-      const response = await fetch(`http://127.0.0.1:3001/api/drive/list?folderId=${folderId}`);
+      const response = await fetch(`https://google-drive-api-server.onrender.com/api/drive/list?folderId=${folderId}`);
       const data = await response.json();
       setFiles(data.files || []);
     } catch (error) {
@@ -34,7 +34,7 @@ function GoogleDriveTest() {
     setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
 
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/drive/upload', {
+      const response = await fetch('https://google-drive-api-server.onrender.com/api/drive/upload', {
         method: 'POST',
         body: formData
       });
@@ -67,7 +67,7 @@ function GoogleDriveTest() {
     if (!folderName) return;
 
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/drive/create-folder', {
+      const response = await fetch('https://google-drive-api-server.onrender.com/api/drive/create-folder', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -93,7 +93,7 @@ function GoogleDriveTest() {
     if (!confirm(`Are you sure you want to delete "${fileName}"?`)) return;
 
     try {
-      const response = await fetch(`http://127.0.0.1:3001/api/drive/delete?fileId=${fileId}`, {
+      const response = await fetch(`https://google-drive-api-server.onrender.com/api/drive/delete?fileId=${fileId}`, {
         method: 'DELETE'
       });
 
@@ -112,7 +112,7 @@ function GoogleDriveTest() {
     if (!newName || newName === currentName) return;
 
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/drive/rename', {
+      const response = await fetch('https://google-drive-api-server.onrender.com/api/drive/rename', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -139,7 +139,7 @@ function GoogleDriveTest() {
 
     setLoading(true);
     try {
-      const response = await fetch(`http://127.0.0.1:3001/api/drive/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(`https://google-drive-api-server.onrender.com/api/drive/search?q=${encodeURIComponent(query)}`);
       const data = await response.json();
       setFiles(data || []);
     } catch (error) {

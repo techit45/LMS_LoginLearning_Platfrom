@@ -1,7 +1,10 @@
 // Google Drive API Client for Frontend
 class GoogleDriveClient {
   constructor() {
-    this.baseURL = '/api/drive';
+    // Use Render.com external server for Google Drive API
+    this.baseURL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://127.0.0.1:3001/api/drive'
+      : 'https://google-drive-api-server.onrender.com/api/drive';
   }
 
   // 📁 List files
