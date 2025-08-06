@@ -72,7 +72,7 @@ const AdminGoogleDrivePage = () => {
     setServerError(false);
     try {
       console.log('📁 Loading files from folder:', folderId);
-      const data = await listFiles(folderId, 50);
+      const data = await listFiles(folderId, 50, IS_SHARED_DRIVE);
       console.log('📁 Loaded files from API:', data.files);
       setFiles(data.files || []);
       setServerError(false);

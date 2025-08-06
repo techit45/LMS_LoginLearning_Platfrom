@@ -197,6 +197,7 @@ serve(async (req: Request) => {
       const folderId = url.searchParams.get('folderId') || 'root'
       const pageSize = parseInt(url.searchParams.get('pageSize') || '50')
       const orderBy = url.searchParams.get('orderBy') || 'modifiedTime desc'
+      const isSharedDrive = url.searchParams.get('isSharedDrive') === 'true'
 
       const params = new URLSearchParams({
         q: `'${folderId}' in parents and trashed=false`,
@@ -205,9 +206,17 @@ serve(async (req: Request) => {
         fields: 'files(id,name,mimeType,size,createdTime,modifiedTime,webViewLink,parents,iconLink)',
         supportsAllDrives: 'true',
         includeItemsFromAllDrives: 'true',
-        corpora: 'drive',
-        driveId: Deno.env.get('GOOGLE_DRIVE_FOLDER_ID') || '',
       })
+
+      // เพิ่ม driveId และ corpora เฉพาะสำหรับ Shared Drive
+      if (isSharedDrive) {
+        params.set('corpora', 'drive')
+        params.set('driveId', Deno.env.get('GOOGLE_DRIVE_FOLDER_ID') || '')
+        console.log('🔗 Using Shared Drive mode:', Deno.env.get('GOOGLE_DRIVE_FOLDER_ID'))
+      } else {
+        params.set('corpora', 'user')
+        console.log('👤 Using My Drive mode')
+      }
 
       const result = await callGoogleDriveAPI(`/files?${params}`)
       

@@ -133,10 +133,11 @@ export const uploadFileToFolder = async (file, targetFolderId) => {
 };
 
 // List files in a folder
-export const listFiles = async (folderId = 'root', pageSize = 50) => {
+export const listFiles = async (folderId = 'root', pageSize = 50, isSharedDrive = false) => {
   const params = new URLSearchParams({
     folderId,
     pageSize: pageSize.toString(),
+    isSharedDrive: isSharedDrive.toString(),
   });
 
   return await apiCall(`/list?${params}`);
