@@ -1,8 +1,19 @@
 // Google Drive Integration Client Service (Frontend)
 
-const BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://127.0.0.1:3001/api/drive'  // Local development
-  : '/api/drive';  // Production (Vercel)
+// Detect if we're in production (Vercel deployment)
+const isProduction = window.location.hostname !== 'localhost' && 
+                     window.location.hostname !== '127.0.0.1' && 
+                     !window.location.hostname.includes('localhost');
+
+const BASE_URL = isProduction
+  ? '/api/drive'  // Production (Vercel) - use relative path
+  : 'http://127.0.0.1:3001/api/drive';  // Local development
+
+console.log('🔧 Google Drive API Configuration:', {
+  hostname: window.location.hostname,
+  isProduction,
+  BASE_URL
+});
 
 // Company folder mapping
 const COMPANY_FOLDERS = {
