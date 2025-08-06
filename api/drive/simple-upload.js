@@ -1,4 +1,4 @@
-import { google } from 'googleapis';
+import { getServiceAccountCredentials, getAccessToken } from './auth-utils.js';
 import formidable from 'formidable';
 import fs from 'fs';
 
@@ -7,6 +7,48 @@ export const config = {
     bodyParser: false,
   },
 };
+
+// Upload file to Google Drive using resumable upload approach
+async function uploadFileToGoogleDrive(accessToken, fileMetadata, filePath, mimeType) {
+  // Step 1: Initiate resumable upload
+  const initResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json; charset=UTF-8',
+      'X-Upload-Content-Type': mimeType,
+      'X-Upload-Content-Length': fs.statSync(filePath).size.toString()
+    },
+    body: JSON.stringify(fileMetadata)
+  });
+
+  if (!initResponse.ok) {
+    const error = await initResponse.text();
+    throw new Error(`Google Drive upload initiation failed: ${initResponse.status} ${error}`);
+  }
+
+  const uploadUrl = initResponse.headers.get('location');
+  if (!uploadUrl) {
+    throw new Error('No upload URL returned from Google Drive');
+  }
+
+  // Step 2: Upload file content
+  const fileBuffer = fs.readFileSync(filePath);
+  const uploadResponse = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': mimeType
+    },
+    body: fileBuffer
+  });
+
+  if (!uploadResponse.ok) {
+    const error = await uploadResponse.text();
+    throw new Error(`Google Drive file upload failed: ${uploadResponse.status} ${error}`);
+  }
+
+  return uploadResponse.json();
+}
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -24,28 +66,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    // Support both direct JSON and Base64 encoded JSON
-    let jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-    const isBase64 = jsonString && !jsonString.trim().startsWith('{');
-    
-    if (isBase64) {
-      console.log('🔍 Base64 detected in simple-upload, decoding...');
-      jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
-    }
-    
-    const serviceAccount = JSON.parse(jsonString);
-    
-    const auth = new google.auth.JWT({
-      email: serviceAccount.client_email,
-      key: serviceAccount.private_key,
-      scopes: [
-        'https://www.googleapis.com/auth/drive',
-        'https://www.googleapis.com/auth/drive.file'
-      ]
-    });
+  let uploadedFile;
 
-    const drive = google.drive({ version: 'v3', auth });
+  try {
+    // Get service account credentials using shared utility
+    const serviceAccount = getServiceAccountCredentials();
+    
+    // Use manual JWT creation instead of google.auth.JWT
+    console.log('🚀 Creating access token for file upload...');
+    const accessToken = await getAccessToken(serviceAccount);
+    console.log('✅ Access token obtained successfully');
 
     // Parse multipart form data
     const form = formidable({
@@ -55,7 +85,7 @@ export default async function handler(req, res) {
 
     const [fields, files] = await form.parse(req);
     
-    const uploadedFile = files.file?.[0];
+    uploadedFile = files.file?.[0];
     const targetFolderId = fields.folderId?.[0] || process.env.GOOGLE_DRIVE_FOLDER_ID;
 
     if (!uploadedFile) {
@@ -74,46 +104,60 @@ export default async function handler(req, res) {
       parents: [targetFolderId]
     };
 
-    const media = {
-      mimeType: uploadedFile.mimetype,
-      body: fs.createReadStream(uploadedFile.filepath)
-    };
-
-    const response = await drive.files.create({
-      requestBody: fileMetadata,
-      media,
-      fields: 'id, name, size, mimeType, createdTime, webViewLink, parents',
-      supportsAllDrives: true,
-      supportsTeamDrives: true
-    });
+    // Use our custom upload function instead of google.drive
+    const responseData = await uploadFileToGoogleDrive(
+      accessToken, 
+      fileMetadata, 
+      uploadedFile.filepath, 
+      uploadedFile.mimetype
+    );
 
     // Clean up temporary file
     try {
       fs.unlinkSync(uploadedFile.filepath);
+      uploadedFile = null; // Clear reference after cleanup
     } catch (cleanupError) {
       console.warn('Failed to cleanup temp file:', cleanupError.message);
     }
 
-    console.log('✅ File uploaded successfully:', response.data);
+    console.log('✅ File uploaded successfully:', responseData);
 
     res.status(200).json({
       success: true,
       message: 'File uploaded successfully',
       file: {
-        id: response.data.id,
-        name: response.data.name,
-        size: response.data.size,
-        mimeType: response.data.mimeType,
-        webViewLink: response.data.webViewLink,
-        createdTime: response.data.createdTime
+        id: responseData.id,
+        name: responseData.name,
+        size: responseData.size,
+        mimeType: responseData.mimeType,
+        webViewLink: responseData.webViewLink,
+        createdTime: responseData.createdTime
       }
     });
 
   } catch (error) {
     console.error('❌ Upload failed:', error);
+    
+    // Clean up temporary file on error
+    if (uploadedFile?.filepath) {
+      try {
+        fs.unlinkSync(uploadedFile.filepath);
+      } catch (cleanupError) {
+        console.warn('Failed to cleanup temp file after error:', cleanupError.message);
+      }
+    }
+    
+    // Enhanced error logging
+    if (error.message.includes('OAuth2')) {
+      console.error('OAuth2 authentication error - check service account credentials');
+    } else if (error.message.includes('Google Drive')) {
+      console.error('Google Drive API error - check folder permissions and file size');
+    }
+    
     res.status(500).json({ 
       error: error.message,
-      details: 'Simple upload failed'
+      type: 'GoogleDriveUploadError',
+      timestamp: new Date().toISOString()
     });
   }
 }

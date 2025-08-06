@@ -1,4 +1,4 @@
-import { google } from 'googleapis';
+import { getServiceAccountCredentials, getAccessToken } from './auth-utils.js';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -17,24 +17,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Support both direct JSON and Base64 encoded JSON
-    let jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-    const isBase64 = jsonString && !jsonString.trim().startsWith('{');
+    // Get service account credentials using shared utility
+    const serviceAccount = getServiceAccountCredentials();
     
-    if (isBase64) {
-      console.log('🔍 Base64 detected in create-folder, decoding...');
-      jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
-    }
-    
-    const serviceAccount = JSON.parse(jsonString);
-    
-    const auth = new google.auth.JWT({
-      email: serviceAccount.client_email,
-      key: serviceAccount.private_key,
-      scopes: ['https://www.googleapis.com/auth/drive']
-    });
-
-    const drive = google.drive({ version: 'v3', auth });
+    // Use manual JWT creation instead of google.auth.JWT
+    console.log('🚀 Creating access token for folder creation...');
+    const accessToken = await getAccessToken(serviceAccount);
+    console.log('✅ Access token obtained successfully');
     
     const { name, parentId } = req.body;
     
@@ -44,16 +33,42 @@ export default async function handler(req, res) {
       parents: parentId ? [parentId] : [process.env.GOOGLE_DRIVE_FOLDER_ID]
     };
 
-    const response = await drive.files.create({
-      requestBody: fileMetadata,
-      fields: 'id, name, webViewLink',
-      supportsAllDrives: true,
-      supportsTeamDrives: true
+    const response = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ...fileMetadata,
+        fields: 'id, name, webViewLink',
+        supportsAllDrives: true,
+        supportsTeamDrives: true
+      })
     });
 
-    res.status(200).json(response.data);
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Google Drive API request failed: ${response.status} ${error}`);
+    }
+
+    const data = await response.json();
+    console.log(`✅ Successfully created folder: ${name}`);
+    res.status(200).json(data);
   } catch (error) {
     console.error('Error creating folder:', error);
-    res.status(500).json({ error: error.message });
+    
+    // Enhanced error logging
+    if (error.message.includes('OAuth2')) {
+      console.error('OAuth2 authentication error - check service account credentials');
+    } else if (error.message.includes('Google Drive API')) {
+      console.error('Google Drive API error - check folder permissions and parent ID');
+    }
+    
+    res.status(500).json({ 
+      error: error.message,
+      type: 'GoogleDriveCreateFolderError',
+      timestamp: new Date().toISOString()
+    });
   }
 }
