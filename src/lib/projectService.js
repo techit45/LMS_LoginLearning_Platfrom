@@ -157,25 +157,19 @@ export const getFeaturedProjects = async () => {
   try {
     console.log('Fetching featured projects from database...');
     
-    // Add timeout to database query
+    // Optimized database query - reduced fields for better performance
     const queryPromise = supabase
       .from('projects')
       .select(`
         id,
         title,
-        description,
         short_description,
         category,
         difficulty_level,
-        is_featured,
         technology,
         demo_url,
-        github_url,
         thumbnail_url,
-        creator_id,
         created_at,
-        updated_at,
-        is_approved,
         view_count,
         like_count
       `)
@@ -185,7 +179,7 @@ export const getFeaturedProjects = async () => {
       .limit(6);
     
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Database query timeout')), 3000)
+      setTimeout(() => reject(new Error('Database query timeout')), 10000)
     );
     
     const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
