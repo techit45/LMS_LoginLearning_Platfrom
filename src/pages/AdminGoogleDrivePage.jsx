@@ -48,7 +48,7 @@ const AdminGoogleDrivePage = () => {
   const [currentFolder, setCurrentFolder] = useState(DEFAULT_FOLDER);
   const [folderPath, setFolderPath] = useState([{ 
     id: DEFAULT_FOLDER, 
-    name: IS_SHARED_DRIVE ? 'Login Learning Platform' : 'Database' 
+    name: IS_SHARED_DRIVE ? 'Shared Drive' : 'My Drive' 
   }]);
   const [uploadProgress, setUploadProgress] = useState({});
   const [viewMode, setViewMode] = useState('grid');
@@ -732,13 +732,14 @@ const AdminGoogleDrivePage = () => {
           <nav className="flex items-center text-sm text-gray-600">
             <button
               onClick={() => {
-                setCurrentFolder('root');
-                setFolderPath([{ id: 'root', name: 'My Drive' }]);
+                setCurrentFolder(DEFAULT_FOLDER);
+                setFolderPath([{ id: DEFAULT_FOLDER, name: IS_SHARED_DRIVE ? 'Shared Drive' : 'My Drive' }]);
+                loadFiles(DEFAULT_FOLDER);
               }}
               className="hover:text-blue-600 transition-colors flex items-center px-2 py-1 rounded hover:bg-gray-100"
             >
               <Home className="w-4 h-4 mr-1" />
-              My Drive
+              {IS_SHARED_DRIVE ? 'Shared Drive' : 'My Drive'}
             </button>
             {folderPath.length > 1 && (
               <>
