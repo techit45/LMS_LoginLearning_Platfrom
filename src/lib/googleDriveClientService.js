@@ -1,5 +1,8 @@
 // Google Drive Integration Client Service (Frontend)
 
+// CACHE BUSTER: Build timestamp
+const BUILD_TIMESTAMP = new Date().toISOString();
+
 // PRODUCTION FIX - Force Vercel API path
 const BASE_URL = window.location.hostname.includes('vercel.app')
   ? '/api/drive'  // Force Vercel production path
@@ -7,12 +10,20 @@ const BASE_URL = window.location.hostname.includes('vercel.app')
     ? 'http://127.0.0.1:3001/api/drive'  // Local development only
     : '/api/drive';  // All other production
 
-console.warn('🚨 BASE_URL FORCED:', {
+// Enhanced logging for cache debugging
+console.warn('🚨 VERCEL CACHE DEBUG:', {
+  buildTimestamp: BUILD_TIMESTAMP,
   hostname: window.location.hostname,
   BASE_URL,
   isVercel: window.location.hostname.includes('vercel.app'),
+  userAgent: navigator.userAgent,
   timestamp: new Date().toISOString()
 });
+
+// Force console visibility
+console.log('%c🚨 VERCEL DEPLOYMENT CHECK', 'color: red; font-size: 20px; font-weight: bold;');
+console.log('%cBuild Time: ' + BUILD_TIMESTAMP, 'color: blue; font-size: 16px;');
+console.log('%cBASE_URL: ' + BASE_URL, 'color: green; font-size: 16px;');
 
 // Company folder mapping
 const COMPANY_FOLDERS = {
