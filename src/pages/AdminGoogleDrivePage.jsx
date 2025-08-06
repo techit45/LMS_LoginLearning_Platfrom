@@ -37,7 +37,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { googleDriveClient } from '../lib/googleDriveClient';
+import { listFiles } from '../lib/googleDriveClientService';
 
 const AdminGoogleDrivePage = () => {
   const DEFAULT_FOLDER = import.meta.env.VITE_GOOGLE_DRIVE_DEFAULT_FOLDER || '0AAMvBF62LaLyUk9PVA';
@@ -63,24 +63,16 @@ const AdminGoogleDrivePage = () => {
   const [serverError, setServerError] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Production API base URL
-  const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-    ? 'http://127.0.0.1:3001/api/drive' 
-    : 'https://google-drive-api-server.onrender.com/api/drive';
+  // Production API base URL - SUPABASE EDGE FUNCTION
+  const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
 
-  // Load files from current folder
+  // Load files from current folder using googleDriveClientService
   const loadFiles = async (folderId = currentFolder) => {
     setLoading(true);
     setServerError(false);
     try {
-      // Add cache-busting parameter to ensure fresh data
-      const timestamp = new Date().getTime();
-      const response = await fetch(`${API_BASE}/list?folderId=${folderId}&orderBy=${sortBy}&t=${timestamp}`, {
-        cache: 'no-cache'
-      });
-      if (!response.ok) throw new Error('Failed to load files');
-      
-      const data = await response.json();
+      console.log('📁 Loading files from folder:', folderId);
+      const data = await listFiles(folderId, 50);
       console.log('📁 Loaded files from API:', data.files);
       setFiles(data.files || []);
       setServerError(false);
@@ -88,13 +80,7 @@ const AdminGoogleDrivePage = () => {
       console.error('Error loading files:', error);
       setServerError(true);
       setFiles([]);
-      
-      if (error.message.includes('Load failed') || error.message.includes('Failed to fetch')) {
-        // Server is down
-        console.log('🚨 Server appears to be down');
-      } else {
-        alert('ไม่สามารถโหลดไฟล์ได้: ' + error.message);
-      }
+      alert('ไม่สามารถโหลดไฟล์ได้: ' + error.message);
     } finally {
       setLoading(false);
     }
