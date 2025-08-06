@@ -27,9 +27,13 @@ export default async function handler(req, res) {
   try {
     // Support both direct JSON and Base64 encoded JSON
     let jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-    if (!jsonString.startsWith('{')) {
+    const isBase64 = jsonString && !jsonString.trim().startsWith('{');
+    
+    if (isBase64) {
+      console.log('🔍 Base64 detected in upload, decoding...');
       jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
     }
+    
     const serviceAccount = JSON.parse(jsonString);
     
     const auth = new google.auth.JWT({

@@ -44,37 +44,45 @@ export default async function handler(req, res) {
 
     // Try to parse service account JSON (support both direct JSON and Base64)
     let serviceAccount;
+    let jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    
     try {
-      let jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-      
-      // More robust Base64 detection
+      // Check if it's Base64 encoded
       const isBase64 = jsonString && !jsonString.trim().startsWith('{');
       
       if (isBase64) {
         console.log('🔍 Detected Base64 encoded JSON, decoding...');
-        try {
-          jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
-          console.log('✅ Base64 decoded successfully');
-        } catch (decodeError) {
-          console.error('❌ Base64 decode error:', decodeError.message);
-          throw new Error(`Base64 decoding failed: ${decodeError.message}`);
-        }
+        console.log('📊 Base64 length:', jsonString.length);
+        console.log('🔤 First 50 chars:', jsonString.substring(0, 50));
+        
+        // Decode Base64 to JSON string
+        jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
+        console.log('✅ Base64 decoded successfully');
+        console.log('📝 Decoded starts with:', jsonString.substring(0, 30));
       } else {
         console.log('🔍 Using direct JSON (not Base64)');
       }
       
+      // Now parse the JSON
       serviceAccount = JSON.parse(jsonString);
       console.log('✅ Service Account JSON parsed successfully');
       console.log('📧 Service Account Email:', serviceAccount.client_email);
-    } catch (parseError) {
-      console.error('❌ JSON Parse Error:', parseError.message);
+      
+    } catch (error) {
+      console.error('❌ Parse/Decode Error:', error.message);
+      console.error('🔍 Error type:', error.name);
+      console.error('📊 jsonString type:', typeof jsonString);
+      console.error('📊 jsonString length:', jsonString ? jsonString.length : 0);
+      console.error('🔤 jsonString preview:', jsonString ? jsonString.substring(0, 100) : 'undefined');
+      
       return res.status(500).json({ 
-        error: parseError.message,
+        error: `Failed to parse service account: ${error.message}`,
         debug: {
           ...envDebug,
+          parseError: error.message,
+          errorType: error.name,
           isBase64: process.env.GOOGLE_SERVICE_ACCOUNT_JSON && !process.env.GOOGLE_SERVICE_ACCOUNT_JSON.trim().startsWith('{'),
-          rawLength: process.env.GOOGLE_SERVICE_ACCOUNT_JSON ? process.env.GOOGLE_SERVICE_ACCOUNT_JSON.length : 0,
-          rawStart: process.env.GOOGLE_SERVICE_ACCOUNT_JSON ? process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 100) : 'undefined'
+          decodedPreview: jsonString ? jsonString.substring(0, 100) : 'undefined'
         }
       });
     }

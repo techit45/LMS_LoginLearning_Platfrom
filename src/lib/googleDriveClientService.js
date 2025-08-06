@@ -3,15 +3,18 @@
 // CACHE BUSTER: Build timestamp
 const BUILD_TIMESTAMP = new Date().toISOString();
 
-// EMERGENCY PRODUCTION FIX - FORCE VERCEL PATH
-const BASE_URL = '/api/drive';  // HARDCODED FOR PRODUCTION ONLY
+// Smart API URL detection
+const getApiUrl = () => {
+  // For development, use local server
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://127.0.0.1:3001/api/drive';
+  }
+  // For production (Vercel), use Vercel API functions
+  return '/api/drive';
+};
 
-// Override for localhost only  
-if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-  window.__DRIVE_BASE_URL = 'http://127.0.0.1:3001/api/drive';
-} else {
-  window.__DRIVE_BASE_URL = '/api/drive';  // FORCE PRODUCTION PATH
-}
+const BASE_URL = getApiUrl();
+window.__DRIVE_BASE_URL = BASE_URL;
 
 // Enhanced logging for cache debugging
 console.warn('🚨 EMERGENCY VERCEL FIX:', {
