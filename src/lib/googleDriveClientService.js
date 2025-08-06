@@ -9,8 +9,8 @@ const getApiUrl = () => {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return 'http://127.0.0.1:3001/api/drive';
   }
-  // For production (Vercel), use Vercel API functions
-  return '/api/drive';
+  // For production, use Render.com external server
+  return 'https://google-drive-api-server.onrender.com/api/drive';
 };
 
 const BASE_URL = getApiUrl();
