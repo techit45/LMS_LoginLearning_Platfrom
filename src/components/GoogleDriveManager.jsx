@@ -33,7 +33,9 @@ const GoogleDriveManager = ({
   const loadFiles = async (folderId = currentFolder) => {
     setLoading(true);
     try {
-      const response = await fetch(`http://127.0.0.1:3001/api/drive/list?folderId=${folderId}`);
+      // Use production API path
+      const API_BASE = window.location.hostname.includes('vercel.app') ? '/api/drive' : 'http://127.0.0.1:3001/api/drive';
+      const response = await fetch(`${API_BASE}/list?folderId=${folderId}`);
       if (!response.ok) throw new Error('Failed to load files');
       
       const data = await response.json();

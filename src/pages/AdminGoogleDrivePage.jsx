@@ -63,6 +63,9 @@ const AdminGoogleDrivePage = () => {
   const [serverError, setServerError] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Production API base URL
+  const API_BASE = window.location.hostname.includes('vercel.app') ? '/api/drive' : 'http://127.0.0.1:3001/api/drive';
+
   // Load files from current folder
   const loadFiles = async (folderId = currentFolder) => {
     setLoading(true);
@@ -70,7 +73,7 @@ const AdminGoogleDrivePage = () => {
     try {
       // Add cache-busting parameter to ensure fresh data
       const timestamp = new Date().getTime();
-      const response = await fetch(`http://127.0.0.1:3001/api/drive/list?folderId=${folderId}&orderBy=${sortBy}&t=${timestamp}`, {
+      const response = await fetch(`${API_BASE}/list?folderId=${folderId}&orderBy=${sortBy}&t=${timestamp}`, {
         cache: 'no-cache'
       });
       if (!response.ok) throw new Error('Failed to load files');
@@ -107,7 +110,7 @@ const AdminGoogleDrivePage = () => {
       setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
 
       try {
-        const response = await fetch('http://127.0.0.1:3001/api/drive/upload', {
+        const response = await fetch(`${API_BASE}/upload`, {
           method: 'POST',
           body: formData
         });
@@ -156,7 +159,7 @@ const AdminGoogleDrivePage = () => {
     if (!folderName) return;
 
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/drive/create-folder', {
+      const response = await fetch(`${API_BASE}/create-folder`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -186,7 +189,7 @@ const AdminGoogleDrivePage = () => {
     if (!confirm(`คุณต้องการลบ "${fileName}" หรือไม่?`)) return;
 
     try {
-      const response = await fetch(`http://127.0.0.1:3001/api/drive/delete?fileId=${fileId}`, {
+      const response = await fetch(`${API_BASE}/delete?fileId=${fileId}`, {
         method: 'DELETE'
       });
 
@@ -213,7 +216,7 @@ const AdminGoogleDrivePage = () => {
     if (!newName || newName === currentName) return;
 
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/drive/rename', {
+      const response = await fetch(`${API_BASE}/rename`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileId, newName })
@@ -256,7 +259,7 @@ const AdminGoogleDrivePage = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`http://127.0.0.1:3001/api/drive/search?q=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(searchQuery)}`);
       const data = await response.json();
       setFiles(data || []);
     } catch (error) {
@@ -283,7 +286,7 @@ const AdminGoogleDrivePage = () => {
   // Load available folders for move operation
   const loadAvailableFolders = async () => {
     try {
-      const response = await fetch(`http://127.0.0.1:3001/api/drive/folders?folderId=root`, {
+      const response = await fetch(`${API_BASE}/folders?folderId=root`, {
         cache: 'no-cache'
       });
       if (response.ok) {
@@ -305,7 +308,7 @@ const AdminGoogleDrivePage = () => {
   // Move files to target folder
   const moveFiles = async (fileIds, targetFolderId) => {
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/drive/move', {
+      const response = await fetch(`${API_BASE}/move`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileIds, targetFolderId, currentFolderId: currentFolder })

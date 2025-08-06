@@ -247,7 +247,8 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
       uploadFormData.append('targetFolderId', targetFolderId);
       
       // Call upload API
-      const response = await fetch('http://127.0.0.1:3001/api/drive/simple-upload', {
+      const API_BASE = window.location.hostname.includes('vercel.app') ? '/api/drive' : 'http://127.0.0.1:3001/api/drive';
+      const response = await fetch(`${API_BASE}/simple-upload`, {
         method: 'POST',
         body: uploadFormData,
       });
