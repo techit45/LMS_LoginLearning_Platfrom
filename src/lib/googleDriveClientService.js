@@ -1,6 +1,8 @@
 // Google Drive Integration Client Service (Frontend)
 
-const BASE_URL = 'http://127.0.0.1:3001/api/drive';
+const BASE_URL = process.env.NODE_ENV === 'production' 
+  ? '/api/drive'  // Use Vercel API Routes in production
+  : 'http://127.0.0.1:3001/api/drive';
 
 // Company folder mapping
 const COMPANY_FOLDERS = {
