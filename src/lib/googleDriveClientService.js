@@ -3,35 +3,35 @@
 // CACHE BUSTER: Build timestamp
 const BUILD_TIMESTAMP = new Date().toISOString();
 
-// FORCE RENDER.COM URL - NO MORE VERCEL API
-const FORCED_API_URL = 'https://google-drive-api-server.onrender.com/api/drive';
+// SUPABASE EDGE FUNCTION URL - NO MORE RENDER.COM OR VERCEL API
+const SUPABASE_EDGE_FUNCTION_URL = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
 
 // Smart API URL detection
 const getApiUrl = () => {
-  // For development, use local server
+  // For development, use local server (optional - can also use Supabase directly)
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'http://127.0.0.1:3001/api/drive';
+    return SUPABASE_EDGE_FUNCTION_URL; // ใช้ Supabase Edge Function เสมอ
   }
-  // FORCE Render.com for production - NO MORE VERCEL!
-  return FORCED_API_URL;
+  // FORCE Supabase Edge Function for production - NO MORE RENDER.COM OR VERCEL!
+  return SUPABASE_EDGE_FUNCTION_URL;
 };
 
 const BASE_URL = getApiUrl();
 window.__DRIVE_BASE_URL = BASE_URL;
 
-// Enhanced logging for cache debugging
-console.warn('🚨 EMERGENCY VERCEL FIX:', {
+// Enhanced logging for Supabase Edge Function
+console.warn('🚀 SUPABASE EDGE FUNCTION:', {
   buildTimestamp: BUILD_TIMESTAMP,
   hostname: window.location.hostname,
   BASE_URL,
   globalURL: window.__DRIVE_BASE_URL,
-  isVercel: window.location.hostname.includes('vercel.app'),
+  isSupabase: BASE_URL.includes('supabase.co'),
   timestamp: new Date().toISOString()
 });
 
 // Force console visibility with different message
-console.log('%c🚨 EMERGENCY DEPLOYMENT', 'color: red; font-size: 20px; font-weight: bold;');
-console.log('%cHARDCODED BASE_URL: ' + window.__DRIVE_BASE_URL, 'color: green; font-size: 16px;');
+console.log('%c🚀 SUPABASE EDGE DEPLOYMENT', 'color: blue; font-size: 20px; font-weight: bold;');
+console.log('%cSUPABASE BASE_URL: ' + window.__DRIVE_BASE_URL, 'color: green; font-size: 16px;');
 
 // Company folder mapping
 const COMPANY_FOLDERS = {
@@ -47,11 +47,12 @@ const COMPANY_FOLDERS = {
 // API Helper function
 const apiCall = async (endpoint, options = {}) => {
   try {
-    const API_URL = FORCED_API_URL;  // FORCE Render.com - ignore cache  // Use global or fallback
+    const API_URL = SUPABASE_EDGE_FUNCTION_URL;  // FORCE Supabase Edge Function
     console.log(`🌐 API Call: ${endpoint}`, { API_URL, options });
     const response = await fetch(`${API_URL}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
         ...options.headers,
       },
       ...options,
@@ -110,9 +111,12 @@ export const uploadFileToFolder = async (file, targetFolderId) => {
   formData.append('targetFolderId', targetFolderId);
 
   try {
-    const API_URL = FORCED_API_URL;  // FORCE Render.com - ignore cache
+    const API_URL = SUPABASE_EDGE_FUNCTION_URL;  // FORCE Supabase Edge Function
     const response = await fetch(`${API_URL}/simple-upload`, {
       method: 'POST',
+      headers: {
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+      },
       body: formData,
     });
 
@@ -317,11 +321,12 @@ export const getFolderContents = async (folderId) => {
   try {
     console.log(`📋 Getting folder contents: ${folderId}`);
     
-    const API_URL = FORCED_API_URL;  // FORCE Render.com - ignore cache
+    const API_URL = SUPABASE_EDGE_FUNCTION_URL;  // FORCE Supabase Edge Function
     const response = await fetch(`${API_URL}/folder-contents/${folderId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
       },
     });
 
