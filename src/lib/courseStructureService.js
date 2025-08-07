@@ -33,14 +33,13 @@ export const createCourseStructure = async (courseData, chapters = []) => {
 
     console.log('📋 Structure data:', structureData);
 
-    // Call server API to create Google Drive structure
-    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? 'https://google-drive-api-server.onrender.com/api/drive' 
-      : 'https://google-drive-api-server.onrender.com/api/drive';
+    // Call Supabase Edge Function to create Google Drive structure
+    const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
     const response = await fetch(`${API_BASE}/create-course-structure`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
       },
       body: JSON.stringify(structureData)
     });
@@ -89,10 +88,11 @@ export const addChapterFolder = async (chapterTitle, parentFolderId) => {
   try {
     console.log('📚 Adding chapter folder:', chapterTitle);
 
-    const response = await fetch('https://google-drive-api-server.onrender.com/api/drive/create-chapter-folder', {
+    const response = await fetch('https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive/create-chapter-folder', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
       },
       body: JSON.stringify({
         chapterTitle,

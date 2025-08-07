@@ -67,8 +67,13 @@ const ForgotPasswordPage = () => {
     setLoading(true);
 
     try {
+      // Use production URL for password reset redirect
+      const redirectUrl = import.meta.env.PROD 
+        ? 'https://login-learning-platform.vercel.app/#/reset-password'
+        : `${window.location.origin}/#/reset-password`;
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/#/reset-password`,
+        redirectTo: redirectUrl,
       });
 
       if (error) {

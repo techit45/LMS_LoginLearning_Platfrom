@@ -222,13 +222,13 @@ export const createProjectStructure = async (projectData, companySlug = 'login')
     console.log('📁 Creating company structure...');
     const companyStructure = await createCompanyStructure(
       companySlug,
-      'All Projects', // Fixed name instead of category-specific
-      `${companySlug}-all-projects` // Fixed slug instead of category-specific
+      'Projects', // เพื่อให้ Edge Function สร้าง [COMPANY] เท่านั้น
+      `${companySlug}-projects` // slug สำหรับ projects
     );
     console.log('📁 Company structure created successfully:', companyStructure);
     
-    // Check if we got the projects folder ID directly (new structure)
-    const projectsParentId = companyStructure.courseFolderId || (companyStructure.folderIds && companyStructure.folderIds.projects);
+    // ใช้ projects folder ID เท่านั้น (ไม่ fallback ไป courses)
+    const projectsParentId = companyStructure.folderIds && companyStructure.folderIds.projects;
     
     if (!companyStructure || !projectsParentId) {
       throw new Error('Company structure creation failed or missing projects folder');
@@ -255,7 +255,7 @@ export const createProjectStructure = async (projectData, companySlug = 'login')
       companyStructure,
       projectFolder,
       projectFolderId: projectFolder.topicFolderId,
-      companyFolderId: companyStructure.courseFolderId,
+      companyFolderId: companyStructure.folderIds.main, // ใช้ main folder ID แทน
     };
     console.log('📁 Final project structure result:', result);
     return result;

@@ -176,82 +176,135 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
 
     setUploading(true);
     try {
-      // First, get course folder structure to find the lessons folder
+      // Create proper folder structure: [COMPANY] > คอร์สเรียน > Course Title
       let targetFolderId = null;
-      let courseData = null;
+      let courseTitle = 'Unknown Course';
       
+      // Get course information first
       if (courseId) {
-        try {    
-          // Import courseService to get course data
+        try {
           const { getCourseByIdAdmin } = await import('../lib/courseService.js');
           const result = await getCourseByIdAdmin(courseId);
           
           if (!result.error && result.data) {
-            courseData = result.data;
-            if (courseData.google_drive_folder_id) {
-              // Use the course's Google Drive folder for upload
-              targetFolderId = courseData.google_drive_folder_id;
-              console.log('🎯 Using course folder:', targetFolderId);
-              console.log('📊 Course data:', { courseData });
-            } else {
-              console.warn('Course has no Google Drive folder, will create structure');
-            }
+            courseTitle = result.data.title || 'Unknown Course';
+            console.log('📚 Course info:', { id: courseId, title: courseTitle });
           }
         } catch (courseError) {
-          console.warn('Could not get course folder:', courseError);
+          console.warn('Could not get course info:', courseError);
         }
       }
-
-      // If no course folder found, we need to create/get the folder structure first
-      if (!targetFolderId) {
-        console.log('🏗️ Creating course folder structure...');
-        try {
-          // Create course structure in Google Drive  
-          const { createCourseStructure } = await import('../lib/googleDriveClientService.js');
-          
-          // Use course's company if available, otherwise use current company context
-          let companySlug = 'login'; // default fallback
-          if (courseData?.company) {
-            companySlug = courseData.company;
-            console.log('🏢 Using course company:', companySlug);
-          } else if (currentCompany?.id) {
-            companySlug = currentCompany.id;
-            console.log('🏢 Using context company:', companySlug);
+      
+      // Create proper folder structure: [LOGIN] > โปรเจค > Course Name
+      
+      // Use one of the existing คอร์สเรียน folders to avoid creating duplicates
+      // We'll find and use the first คอร์สเรียน folder that exists
+      let coursesFolderId = null;
+      
+      try {
+        // List folders in [LOGIN] to find existing คอร์สเรียน folder
+        const loginFolderId = '1xjUv7ruPHwiLhZJ42IeyfcKBkYP8CX4S';
+        const listResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-drive/list?folderId=${loginFolderId}&isSharedDrive=true`, {
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
           }
+        });
+        
+        if (listResponse.ok) {
+          const listData = await listResponse.json();
+          console.log('📂 Found folders in [LOGIN]:', listData);
           
-          console.log('🏢 Final company for upload:', { companySlug, courseCompany: courseData?.company, currentCompany });
+          // Find existing คอร์สเรียน folder
+          const existingCoursesFolder = listData.files?.find(file => 
+            file.name.includes('คอร์สเรียน') && file.mimeType === 'application/vnd.google-apps.folder'
+          );
           
-          const structureResponse = await createCourseStructure({
-            title: `Course ${courseId} Materials`,
-            company: companySlug
-          }, companySlug);
-          
-          if (structureResponse.success && structureResponse.courseFolderId) {
-            targetFolderId = structureResponse.courseFolderId;
-            console.log('✅ Created course folder:', targetFolderId);
+          if (existingCoursesFolder) {
+            coursesFolderId = existingCoursesFolder.id;
+            console.log('📁 Using existing คอร์สเรียน folder:', coursesFolderId);
           }
-        } catch (structureError) {
-          console.error('Failed to create course structure:', structureError);
         }
+        
+        // If no existing folder found, use working folder as fallback
+        if (!coursesFolderId) {
+          console.log('⚠️ No คอร์สเรียน folder found, using โปรเจค folder as fallback');
+          coursesFolderId = '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF'; // Use working โปรเจค folder
+        }
+        
+        // PREVENT DUPLICATE FOLDERS - Always use คอร์สเรียน folder directly
+        if (coursesFolderId) {
+          // List folders in คอร์สเรียน to find existing course folder first
+          const listCourseResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-drive/list?folderId=${coursesFolderId}&isSharedDrive=true`, {
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            }
+          });
+          
+          let existingCourseFolder = null;
+          if (listCourseResponse.ok) {
+            const listCourseData = await listCourseResponse.json();
+            console.log('📂 Found folders in คอร์สเรียน:', listCourseData);
+            
+            // Find existing folder with exact course name match (more precise matching)
+            existingCourseFolder = listCourseData.files?.find(file => 
+              file.name === `📚 ${courseTitle}` && file.mimeType === 'application/vnd.google-apps.folder'
+            );
+            
+            // If exact match not found, try partial match with course title
+            if (!existingCourseFolder) {
+              existingCourseFolder = listCourseData.files?.find(file => 
+                file.name.includes(courseTitle) && file.mimeType === 'application/vnd.google-apps.folder'
+              );
+            }
+          }
+          
+          if (existingCourseFolder) {
+            // Use existing course folder
+            targetFolderId = existingCourseFolder.id;
+            console.log('✅ Using existing course folder:', { 
+              courseTitle, 
+              folderId: targetFolderId,
+              folderName: existingCourseFolder.name 
+            });
+          } else {
+            // For now, use คอร์สเรียน folder directly to prevent duplicates
+            // This ensures all files go to the same location until we fix the duplication issue
+            targetFolderId = coursesFolderId;
+            console.log('🔄 Using คอร์สเรียน folder directly (prevent duplicates):', {
+              courseTitle,
+              folderId: coursesFolderId
+            });
+          }
+        }
+      } catch (folderError) {
+        console.error('⚠️ Failed to find/create course folder:', folderError);
       }
-
-      // If still no folder, use the shared drive root as fallback
+      
+      // Fallback to [LOGIN] folder if everything failed
       if (!targetFolderId) {
-        targetFolderId = '0AAMvBF62LaLyUk9PVA'; // Shared drive root ID
-        console.log('🔄 Using shared drive root as fallback:', targetFolderId);
+        targetFolderId = '1xjUv7ruPHwiLhZJ42IeyfcKBkYP8CX4S';
+        console.log('🔄 Using [LOGIN] folder as fallback:', targetFolderId);
       }
 
       // Create FormData for upload
       const uploadFormData = new FormData();
       uploadFormData.append('file', file);
-      uploadFormData.append('targetFolderId', targetFolderId);
+      uploadFormData.append('folderId', targetFolderId);
       
-      // Call upload API
-      const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-        ? 'http://127.0.0.1:3001/api/drive' 
-        : 'https://google-drive-api-server.onrender.com/api/drive';
+      console.log('📤 Upload parameters:', {
+        fileName: file.name,
+        fileSize: file.size,
+        targetFolderId: targetFolderId,
+        fileType: file.type
+      });
+      
+      // Call upload API via Supabase Edge Function
+      const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
       const response = await fetch(`${API_BASE}/simple-upload`, {
         method: 'POST',
+        headers: {
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+        },
         body: uploadFormData,
       });
 
@@ -263,16 +316,18 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
       console.log('✅ Upload successful:', result);
       
       // Set uploaded file info
+      const fileId = result.fileId || result.id; // Support both field names
+      console.log('📋 File ID extracted:', { fileId, resultFileId: result.fileId, resultId: result.id });
       setUploadedFile({
         name: file.name,
         size: file.size,
         type: file.type,
-        url: result.webViewLink || `https://drive.google.com/file/d/${result.id}/view`,
-        id: result.id
+        url: result.webViewLink || `https://drive.google.com/file/d/${fileId}/view`,
+        id: fileId
       });
 
       // Update document_url in form
-      handleInputChange('document_url', result.webViewLink || `https://drive.google.com/file/d/${result.id}/view`);
+      handleInputChange('document_url', result.webViewLink || `https://drive.google.com/file/d/${fileId}/view`);
 
       toast({
         title: "อัปโหลดสำเร็จ",
@@ -301,9 +356,59 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
     }
   };
 
-  const handleFileRemove = () => {
-    setUploadedFile(null);
-    handleInputChange('document_url', '');
+  const handleFileRemove = async () => {
+    if (!uploadedFile) return;
+
+    // Show confirmation dialog
+    const isConfirmed = window.confirm(`คุณต้องการลบไฟล์ "${uploadedFile.name}" จาก Google Drive หรือไม่?\n\nการลบไม่สามารถย้อนกลับได้`);
+    
+    if (!isConfirmed) return;
+
+    try {
+      setUploading(true);
+      
+      // Delete file from Google Drive
+      const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+      const response = await fetch(`${API_BASE}/delete-file`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fileId: uploadedFile.id,
+          fileName: uploadedFile.name
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Delete failed');
+      }
+
+      const result = await response.json();
+      console.log('✅ File deleted from Google Drive:', result);
+      
+      // Clear uploaded file state
+      setUploadedFile(null);
+      handleInputChange('document_url', '');
+
+      toast({
+        title: "ลบไฟล์สำเร็จ",
+        description: `ไฟล์ ${uploadedFile.name} ถูกลบจาก Google Drive แล้ว`,
+        variant: "default"
+      });
+
+    } catch (error) {
+      console.error('Delete error:', error);
+      
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถลบไฟล์ได้ กรุณาลองใหม่",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const formatFileSize = (bytes) => {
@@ -593,9 +698,15 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
                             variant="ghost"
                             size="sm"
                             onClick={handleFileRemove}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            disabled={uploading}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
+                            title="ลบไฟล์จาก Google Drive"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            {uploading ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
                           </Button>
                         </div>
                       </div>

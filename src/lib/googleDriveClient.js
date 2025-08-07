@@ -1,10 +1,9 @@
 // Google Drive API Client for Frontend
 class GoogleDriveClient {
   constructor() {
-    // Use Render.com external server for Google Drive API
-    this.baseURL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? 'http://127.0.0.1:3001/api/drive'
-      : 'https://google-drive-api-server.onrender.com/api/drive';
+    // Use Supabase Edge Function for Google Drive API
+    this.baseURL = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+    this.authHeader = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
   }
 
   // 📁 List files
@@ -14,7 +13,11 @@ class GoogleDriveClient {
       ...options
     });
 
-    const response = await fetch(`${this.baseURL}/list?${params}`);
+    const response = await fetch(`${this.baseURL}/list?${params}`, {
+      headers: {
+        'Authorization': this.authHeader,
+      },
+    });
     if (!response.ok) {
       throw new Error(`Failed to list files: ${response.statusText}`);
     }
@@ -27,8 +30,11 @@ class GoogleDriveClient {
     formData.append('file', file);
     formData.append('folderId', folderId);
 
-    const response = await fetch(`${this.baseURL}/upload`, {
+    const response = await fetch(`${this.baseURL}/simple-upload`, {
       method: 'POST',
+      headers: {
+        'Authorization': this.authHeader,
+      },
       body: formData
     });
 
@@ -43,7 +49,8 @@ class GoogleDriveClient {
     const response = await fetch(`${this.baseURL}/create-folder`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': this.authHeader,
       },
       body: JSON.stringify({
         folderName,

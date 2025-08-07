@@ -62,6 +62,18 @@ export const addCourseContent = async (courseId, contentData) => {
   try {
     console.log('➕ Adding course content:', contentData);
 
+    // Get course info first to obtain company information for Google Drive folder creation
+    const { data: courseInfo, error: courseError } = await supabase
+      .from('courses')
+      .select('id, title, company')
+      .eq('id', courseId)
+      .single();
+    
+    if (courseError) {
+      console.error('❌ Error fetching course info:', courseError);
+      throw new Error('ไม่สามารถดึงข้อมูลคอร์สได้');
+    }
+
     // Validate required fields
     if (!contentData.title?.trim()) {
       throw new Error('ชื่อเนื้อหาเป็นข้อมูลที่จำเป็น');
@@ -133,6 +145,68 @@ export const addCourseContent = async (courseId, contentData) => {
     }
 
     console.log('✅ Content added successfully:', data);
+    
+    // Create Google Drive folder for the course content
+    try {
+      console.log('📁 Creating Google Drive folder for course content...');
+      
+      // Determine the parent folder based on company and course structure
+      const companyName = courseInfo.company || 'login';
+      const folderName = data.title;
+      
+      // Get the course folder structure from Edge Function
+      const structureResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-drive/create-course-structure`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: courseInfo.title,
+          companySlug: companyName
+        })
+      });
+      
+      if (!structureResponse.ok) {
+        throw new Error(`Course structure API failed: ${structureResponse.status}`);
+      }
+      
+      const structureData = await structureResponse.json();
+      console.log('📋 Course structure response:', structureData);
+      
+      // Create the content folder inside the courses folder
+      const createFolderResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-drive/create-topic-folder`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          parentFolderId: structureData.folderIds.courses, // คอร์สเรียน folder
+          topicName: folderName,
+          topicType: 'course_content'
+        })
+      });
+      
+      if (!createFolderResponse.ok) {
+        console.error('⚠️ Failed to create Google Drive folder, but content was saved to database');
+      } else {
+        const folderData = await createFolderResponse.json();
+        console.log('✅ Google Drive folder created:', folderData);
+        
+        // Update the content with Google Drive folder ID
+        if (folderData.success && folderData.topicFolderId) {
+          await supabase
+            .from('course_content')
+            .update({ google_drive_folder_id: folderData.topicFolderId })
+            .eq('id', data.id);
+        }
+      }
+    } catch (driveError) {
+      console.error('⚠️ Google Drive folder creation failed:', driveError);
+      // Don't fail the entire operation - content is still saved to database
+    }
+
     return { data, error: null };
 
   } catch (error) {

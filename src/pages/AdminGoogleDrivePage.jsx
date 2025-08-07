@@ -65,6 +65,7 @@ const AdminGoogleDrivePage = () => {
 
   // Production API base URL - SUPABASE EDGE FUNCTION
   const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
   // Load files from current folder using googleDriveClientService
   const loadFiles = async (folderId = currentFolder) => {
@@ -177,8 +178,16 @@ const AdminGoogleDrivePage = () => {
     if (!confirm(`คุณต้องการลบ "${fileName}" หรือไม่?`)) return;
 
     try {
-      const response = await fetch(`${API_BASE}/delete?fileId=${fileId}`, {
-        method: 'DELETE'
+      const response = await fetch(`${API_BASE}/delete-file`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fileId: fileId,
+          fileName: fileName
+        })
       });
 
       if (response.ok) {

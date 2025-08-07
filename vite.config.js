@@ -219,7 +219,9 @@ export default defineConfig({
 			'@radix-ui/react-toast',
 			'lucide-react',
 			'react-helmet-async',
-			'framer-motion'
+			'framer-motion',
+			'react-dnd',
+			'react-dnd-html5-backend'
 		],
 		exclude: [],
 		esbuildOptions: {

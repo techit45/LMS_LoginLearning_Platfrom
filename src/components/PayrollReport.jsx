@@ -176,7 +176,7 @@ const PayrollReport = ({ selectedUserId = null, showDetails = true }) => {
           regularHours: 0,
           overtimeHours: 0,
           companies: {},
-          employmentType: employmentType
+          employmentType: entry.employment_type || 'general'
         };
       }
       workTypeSummary[workType].regularHours += regularHours;

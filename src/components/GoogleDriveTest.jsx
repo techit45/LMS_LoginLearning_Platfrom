@@ -8,11 +8,18 @@ function GoogleDriveTest() {
   const [currentFolder, setCurrentFolder] = useState('134qcR1t2BQqRUJCHexjLEoDZjU9MWPLY');
   const [uploadProgress, setUploadProgress] = useState({});
 
+  // 🚨 NOTE: ต้อง deploy Edge Function ใหม่ก่อนใช้งาน!
+  // Copy โค้ดจาก supabase/functions/google-drive/index.ts ไป Supabase Dashboard
+
   // 📁 Load files from current folder
   const loadFiles = async (folderId = currentFolder) => {
     setLoading(true);
     try {
-      const response = await fetch(`https://google-drive-api-server.onrender.com/api/drive/list?folderId=${folderId}`);
+      const response = await fetch(`https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive/list?folderId=${folderId}`, {
+        headers: {
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+        },
+      });
       const data = await response.json();
       setFiles(data.files || []);
     } catch (error) {

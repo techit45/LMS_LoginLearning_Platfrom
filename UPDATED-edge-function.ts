@@ -198,18 +198,17 @@ serve(async (req: Request) => {
       console.log('📁 Creating structure with HARDCODED folders from Shared Drive')
 
       // ✅ โฟลเดอร์ที่อยู่ใน Shared Drive จริงๆ (0AAMvBF62LaLyUk9PVA)
-      // Updated: Use only working folder IDs, removed broken คอร์สเรียน ID
       const response = {
         success: true,
-        courseFolderId: '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF', // Use โปรเจค folder as courses fallback
+        courseFolderId: '1Fyq7tkra-DAZ6ndcvlUnERH5ryfOMQ7B', // คอร์สเรียน
         folderIds: {
           main: '1xjUv7ruPHwiLhZJ42IeyfcKBkYP8CX4S',      // [LOGIN]
-          courses: '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF',    // Use โปรเจค for courses (working)
+          courses: '1Fyq7tkra-DAZ6ndcvlUnERH5ryfOMQ7B',    // คอร์สเรียน  
           projects: '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF',   // โปรเจค
         },
         courseFolderName: '[LOGIN]',
         isExisting: true,
-        version: 'FIXED-FOLDER-IDS-AUG-2025'
+        version: 'COMPLETE-FIX-HARDCODE-SHARED-DRIVE-WITH-UPLOAD'
       }
 
       console.log('✅ Returning hardcoded Shared Drive folders:', response)
@@ -426,75 +425,6 @@ serve(async (req: Request) => {
       }
     }
 
-    // Delete file endpoint - NEW! 🗑️
-    if (url.pathname.includes('/delete-file') && req.method === 'DELETE') {
-      const body = await req.json()
-      const { fileId, fileName } = body
-
-      if (!fileId) {
-        return new Response(
-          JSON.stringify({ error: 'File ID is required' }),
-          { 
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
-      console.log('🗑️ Deleting file:', { fileId, fileName })
-
-      try {
-        // Delete file from Google Drive
-        const result = await callGoogleDriveAPI(`/files/${fileId}`, 'DELETE', undefined, { 
-          supportsAllDrives: true 
-        })
-
-        console.log('✅ File deleted successfully:', fileId)
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-            deletedFileId: fileId,
-            fileName: fileName || 'Unknown File'
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      } catch (error) {
-        console.error('❌ Failed to delete file:', error)
-        
-        // Check if it's a 404 (file not found) - treat as success since it's already deleted
-        if (error.message && error.message.includes('404')) {
-          console.log('📄 File not found (already deleted), treating as success')
-          
-          return new Response(
-            JSON.stringify({
-              success: true,
-              deletedFileId: fileId,
-              fileName: fileName || 'Unknown File',
-              note: 'File was already deleted or not found'
-            }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          )
-        }
-        
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: `Failed to delete Google Drive file: ${error.message}`,
-            fileId
-          }),
-          { 
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-    }
-
     // List files - basic implementation
     if (url.pathname.includes('/list') && req.method === 'GET') {
       const folderId = url.searchParams.get('folderId') || 'root'
@@ -538,7 +468,7 @@ serve(async (req: Request) => {
         error: 'Endpoint not found', 
         path: url.pathname, 
         method: req.method,
-        availableEndpoints: ['/health', '/create-course-structure', '/create-topic-folder', '/delete-project-folder', '/simple-upload', '/delete-file', '/list']
+        availableEndpoints: ['/health', '/create-course-structure', '/create-topic-folder', '/delete-project-folder', '/simple-upload', '/list']
       }),
       { 
         status: 404,
