@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CSP YouTube Test</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; frame-src 'self' https://www.youtube.com https://youtube.com;">
+</head>
+<body>
+    <h1>CSP YouTube Test</h1>
+    <p>Testing YouTube embed with CSP frame-src directive:</p>
+    <iframe width="560" height="315" 
+            src="https://www.youtube.com/embed/xwy5XKS5mb4" 
+            frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowfullscreen>
+    </iframe>
+    <script>
+        console.log('CSP Test page loaded');
+        setTimeout(() => {
+            const iframe = document.querySelector('iframe');
+            if (iframe) {
+                console.log('YouTube iframe found and should be loading...');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
