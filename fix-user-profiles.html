@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แก้ไข User Profiles</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .card { background: #f9f9f9; padding: 20px; margin: 10px 0; border-radius: 8px; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #45a049; }
+        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .warning { background: #fff3cd; color: #856404; padding: 10px; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 แก้ไข User Profiles</h1>
+    
+    <div class="card">
+        <h2>ปัญหาที่พบ:</h2>
+        <ul>
+            <li><strong>Login-Learning Admin:</strong> ชื่อไม่ครบ และ is_active = false (ทำให้ไม่แสดงในตาราง)</li>
+            <li><strong>pethj02:</strong> role = student ถูกแล้ว ไม่ต้องแก้</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <button onclick="checkProfiles()">📋 ตรวจสอบปัจจุบัน</button>
+        <button onclick="fixProfiles()">🔧 แก้ไขทั้งหมด</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        const supabase = window.supabase.createClient(
+            'https://vuitwzisazvikrhtfthh.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE'
+        )
+
+        async function checkProfiles() {
+            const result = document.getElementById('result')
+            result.innerHTML = '⏳ ตรวจสอบ profiles...'
+
+            try {
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .select('user_id, email, full_name, role, is_active')
+                    .order('full_name')
+
+                if (error) {
+                    result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`
+                } else {
+                    let html = `<div class="card"><h3>📊 Profiles ปัจจุบัน (${data.length} คน):</h3><ul>`
+                    
+                    data.forEach(p => {
+                        let status = '✅'
+                        if (p.email === 'techit.y@login-learning.com' && (p.full_name !== 'Login-Learning Admin' || !p.is_active)) {
+                            status = '⚠️ ต้องแก้ไข (is_active = false)'
+                        }
+                        
+                        html += `<li>${status} <strong>${p.full_name || 'ไม่มีชื่อ'}</strong> (${p.email}) - Role: ${p.role} - Active: ${p.is_active}</li>`
+                    })
+                    
+                    html += '</ul></div>'
+                    result.innerHTML = html
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Unexpected error: ${error.message}</div>`
+            }
+        }
+
+        async function fixProfiles() {
+            const result = document.getElementById('result')
+            result.innerHTML = '⏳ แก้ไข profiles...'
+
+            try {
+                const fixes = []
+                
+                // 1. แก้ไข Login-Learning Admin
+                const fix1 = await supabase
+                    .from('user_profiles')
+                    .update({
+                        full_name: 'Login-Learning Admin',
+                        role: 'admin',
+                        is_active: true
+                    })
+                    .eq('email', 'techit.y@login-learning.com')
+                
+                fixes.push({ name: 'Login-Learning Admin', result: fix1 })
+
+                // รายงานผล
+                let html = '<div class="success"><h3>🎉 แก้ไขเสร็จสิ้น!</h3><ul>'
+                fixes.forEach(fix => {
+                    if (fix.result.error) {
+                        html += `<li>❌ ${fix.name}: ${fix.result.error.message}</li>`
+                    } else {
+                        html += `<li>✅ ${fix.name}: แก้ไขสำเร็จ</li>`
+                    }
+                })
+                html += '</ul></div>'
+                
+                html += `<div class="warning">
+                    <strong>⚠️ สำคัญ:</strong> กลับไปหน้าจัดการตารางสอนและรีเฟรช จะเห็น Login-Learning Admin กลับมาแสดงแล้ว!
+                </div>`
+                
+                result.innerHTML = html
+                
+                // แสดงผลลัพธ์ล่าสุด
+                setTimeout(() => {
+                    checkProfiles()
+                }, 1000)
+
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Unexpected error: ${error.message}</div>`
+            }
+        }
+    </script>
+</body>
+</html>

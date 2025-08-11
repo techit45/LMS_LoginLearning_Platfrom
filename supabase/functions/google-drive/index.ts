@@ -185,7 +185,7 @@ serve(async (req: Request) => {
         JSON.stringify({ 
           status: 'healthy', 
           timestamp: new Date().toISOString(),
-          version: 'COMPLETE-FIX-WITH-SIMPLE-UPLOAD-5.0.0'
+          version: 'WORKING-FOLDER-ID-FIX-5.1.0'
         }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -198,18 +198,18 @@ serve(async (req: Request) => {
       console.log('📁 Creating structure with HARDCODED folders from Shared Drive')
 
       // ✅ โฟลเดอร์ที่อยู่ใน Shared Drive จริงๆ (0AAMvBF62LaLyUk9PVA)
-      // Updated: Use only working folder IDs, removed broken คอร์สเรียน ID
+      // Fixed: Use working โปรเจค folder ID for all uploads
       const response = {
         success: true,
-        courseFolderId: '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF', // Use โปรเจค folder as courses fallback
+        courseFolderId: '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF', // Use working โปรเจค folder ID
         folderIds: {
           main: '1xjUv7ruPHwiLhZJ42IeyfcKBkYP8CX4S',      // [LOGIN]
-          courses: '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF',    // Use โปรเจค for courses (working)
-          projects: '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF',   // โปรเจค
+          courses: '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF',    // Use working โปรเจค folder ID
+          projects: '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF',   // Working โปรเจค folder ID
         },
         courseFolderName: '[LOGIN]',
         isExisting: true,
-        version: 'FIXED-FOLDER-IDS-AUG-2025'
+        version: 'WORKING-FOLDER-ID-FIX-AUG-2025'
       }
 
       console.log('✅ Returning hardcoded Shared Drive folders:', response)
@@ -567,8 +567,8 @@ serve(async (req: Request) => {
 =====================================================================================
 ✅ โฟลเดอร์ที่ใช้ (ใน Shared Drive 0AAMvBF62LaLyUk9PVA):
 - [LOGIN]: 1xjUv7ruPHwiLhZJ42IeyfcKBkYP8CX4S
-- คอร์สเรียน: 1Fyq7tkra-DAZ6ndcvlUnERH5ryfOMQ7B  
-- โปรเจค: 148MPiUE7WLAvluF1o2VuPA2VlplzJMJF
+- โปรเจค (Working): 148MPiUE7WLAvluF1o2VuPA2VlplzJMJF  
+- All uploads go to working โปรเจค folder
 
 🔧 Features:
 - create-course-structure: Returns hardcoded correct folder IDs (no new folders created)

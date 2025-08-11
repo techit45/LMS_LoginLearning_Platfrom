@@ -5,6 +5,9 @@ const SimpleCharts = {
   
   // Simple Bar Chart Component
   BarChart: ({ data, title, height = 200, colors = ['#3b82f6', '#10b981'] }) => {
+    // Ensure height is a valid number
+    const validHeight = typeof height === 'number' && !isNaN(height) && height > 0 ? height : 200;
+    
     if (!data || data.length === 0) {
       return (
         <div className="w-full bg-gray-50 rounded-lg p-4 text-center text-gray-500">
@@ -18,10 +21,10 @@ const SimpleCharts = {
     return (
       <div className="w-full">
         {title && <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>}
-        <div className="flex items-end justify-between space-x-1" style={{ height: `${height}px` }}>
+        <div className="flex items-end justify-between space-x-1" style={{ height: `${validHeight}px` }}>
           {data.map((item, index) => {
-            const userHeight = ((item.users || item.count || item.value || 0) / maxValue) * (height - 40);
-            const enrollmentHeight = ((item.enrollments || 0) / maxValue) * (height - 40);
+            const userHeight = ((item.users || item.count || item.value || 0) / maxValue) * (validHeight - 40);
+            const enrollmentHeight = ((item.enrollments || 0) / maxValue) * (validHeight - 40);
             
             return (
               <div key={index} className="flex-1 flex flex-col items-center">
@@ -29,7 +32,7 @@ const SimpleCharts = {
                   {/* First bar (users/count/value) */}
                   <div
                     className="bg-blue-500 rounded-t-sm relative group transition-all duration-200 hover:bg-blue-600 min-w-4"
-                    style={{ height: `${userHeight}px` }}
+                    style={{ height: `${Math.max(userHeight, 1)}px` }}
                   >
                     <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                       {item.users || item.count || item.value || 0}
@@ -40,7 +43,7 @@ const SimpleCharts = {
                   {item.enrollments !== undefined && (
                     <div
                       className="bg-green-500 rounded-t-sm relative group transition-all duration-200 hover:bg-green-600 min-w-4"
-                      style={{ height: `${enrollmentHeight}px` }}
+                      style={{ height: `${Math.max(enrollmentHeight, 1)}px` }}
                     >
                       <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                         {item.enrollments}
@@ -79,6 +82,9 @@ const SimpleCharts = {
 
   // Simple Pie Chart Component
   PieChart: ({ data, title, size = 200 }) => {
+    // Ensure size is a valid number
+    const validSize = typeof size === 'number' && !isNaN(size) && size > 0 ? size : 200;
+    
     if (!data || data.length === 0) {
       return (
         <div className="w-full bg-gray-50 rounded-lg p-4 text-center text-gray-500">
@@ -96,12 +102,12 @@ const SimpleCharts = {
       <div className="w-full">
         {title && <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>}
         <div className="flex items-center justify-center">
-          <div className="relative" style={{ width: size, height: size }}>
-            <svg width={size} height={size} className="transform -rotate-90">
+          <div className="relative" style={{ width: validSize, height: validSize }}>
+            <svg width={validSize} height={validSize} className="transform -rotate-90">
               <circle
-                cx={size / 2}
-                cy={size / 2}
-                r={(size - 40) / 2}
+                cx={validSize / 2}
+                cy={validSize / 2}
+                r={(validSize - 40) / 2}
                 fill="none"
                 stroke="#f3f4f6"
                 strokeWidth="20"
@@ -115,9 +121,9 @@ const SimpleCharts = {
                 return (
                   <circle
                     key={index}
-                    cx={size / 2}
-                    cy={size / 2}
-                    r={(size - 40) / 2}
+                    cx={validSize / 2}
+                    cy={validSize / 2}
+                    r={(validSize - 40) / 2}
                     fill="none"
                     stroke={colors[index % colors.length]}
                     strokeWidth="20"

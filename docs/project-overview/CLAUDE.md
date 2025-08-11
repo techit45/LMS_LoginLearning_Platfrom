@@ -166,6 +166,35 @@ COMPANIES = {
   - Admin bundle: 508.03 kB (gzipped: 91.82 kB)
   - React vendor: 341.35 kB (gzipped: 105.43 kB)
 
+### 📡 Real-time Collaborative Teaching Schedules Implementation (August 8, 2025)
+
+- **Complete Real-time Infrastructure**: Implemented full collaborative teaching schedule system with Supabase Realtime
+- **Database Schema**: Created `teaching_schedules` table with conflict resolution and version control
+- **React Hooks Integration**: Built `useRealtimeSchedule` hook with optimistic updates and error handling  
+- **UI/UX Integration**: Updated TeachingSchedulePageNew with real-time connection indicators and status display
+- **Drag-and-Drop Enhancement**: Replaced legacy handlers with real-time addSchedule/removeSchedule functions
+
+#### Real-time Features Implemented:
+1. **Live Synchronization**: Changes appear instantly across all connected users
+2. **Optimistic Updates**: UI updates immediately, reverts on error  
+3. **Connection Health Monitoring**: Visual indicators showing real-time connection status
+4. **Multi-user Notifications**: Toast messages for changes made by other users
+5. **Conflict Resolution**: Version-based handling of simultaneous edits
+
+#### Technical Implementation:
+- **Database Table**: `teaching_schedules` with RLS policies, indexes, and triggers
+- **Real-time Service**: `realtimeScheduleService.js` with Supabase Realtime subscriptions
+- **React Hook**: `useRealtimeSchedule.js` with state management and optimistic updates  
+- **UI Components**: Connection indicator with dynamic status (connected/connecting/error)
+- **Legacy Compatibility**: Adapter functions to work with existing drag-and-drop interface
+
+#### MCP Supabase Connection Status:
+- **Personal Access Token**: Successfully created and configured
+- **Server Installation**: MCP Supabase server installed with project-scoped access
+- **Known Issue**: "Transport is closed" error (common in 2024-2025)
+- **Workaround**: Direct Supabase client connection provides full functionality
+- **Real-time Status**: ✅ Fully operational through direct database connection
+
 ### 🐛 Critical Bug Fixes (August 7, 2025)
 
 #### **PayrollReport.jsx Error Resolution**
@@ -347,6 +376,15 @@ Shared Drive (0AAMvBF62LaLyUk9PVA)
 - Admin interface for course management
 - Student learning progress tracking
 - Interactive course content display
+
+### Real-time Collaborative Teaching Schedules
+
+- **Live Multi-user Editing**: Google Sheets-like collaborative editing for teaching schedules
+- **Drag-and-Drop Interface**: Intuitive course assignment to instructors and time slots
+- **Connection Status Monitoring**: Real-time indicators showing connection health
+- **Optimistic Updates**: Immediate UI feedback with error rollback capabilities
+- **Version Control**: Conflict resolution for simultaneous edits by multiple users
+- **Cross-session Synchronization**: Changes appear instantly across all browser sessions
 
 ### Multi-Company Architecture
 
@@ -819,7 +857,35 @@ rm -rf node_modules/.vite && rm -rf node_modules/.cache
 \i sql_scripts/fix-rls-security-issues.sql        # Enable RLS and create policies
 \i sql_scripts/simple-view-fix.sql                # Fix instructor_profiles view
 \i sql_scripts/simple-security-check.sql          # Verify security implementation
+
+# Real-time teaching schedules table
+\i sql_scripts/create-teaching-schedules-table.sql # Create real-time collaborative schedules
 ```
+
+### MCP Supabase Connection (August 2025)
+
+```bash
+# Check MCP server status
+claude mcp list
+
+# Add Supabase MCP server with personal access token
+claude mcp add supabase -e SUPABASE_ACCESS_TOKEN=your_token_here -- npx @supabase/mcp-server-supabase --project-ref vuitwzisazvikrhtfthh --read-only
+
+# Remove MCP server if needed
+claude mcp remove supabase -s local
+```
+
+**MCP Supabase Setup Status:**
+- ✅ Personal Access Token: `sbp_26c83c870007610584ec7fd83326b141c26950cd`
+- ✅ MCP Server: Configured with project ref `vuitwzisazvikrhtfthh`
+- ⚠️ Transport Status: "Transport is closed" (known issue, workaround available)
+- ✅ Alternative: Direct Supabase client connection works perfectly
+
+**Troubleshooting MCP Connection:**
+- MCP Transport closed error is common in 2024-2025
+- Real-time features work through direct Supabase client
+- Database operations can be done via Supabase Dashboard SQL editor
+- All real-time functionality implemented and functional
 
 ### Google Drive Server
 
@@ -1056,5 +1122,5 @@ CREATE POLICY "policy_name" ON table_name
 
 ---
 
-Last Updated: August 7, 2025
-Platform Version: 2.4.0 (Google Drive File Management & Production Deployment)
+Last Updated: August 8, 2025
+Platform Version: 2.5.0 (Real-time Collaborative Teaching Schedules & MCP Supabase Integration)

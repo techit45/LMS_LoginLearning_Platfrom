@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Time Format - Weekly Schedules</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .btn {
+            background: #3b82f6;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover { background: #2563eb; }
+        .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+        .log {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+        }
+        .success { color: #16a34a; }
+        .error { color: #dc2626; }
+        .warning { color: #ea580c; }
+        .info { color: #0ea5e9; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Fix Time Format Issues</h1>
+        <p>แก้ไขปัญหา time format ใน weekly_schedules records ID 79, 83</p>
+        
+        <div>
+            <button id="checkBtn" class="btn">🔍 ตรวจสอบข้อมูล</button>
+            <button id="fixBtn" class="btn">🛠️ แก้ไขปัญหา</button>
+            <button id="verifyBtn" class="btn">✅ ตรวจสอบผลลัพธ์</button>
+            <button id="clearBtn" class="btn" style="background: #64748b;">🗑️ ล้าง Log</button>
+        </div>
+        
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        // Supabase configuration
+        const supabaseUrl = 'https://vuitwzisazvikrhtfthh.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+        
+        const { createClient } = supabase;
+        const supabaseClient = createClient(supabaseUrl, supabaseKey);
+        
+        const logElement = document.getElementById('log');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('th-TH');
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info';
+            logElement.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        async function checkRecords() {
+            log('🔍 กำลังตรวจสอบข้อมูล records ID 79, 83...');
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('weekly_schedules')
+                    .select('id, time_slot, start_time, end_time, day_of_week, duration, course_id, instructor_id')
+                    .in('id', [79, 83])
+                    .order('id');
+                
+                if (error) {
+                    log(`❌ Error: ${error.message}`, 'error');
+                    return;
+                }
+                
+                log('📊 ข้อมูลปัจจุบัน:', 'info');
+                data.forEach(record => {
+                    const hasIssue = !record.time_slot.match(/^[0-9]{2}:[0-9]{2}$/) || !record.start_time.match(/^[0-9]{2}:[0-9]{2}$/);
+                    const status = hasIssue ? '❌ มีปัญหา' : '✅ ปกติ';
+                    log(`  ID ${record.id}: ${record.time_slot} → ${record.start_time} → ${record.end_time} ${status}`, hasIssue ? 'warning' : 'success');
+                });
+                
+            } catch (error) {
+                log(`💥 Unexpected error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function fixRecords() {
+            log('🛠️ กำลังแก้ไข time format...', 'info');
+            
+            try {
+                // แก้ไข record ID 79
+                log('🔧 แก้ไข record ID 79...', 'info');
+                const { data: fix79, error: error79 } = await supabaseClient
+                    .from('weekly_schedules')
+                    .update({
+                        time_slot: '08:00',
+                        start_time: '08:00',
+                        end_time: '09:00',
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', 79)
+                    .select();
+                
+                if (error79) {
+                    log(`❌ Error fixing record 79: ${error79.message}`, 'error');
+                } else {
+                    log(`✅ Record 79 แก้ไขสำเร็จ: ${fix79 ? fix79.length : 0} records updated`, 'success');
+                }
+                
+                // แก้ไข record ID 83
+                log('🔧 แก้ไข record ID 83...', 'info');
+                const { data: fix83, error: error83 } = await supabaseClient
+                    .from('weekly_schedules')
+                    .update({
+                        time_slot: '08:00',
+                        start_time: '08:00',
+                        end_time: '12:00',
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', 83)
+                    .select();
+                
+                if (error83) {
+                    log(`❌ Error fixing record 83: ${error83.message}`, 'error');
+                } else {
+                    log(`✅ Record 83 แก้ไขสำเร็จ: ${fix83 ? fix83.length : 0} records updated`, 'success');
+                }
+                
+                log('🎉 การแก้ไขเสร็จสิ้น!', 'success');
+                
+            } catch (error) {
+                log(`💥 Unexpected error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function verifyFix() {
+            log('🔍 ตรวจสอบผลลัพธ์หลังการแก้ไข...', 'info');
+            await checkRecords();
+            
+            // ตรวจสอบ records อื่นๆ ที่อาจมีปัญหาคล้ายกัน
+            log('🔍 ตรวจสอบ records อื่นที่อาจมีปัญหา time format...', 'info');
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('weekly_schedules')
+                    .select('id, time_slot, start_time, end_time')
+                    .limit(50);
+                
+                if (error) {
+                    log(`❌ Error checking other records: ${error.message}`, 'error');
+                    return;
+                }
+                
+                const problematicRecords = data.filter(record => 
+                    !record.time_slot.match(/^[0-9]{2}:[0-9]{2}$/) || 
+                    !record.start_time.match(/^[0-9]{2}:[0-9]{2}$/)
+                );
+                
+                if (problematicRecords.length > 0) {
+                    log(`⚠️ พบ records อื่นที่มีปัญหา time format: ${problematicRecords.length} records`, 'warning');
+                    problematicRecords.forEach(record => {
+                        log(`  ID ${record.id}: ${record.time_slot} → ${record.start_time}`, 'warning');
+                    });
+                } else {
+                    log('✅ ไม่พบ records อื่นที่มีปัญหา time format', 'success');
+                }
+                
+            } catch (error) {
+                log(`💥 Unexpected error: ${error.message}`, 'error');
+            }
+        }
+        
+        function clearLog() {
+            logElement.innerHTML = '';
+            log('📝 Log ถูกล้างแล้ว', 'info');
+        }
+        
+        // Event listeners
+        document.getElementById('checkBtn').addEventListener('click', checkRecords);
+        document.getElementById('fixBtn').addEventListener('click', fixRecords);
+        document.getElementById('verifyBtn').addEventListener('click', verifyFix);
+        document.getElementById('clearBtn').addEventListener('click', clearLog);
+        
+        // Auto check on page load
+        log('🚀 เริ่มต้น Time Format Fix Tool', 'info');
+        log('💡 คลิก "ตรวจสอบข้อมูล" เพื่อดูสถานะปัจจุบัน', 'info');
+    </script>
+</body>
+</html>

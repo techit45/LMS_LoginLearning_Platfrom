@@ -4,6 +4,7 @@ const { useRef } = React;
 import { supabase, ADMIN_DOMAIN } from '../lib/supabaseClient';
 import { useToast } from "../hooks/use-toast.jsx"
 import { useLocation } from 'react-router-dom';
+import NotificationIntegrations from '../lib/notificationIntegrations';
 
 const AuthContext = React.createContext();
 
@@ -350,6 +351,18 @@ export const AuthProvider = ({ children }) => {
         }
       } 
     });
+    
+    // Send welcome notification for new users
+    if (!error && data?.user) {
+      try {
+        await NotificationIntegrations.handleUserWelcome(data.user.id);
+        console.log('Welcome notification sent to new user:', data.user.id);
+      } catch (notificationError) {
+        console.error('Error sending welcome notification:', notificationError);
+        // Don't fail signup if notification fails
+      }
+    }
+    
     setLoading(false);
     return { data, error };
   };

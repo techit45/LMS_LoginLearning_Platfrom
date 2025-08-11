@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Course & Instructor</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
+        .card { background: #f9f9f9; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .info { background: #d1ecf1; color: #0c5460; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        pre { background: #000; color: #0f0; padding: 10px; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Debug Course & Instructor</h1>
+    
+    <div class="card">
+        <h3>🎯 เป้าหมาย:</h3>
+        <p>ตรวจสอบว่าทำไมวิชาไม่ขึ้นในตาราง</p>
+        <button onclick="checkCourses()">🎓 ตรวจสอบ Courses</button>
+        <button onclick="checkInstructors()">👥 ตรวจสอบ Instructors</button>
+        <button onclick="checkSchedules()">📅 ตรวจสอบ Schedules</button>
+        <button onclick="checkSessionStorage()">💾 ตรวจสอบ SessionStorage</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        const supabase = window.supabase.createClient(
+            'https://vuitwzisazvikrhtfthh.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE'
+        )
+
+        async function checkCourses() {
+            const result = document.getElementById('result')
+            result.innerHTML = '⏳ กำลังตรวจสอบ Courses...'
+
+            try {
+                const { data, error } = await supabase
+                    .from('teaching_courses')
+                    .select('id, name, created_by, company, duration_hours')
+                    .limit(5)
+
+                if (error) throw error
+
+                let html = '<div class="info"><h3>🎓 Teaching Courses (5 รายการแรก):</h3>'
+                data.forEach(course => {
+                    html += `
+                        <div style="border: 1px solid #ccc; padding: 10px; margin: 5px 0;">
+                            <strong>ID:</strong> ${course.id}<br>
+                            <strong>Name:</strong> ${course.name}<br>
+                            <strong>Instructor ID:</strong> ${course.created_by}<br>
+                            <strong>Company:</strong> ${course.company}<br>
+                            <strong>Duration:</strong> ${course.duration_hours} ชม.
+                        </div>
+                    `
+                })
+                html += '</div>'
+                result.innerHTML = html
+
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`
+            }
+        }
+
+        async function checkInstructors() {
+            const result = document.getElementById('result')
+            result.innerHTML = '⏳ กำลังตรวจสอบ Instructors...'
+
+            try {
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .select('user_id, full_name, email, role, is_active')
+                    .neq('role', 'student')
+
+                if (error) throw error
+
+                let html = '<div class="info"><h3>👥 Instructors ทั้งหมด:</h3>'
+                data.forEach(instructor => {
+                    const status = instructor.is_active ? '🟢 Active' : '🔴 Inactive'
+                    html += `
+                        <div style="border: 1px solid #ccc; padding: 10px; margin: 5px 0;">
+                            <strong>ID:</strong> ${instructor.user_id}<br>
+                            <strong>Name:</strong> ${instructor.full_name}<br>
+                            <strong>Email:</strong> ${instructor.email}<br>
+                            <strong>Role:</strong> ${instructor.role}<br>
+                            <strong>Status:</strong> ${status}
+                        </div>
+                    `
+                })
+                html += '</div>'
+                result.innerHTML = html
+
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`
+            }
+        }
+
+        async function checkSchedules() {
+            const result = document.getElementById('result')
+            result.innerHTML = '⏳ กำลังตรวจสอบ Schedules...'
+
+            try {
+                const { data, error } = await supabase
+                    .from('weekly_schedules')
+                    .select(`
+                        id, day_of_week, time_slot, instructor_id, course_id,
+                        teaching_courses(name)
+                    `)
+                    .order('id', { ascending: false })
+                    .limit(10)
+
+                if (error) throw error
+
+                let html = `<div class="info"><h3>📅 Weekly Schedules (10 รายการล่าสุด):</h3>`
+                if (data.length === 0) {
+                    html += '<p><strong>⚠️ ไม่มี schedules เลย!</strong></p>'
+                } else {
+                    data.forEach(schedule => {
+                        html += `
+                            <div style="border: 1px solid #ccc; padding: 10px; margin: 5px 0;">
+                                <strong>ID:</strong> ${schedule.id}<br>
+                                <strong>Course:</strong> ${schedule.teaching_courses?.name}<br>
+                                <strong>Day:</strong> ${schedule.day_of_week}<br>
+                                <strong>Time:</strong> ${schedule.time_slot}<br>
+                                <strong>Instructor ID:</strong> ${schedule.instructor_id}<br>
+                                <strong>Course ID:</strong> ${schedule.course_id}
+                            </div>
+                        `
+                    })
+                }
+                html += '</div>'
+                result.innerHTML = html
+
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`
+            }
+        }
+
+        async function checkSessionStorage() {
+            const result = document.getElementById('result')
+            
+            const removedInstructors = sessionStorage.getItem('removedInstructors')
+            
+            let html = '<div class="info"><h3>💾 SessionStorage:</h3>'
+            html += `<strong>removedInstructors:</strong><pre>${removedInstructors || 'null'}</pre>`
+            
+            if (removedInstructors) {
+                try {
+                    const parsed = JSON.parse(removedInstructors)
+                    html += `<strong>Parsed:</strong><pre>${JSON.stringify(parsed, null, 2)}</pre>`
+                    html += `<strong>Count:</strong> ${parsed.length} instructors ถูกลบ`
+                } catch (e) {
+                    html += `<strong>Parse Error:</strong> ${e.message}`
+                }
+            }
+            
+            html += '</div>'
+            result.innerHTML = html
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบ CRUD ด้วย Authentication</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .auth-section {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .auth-section.authenticated {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        .test-result {
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 14px;
+        }
+        .success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+        .info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+        .warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            margin: 4px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+        .auth-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        input {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .user-info {
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-weight: 500;
+        }
+        .stats .pass { color: #16a34a; }
+        .stats .fail { color: #dc2626; }
+    </style>
+</head>
+<body>
+    <h1>🔐 ทดสอบ CRUD Operations พร้อม Authentication</h1>
+    
+    <!-- Authentication Section -->
+    <div class="container">
+        <h2>🔑 การเข้าสู่ระบบ</h2>
+        <div id="authSection" class="auth-section">
+            <div id="loginForm" class="auth-form">
+                <input type="email" id="email" placeholder="อีเมล" value="test@example.com">
+                <input type="password" id="password" placeholder="รหัสผ่าน" value="password123">
+                <button onclick="signIn()">เข้าสู่ระบบ</button>
+                <button onclick="signUp()">สมัครสมาชิก</button>
+            </div>
+            <div id="userInfo" class="user-info" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Test Controls -->
+    <div class="container">
+        <h2>🧪 การทดสอบ</h2>
+        <button onclick="runAuthenticatedTests()" id="testBtn" disabled>🚀 เริ่มทดสอบ (ต้องล็อกอินก่อน)</button>
+        <button onclick="testCreateCourse()" id="createBtn" disabled>➕ ทดสอบสร้างคอร์ส</button>
+        <button onclick="testCreateSchedule()" id="scheduleBtn" disabled>📅 ทดสอบสร้างตาราง</button>
+        <button onclick="testRealTime()" id="realtimeBtn" disabled>⚡ ทดสอบ Real-time</button>
+        <button onclick="clearResults()">🧹 เคลียร์ผล</button>
+    </div>
+
+    <!-- Results -->
+    <div class="container">
+        <h2>📋 ผลการทดสอบ</h2>
+        <div class="stats" id="stats">
+            <div>✅ ผ่าน: <span id="passCount" class="pass">0</span></div>
+            <div>❌ ไม่ผ่าน: <span id="failCount" class="fail">0</span></div>
+            <div>⏱️ เวลา: <span id="totalTime">0</span>ms</div>
+        </div>
+        <div id="results" style="max-height: 400px; overflow-y: auto; margin-top: 20px;"></div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+        
+        const supabase = createClient(
+            'https://vuitwzisazvikrhtfthh.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE'
+        )
+
+        let passCount = 0
+        let failCount = 0
+        let startTime = 0
+        let currentUser = null
+        let testCourseId = null
+        let testScheduleId = null
+        
+        // Check if user is already logged in
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (user) {
+                updateAuthUI(user)
+            }
+        })
+
+        async function signIn() {
+            const email = document.getElementById('email').value
+            const password = document.getElementById('password').value
+            
+            logInfo('🔄 กำลังเข้าสู่ระบบ...')
+            
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            })
+            
+            if (error) {
+                logResult(`การเข้าสู่ระบบล้มเหลว: ${error.message}`, false)
+            } else {
+                updateAuthUI(data.user)
+                logResult('เข้าสู่ระบบสำเร็จ!', true)
+            }
+        }
+        
+        async function signUp() {
+            const email = document.getElementById('email').value
+            const password = document.getElementById('password').value
+            
+            logInfo('🔄 กำลังสมัครสมาชิก...')
+            
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password
+            })
+            
+            if (error) {
+                logResult(`การสมัครสมาชิกล้มเหลว: ${error.message}`, false)
+            } else {
+                logResult('สมัครสมาชิกสำเร็จ! กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี', true)
+                if (data.user) {
+                    updateAuthUI(data.user)
+                }
+            }
+        }
+        
+        function updateAuthUI(user) {
+            currentUser = user
+            document.getElementById('loginForm').style.display = 'none'
+            document.getElementById('userInfo').style.display = 'block'
+            document.getElementById('authSection').classList.add('authenticated')
+            
+            document.getElementById('userInfo').innerHTML = `
+                <div><strong>👤 ผู้ใช้:</strong> ${user.email}</div>
+                <div><strong>🆔 ID:</strong> ${user.id}</div>
+                <div><strong>⏰ เข้าสู่ระบบเมื่อ:</strong> ${new Date().toLocaleString('th-TH')}</div>
+                <button onclick="signOut()" style="margin-top: 10px; background: #dc2626;">ออกจากระบบ</button>
+            `
+            
+            // Enable test buttons
+            document.getElementById('testBtn').disabled = false
+            document.getElementById('createBtn').disabled = false
+            document.getElementById('scheduleBtn').disabled = false
+            document.getElementById('realtimeBtn').disabled = false
+            document.getElementById('testBtn').textContent = '🚀 เริ่มทดสอบ (พร้อมแล้ว)'
+        }
+        
+        async function signOut() {
+            await supabase.auth.signOut()
+            currentUser = null
+            
+            document.getElementById('loginForm').style.display = 'flex'
+            document.getElementById('userInfo').style.display = 'none'
+            document.getElementById('authSection').classList.remove('authenticated')
+            
+            // Disable test buttons
+            document.getElementById('testBtn').disabled = true
+            document.getElementById('createBtn').disabled = true
+            document.getElementById('scheduleBtn').disabled = true
+            document.getElementById('realtimeBtn').disabled = true
+            document.getElementById('testBtn').textContent = '🚀 เริ่มทดสอบ (ต้องล็อกอินก่อน)'
+            
+            logResult('ออกจากระบบแล้ว', true)
+        }
+
+        async function runAuthenticatedTests() {
+            if (!currentUser) {
+                logResult('ต้องเข้าสู่ระบบก่อนทดสอบ', false)
+                return
+            }
+
+            startTime = Date.now()
+            passCount = 0
+            failCount = 0
+            clearResults()
+            
+            logInfo('🚀 เริ่มการทดสอบ CRUD Operations พร้อม Authentication...')
+            
+            try {
+                await testCreateCourse()
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                
+                await testCreateSchedule()
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                
+                await testUpdateOperations()
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                
+                await testRealTime()
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                
+                await testDeleteOperations()
+                
+                logInfo(`✅ การทดสอบเสร็จสิ้น - ผ่าน: ${passCount}, ไม่ผ่าน: ${failCount}`)
+                
+            } catch (error) {
+                logResult(`การทดสอบล้มเหลว: ${error.message}`, false)
+            }
+        }
+
+        async function testCreateCourse() {
+            logInfo('1️⃣ ทดสอบการสร้างคอร์ส...')
+            
+            try {
+                const testCourse = {
+                    name: `คอร์สทดสอบ ${new Date().toLocaleString('th-TH')}`,
+                    company: 'Login Learning',
+                    location: 'ศรีราชา',
+                    company_color: '#6366f1',
+                    duration_hours: 2,
+                    description: 'คอร์สทดสอบระบบ CRUD พร้อม Authentication'
+                }
+                
+                const { data, error } = await supabase
+                    .from('teaching_courses')
+                    .insert(testCourse)
+                    .select()
+                    .single()
+                
+                if (error) throw error
+                
+                testCourseId = data.id
+                logResult(`✅ สร้างคอร์สสำเร็จ: ${data.name}`, true)
+                
+            } catch (error) {
+                logResult(`❌ สร้างคอร์สล้มเหลว: ${error.message}`, false)
+            }
+        }
+
+        async function testCreateSchedule() {
+            logInfo('2️⃣ ทดสอบการสร้างตาราง...')
+            
+            try {
+                if (!testCourseId) {
+                    throw new Error('ต้องสร้างคอร์สก่อน')
+                }
+                
+                const weekStart = getWeekStartDate(new Date())
+                const testSchedule = {
+                    week_start_date: weekStart,
+                    company: 'login',
+                    day_of_week: 1, // จันทร์
+                    time_slot_index: 8, // 16:00
+                    duration: 2,
+                    course_id: testCourseId,
+                    course_title: 'คอร์สทดสอบตาราง',
+                    instructor_name: 'ครูทดสอบ',
+                    room: 'ห้อง A1',
+                    color: '#6366f1'
+                }
+                
+                const { data, error } = await supabase
+                    .from('teaching_schedules')
+                    .insert(testSchedule)
+                    .select()
+                    .single()
+                
+                if (error) throw error
+                
+                testScheduleId = data.id
+                logResult(`✅ สร้างตารางสำเร็จ: ${data.course_title}`, true)
+                
+            } catch (error) {
+                logResult(`❌ สร้างตารางล้มเหลว: ${error.message}`, false)
+            }
+        }
+
+        async function testUpdateOperations() {
+            logInfo('3️⃣ ทดสอบการแก้ไข...')
+            
+            try {
+                if (testCourseId) {
+                    const { data: updatedCourse, error: updateError } = await supabase
+                        .from('teaching_courses')
+                        .update({
+                            name: `คอร์สทดสอบ (แก้ไข) ${new Date().getTime()}`,
+                            duration_hours: 3
+                        })
+                        .eq('id', testCourseId)
+                        .select()
+                        .single()
+                    
+                    if (updateError) throw updateError
+                    logResult(`✅ แก้ไขคอร์สสำเร็จ: ${updatedCourse.name}`, true)
+                }
+                
+                if (testScheduleId) {
+                    const { data: movedSchedule, error: moveError } = await supabase
+                        .from('teaching_schedules')
+                        .update({
+                            day_of_week: 2, // ย้ายไปอังคาร
+                            time_slot_index: 9 // ย้ายไป 17:00
+                        })
+                        .eq('id', testScheduleId)
+                        .select()
+                        .single()
+                    
+                    if (moveError) throw moveError
+                    logResult(`✅ ย้ายตารางสำเร็จ: วัน ${movedSchedule.day_of_week} เวลา ${movedSchedule.time_slot_index}`, true)
+                }
+                
+            } catch (error) {
+                logResult(`❌ แก้ไขล้มเหลว: ${error.message}`, false)
+            }
+        }
+
+        async function testRealTime() {
+            logInfo('4️⃣ ทดสอบ Real-time...')
+            
+            return new Promise((resolve) => {
+                try {
+                    const channel = supabase
+                        .channel(`test-${Date.now()}`)
+                        .on('postgres_changes', {
+                            event: '*',
+                            schema: 'public',
+                            table: 'teaching_schedules'
+                        }, (payload) => {
+                            logResult(`📡 Real-time event: ${payload.eventType}`, true)
+                        })
+                        .subscribe((status) => {
+                            if (status === 'SUBSCRIBED') {
+                                logResult('✅ Real-time subscription สำเร็จ', true)
+                                setTimeout(() => {
+                                    supabase.removeChannel(channel)
+                                    resolve()
+                                }, 2000)
+                            } else {
+                                logResult(`❌ Real-time subscription: ${status}`, false)
+                                resolve()
+                            }
+                        })
+                        
+                } catch (error) {
+                    logResult(`❌ Real-time ล้มเหลว: ${error.message}`, false)
+                    resolve()
+                }
+            })
+        }
+
+        async function testDeleteOperations() {
+            logInfo('5️⃣ ทดสอบการลบ...')
+            
+            try {
+                if (testScheduleId) {
+                    const { error: deleteScheduleError } = await supabase
+                        .from('teaching_schedules')
+                        .delete()
+                        .eq('id', testScheduleId)
+                    
+                    if (deleteScheduleError) throw deleteScheduleError
+                    logResult('✅ ลบตารางสำเร็จ', true)
+                }
+                
+                if (testCourseId) {
+                    const { error: deleteCourseError } = await supabase
+                        .from('teaching_courses')
+                        .delete()
+                        .eq('id', testCourseId)
+                    
+                    if (deleteCourseError) throw deleteCourseError
+                    logResult('✅ ลบคอร์สสำเร็จ', true)
+                }
+                
+                // Reset test IDs
+                testCourseId = null
+                testScheduleId = null
+                
+            } catch (error) {
+                logResult(`❌ ลบล้มเหลว: ${error.message}`, false)
+            }
+        }
+
+        function logResult(message, success = true) {
+            const resultsDiv = document.getElementById('results')
+            const div = document.createElement('div')
+            div.className = `test-result ${success ? 'success' : 'error'}`
+            div.innerHTML = `${success ? '✅' : '❌'} ${message}`
+            resultsDiv.appendChild(div)
+            resultsDiv.scrollTop = resultsDiv.scrollHeight
+            
+            if (success) passCount++
+            else failCount++
+            
+            updateStats()
+        }
+        
+        function logInfo(message) {
+            const resultsDiv = document.getElementById('results')
+            const div = document.createElement('div')
+            div.className = 'test-result info'
+            div.innerHTML = `ℹ️ ${message}`
+            resultsDiv.appendChild(div)
+            resultsDiv.scrollTop = resultsDiv.scrollHeight
+        }
+        
+        function updateStats() {
+            document.getElementById('passCount').textContent = passCount
+            document.getElementById('failCount').textContent = failCount
+            document.getElementById('totalTime').textContent = Date.now() - startTime
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = ''
+            passCount = 0
+            failCount = 0
+            updateStats()
+        }
+        
+        function getWeekStartDate(date) {
+            const d = new Date(date)
+            const day = d.getDay()
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+            const monday = new Date(d.setDate(diff))
+            return monday.toISOString().split('T')[0]
+        }
+        
+        // Expose functions to global scope
+        window.signIn = signIn
+        window.signUp = signUp
+        window.signOut = signOut
+        window.runAuthenticatedTests = runAuthenticatedTests
+        window.testCreateCourse = testCreateCourse
+        window.testCreateSchedule = testCreateSchedule
+        window.testRealTime = testRealTime
+        window.clearResults = clearResults
+    </script>
+</body>
+</html>

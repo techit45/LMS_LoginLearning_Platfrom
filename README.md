@@ -1,25 +1,52 @@
-# Learning Management System (LMS) with Teaching Schedule
+# Login Learning Platform
+## แพลตฟอร์มการศึกษาออนไลน์สำหรับวิศวกรรม
 
-A comprehensive Learning Management System built with React, Vite, and Supabase, featuring an advanced Teaching Schedule Management System.
+[![Production](https://img.shields.io/badge/Production-Live-brightgreen)](https://login-learning-platform-7pi9e05uq-techity-3442s-projects.vercel.app)
+[![Version](https://img.shields.io/badge/Version-2.5.0-blue)](https://github.com/techity-3442/login-learning-platform)
+[![Security](https://img.shields.io/badge/Security-95%25-green)](docs/project-overview/PROJECT_COMPLETE_OVERVIEW.md#security-implementation)
 
-## 🎯 Features
+---
 
-- 🎓 **Course Management** - Create and manage courses with content
-- 📝 **Quiz & Assignments** - Interactive quizzes and assignment submissions
-- 👥 **User Roles** - Student, Instructor, and Admin roles
-- 💬 **Forum System** - Discussion forums for courses
-- 🗓️ **Teaching Schedule** - Advanced drag-and-drop schedule management with real-time coordination
-- 📊 **Progress Tracking** - Track learning progress and achievements
-- 🎨 **Modern UI** - Built with Tailwind CSS and Framer Motion
-- 🔐 **Authentication** - Secure user authentication with Supabase
+## 🎯 Overview
+
+Login Learning เป็นแพลตฟอร์มการศึกษาออนไลน์ที่มุ่งเน้นการเรียนรู้ด้านวิศวกรรมสำหรับน้องๆ มัธยมปลาย เพื่อช่วยในการค้นหาความถนัดและเตรียมตัวสู่การศึกษาต่อในคณะวิศวกรรม
+
+### ✨ Key Features
+
+- 🎨 **3D Interactive Homepage** - Engineering mind map with isometric design
+- 📚 **Complete Learning Management** - Courses, assignments, progress tracking
+- 🎯 **Project Showcase** - Student project portfolio with community features
+- 👥 **Real-time Collaboration** - Google Sheets-like teaching schedule system
+- 📁 **Smart File Management** - Google Drive integration with automatic organization
+- 🏢 **Multi-Company Support** - Support for 6 different organizations
+- 🔒 **Enterprise Security** - 95%+ security score with Row Level Security
+
+---
+
+## 🚀 Live Demo
+
+**Production URL**: https://login-learning-platform-7pi9e05uq-techity-3442s-projects.vercel.app
+
+---
 
 ## 🏗️ Tech Stack
 
-- **Frontend:** React 18, Vite, Tailwind CSS
-- **Backend:** Supabase (PostgreSQL, Auth, Storage)
-- **UI Components:** Radix UI, Lucide React
-- **Animations:** Framer Motion, React-DnD
-- **Routing:** React Router DOM
+### Frontend
+- **React 18** + **Vite** - Modern development experience
+- **Tailwind CSS** - Utility-first styling
+- **Lucide React** - Beautiful icons
+- **React Router** - Client-side routing
+
+### Backend  
+- **Supabase** (PostgreSQL) - Database and authentication
+- **Row Level Security** - Enterprise-grade security
+- **Google Drive API** - File storage and organization
+- **Express.js** - API server for integrations
+
+### Deployment
+- **Frontend**: Vercel (Production ready)
+- **Database**: Supabase Cloud
+- **File Storage**: Google Drive (Shared Drive)
 
 ## 🚀 Quick Start
 
@@ -142,14 +169,23 @@ For detailed instructions, see `DEPLOYMENT_INSTRUCTIONS.md`
 3. **Set Environment Variables**
    In Vercel Dashboard → Settings → Environment Variables
 
-## 📚 Documentation
+## 📚 Key Documentation
 
-- `docs/` - Comprehensive documentation directory
-  - `docs/CLAUDE.md` - System architecture documentation
-  - `docs/DEPLOYMENT_INSTRUCTIONS.md` - Detailed deployment guide
-  - `docs/TEACHING_SCHEDULE_SYSTEM_DOCUMENTATION.md` - Teaching schedule feature guide
-- `database/` - Database schemas and migration files
-- `development/` - Development and testing files (git ignored)
+- **[Complete Project Overview](docs/project-overview/PROJECT_COMPLETE_OVERVIEW.md)** - 200+ page comprehensive documentation
+- **[System Requirements](docs/requirements/SYSTEM_REQUIREMENTS.md)** - Detailed requirements specification  
+- **[Project Organization](docs/PROJECT_ORGANIZATION.md)** - File structure and navigation guide
+- **[Setup Guides](docs/guides/)** - Installation and configuration guides
+- **[Troubleshooting](docs/troubleshooting/)** - Common issues and solutions
+
+### File Organization
+```
+📁 docs/                   # Complete documentation
+├── project-overview/      # Main project docs
+├── requirements/          # System requirements
+├── guides/                # Setup guides
+├── troubleshooting/       # Fix guides
+└── api-docs/              # API documentation
+```
 
 ## 🤝 Contributing
 

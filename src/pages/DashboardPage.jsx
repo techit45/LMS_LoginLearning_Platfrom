@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import SEOHead from "../components/SEOHead";
+import NotificationCenter from "../components/NotificationCenter";
 import { useAuth } from "../contexts/AuthContext";
 import {
   LayoutDashboard,
@@ -33,8 +34,15 @@ const DashboardPage = () => {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   const handleFeatureClick = (featureName, path) => {
+    // Special handling for notifications - open notification center
+    if (featureName === "การแจ้งเตือน") {
+      setIsNotificationOpen(true);
+      return;
+    }
+    
     if (path) {
       navigate(path);
     } else {
@@ -45,8 +53,6 @@ const DashboardPage = () => {
         แบบทดสอบ: "ระบบแบบทดสอบออนไลน์กำลังพัฒนา - จะมีคำถามหลากหลายรูปแบบ",
         ใบประกาศนียบัตร:
           "ระบบออกใบประกาศนียบัตรกำลังพัฒนา - จะออกอัตโนมัติเมื่อจบคอร์ส",
-        การแจ้งเตือน:
-          "ระบบแจ้งเตือนกำลังพัฒนา - จะแจ้งเตือนผ่าน Email และ LINE",
         รายงานความคืบหน้า:
           "ระบบรายงานกำลังพัฒนา - จะแสดงสถิติการเรียนแบบละเอียด",
       };
@@ -148,7 +154,7 @@ const DashboardPage = () => {
       icon: BarChart2,
       color: "orange",
       description: "ติดตามความก้าวหน้าในการเรียนรู้ของคุณ",
-      path: null,
+      path: "/progress",
     },
     {
       name: "การแจ้งเตือน",
@@ -386,6 +392,12 @@ const DashboardPage = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Notification Center */}
+      <NotificationCenter 
+        isOpen={isNotificationOpen} 
+        onClose={() => setIsNotificationOpen(false)} 
+      />
     </motion.div>
   );
 };

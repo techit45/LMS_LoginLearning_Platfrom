@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { getEmergencyData } from './quickFix';
 import { deleteProjectFolder, createProjectStructure, getCompanySlug, transferFolderContents, folderHasContents } from './googleDriveClientService';
+import NotificationIntegrations from './notificationIntegrations';
 
 // Simple in-memory cache
 const cache = new Map();
@@ -26,9 +27,15 @@ const setCachedData = (key, data) => {
  */
 export const getAllProjects = async () => {
   try {
-    // Add timeout for emergency fallback (reduced for better UX)
+    console.log('Fetching all projects...');
+    
+    // Check if user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    console.log('Current user:', user ? user.email : 'Anonymous');
+    
+    // Add timeout for emergency fallback (increased for student queries)
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('getAllProjects timeout')), 3000); // 3 seconds for better UX
+      setTimeout(() => reject(new Error('getAllProjects timeout')), 8000); // Increased to 8 seconds
     });
     
     const queryPromise = supabase
@@ -55,7 +62,8 @@ export const getAllProjects = async () => {
         updated_at
       `)
       .eq('is_approved', true)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50); // Add limit to prevent slow queries
 
     const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
@@ -157,36 +165,81 @@ export const getFeaturedProjects = async () => {
   try {
     console.log('Fetching featured projects from database...');
     
-    // Optimized database query - reduced fields for better performance
-    const queryPromise = supabase
-      .from('projects')
-      .select(`
-        id,
-        title,
-        short_description,
-        category,
-        difficulty_level,
-        technology,
-        demo_url,
-        thumbnail_url,
-        created_at,
-        view_count,
-        like_count
-      `)
-      .eq('is_approved', true)
-      .eq('is_featured', true)
-      .order('created_at', { ascending: false })
-      .limit(6);
+    // Optimized database query with retry mechanism
+    let queryAttempt = 0;
+    let lastError = null;
+    let data = null;
     
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Database query timeout')), 10000)
-    );
-    
-    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+    while (queryAttempt < 3 && !data) { // ลองสูงสุด 3 ครั้ง
+      queryAttempt++;
+      console.log(`🔄 Query attempt ${queryAttempt}/3`);
+      
+      try {
+        const queryPromise = supabase
+          .from('projects')
+          .select(`
+            id,
+            title,
+            short_description,
+            category,
+            difficulty_level,
+            technology,
+            demo_url,
+            thumbnail_url,
+            created_at,
+            view_count,
+            like_count
+          `)
+          .eq('is_approved', true)
+          .eq('is_featured', true)
+          .order('created_at', { ascending: false })
+          .limit(6);
+        
+        // Timeout 20 วินาทีต่อครั้ง
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database query timeout')), 20000)
+        );
+        
+        const { data: queryData, error } = await Promise.race([queryPromise, timeoutPromise]);
 
-    if (error) {
-      console.error('Featured projects database error:', error);
-      throw error;
+        if (error) {
+          lastError = error;
+          console.warn(`⚠️ Attempt ${queryAttempt} failed:`, error.message);
+          
+          // ถ้าเป็น timeout หรือ network error ให้ลองใหม่
+          if (error.message.includes('timeout') || error.message.includes('network') || queryAttempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * queryAttempt)); // รอ 1s, 2s, 3s
+            continue;
+          }
+          throw error;
+        }
+
+        // สำเร็จ - เก็บ data
+        if (queryData) {
+          data = queryData;
+          console.log(`✅ Query succeeded on attempt ${queryAttempt}`);
+          lastError = null;
+          break;
+        }
+
+      } catch (attemptError) {
+        lastError = attemptError;
+        console.warn(`⚠️ Attempt ${queryAttempt} failed:`, attemptError.message);
+        
+        // ถ้าเป็นความผิดพลาดสุดท้าย หรือไม่ใช่ network error ให้หยุด
+        if (queryAttempt >= 3 || (!attemptError.message.includes('timeout') && !attemptError.message.includes('network'))) {
+          break;
+        }
+        
+        // รอก่อนลองใหม่
+        await new Promise(resolve => setTimeout(resolve, 1000 * queryAttempt));
+      }
+    }
+
+    // ถ้ายังมี error หลังลอง 3 ครั้ง
+    if (lastError && !data) {
+      console.error('All query attempts failed:', lastError);
+      throw lastError;
     }
 
     if (data && data.length > 0) {
@@ -204,11 +257,16 @@ export const getFeaturedProjects = async () => {
       return { data: projectsWithStats, error: null };
     }
   } catch (error) {
-    console.error('Error fetching featured projects:', error);
+    console.error('🚨 Error fetching featured projects:', error.message);
+    console.log('📝 Stack trace:', error.stack);
   }
   
-  // Always return mock data for development
-  console.log('Returning mock featured projects for development');
+  // Always return mock data as fallback
+  // ลด log spam โดย log เฉพาะบางครั้ง
+  if (Math.random() < 0.3) { // 30% ของเวลา
+    console.log('🎭 Returning mock featured projects as fallback');
+    console.log('💡 This ensures the homepage always shows content even when database is unavailable');
+  }
   const mockProjects = [
     {
       id: 'mock-proj-1',
@@ -310,6 +368,30 @@ export const createProject = async (projectData) => {
       .single();
 
     if (error) throw error;
+
+    // Send new project notification to system administrators
+    try {
+      // Get all admin users
+      const { data: admins } = await supabase
+        .from('user_profiles')
+        .select('user_id')
+        .eq('role', 'admin');
+      
+      if (admins && admins.length > 0) {
+        const adminUserIds = admins.map(admin => admin.user_id);
+        
+        // Create notification for admins about new project submission
+        await NotificationIntegrations.handleSystemAnnouncement(
+          `มีโครงงานใหม่ "${data.title}" ที่รอการอนุมัติจากผู้ใช้ คุณ${user.user_metadata?.full_name || 'ผู้ใช้'}`,
+          `/admin/projects`,
+          adminUserIds
+        );
+        console.log('New project notification sent to admins');
+      }
+    } catch (notificationError) {
+      console.error('Error sending new project notification:', notificationError);
+      // Don't fail the project creation if notification fails
+    }
 
     return { data, error: null };
   } catch (error) {

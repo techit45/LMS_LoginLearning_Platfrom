@@ -50,6 +50,87 @@
   --radius: 0.5rem;
 }
 
+/* Dark mode variables */
+.dark {
+  --primary-blue: #60a5fa; /* Blue-400 - Lighter blue for dark mode */
+  --secondary-blue: #3b82f6; /* Blue-500 - Secondary blue */
+  --light-blue: #1e40af; /* Blue-700 - Darker blue for dark mode */
+  --accent-blue: #0284c7; /* Sky-600 - Darker accent blue */
+  
+  --background-start: #0f172a; /* Slate-900 - Dark background */
+  --background-end: #1e293b; /* Slate-800 - Slightly lighter dark */
+  
+  --text-primary: #ffffff; /* Pure white - Primary text */
+  --text-secondary: #e2e8f0; /* Slate-200 - Secondary text */
+  --text-accent: var(--primary-blue);
+
+  --border-color: rgba(96, 165, 250, 0.2); /* Light blue border for dark mode */
+
+  --primary: 214 88% 67%; /* Lighter primary for dark mode */
+  --primary-foreground: 222 84% 4.9%;
+  --secondary: 222 84% 4.9%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 215 28% 17%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 215 28% 17%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 215 28% 17%;
+  --input: 215 28% 17%;
+  --ring: var(--primary-blue);
+  --background: var(--background-start);
+  --foreground: var(--text-primary);
+  --card: var(--background-end);
+  --card-foreground: var(--text-primary);
+  --popover: var(--background-start);
+  --popover-foreground: var(--text-primary);
+}
+
+/* Enhanced dark mode styles */
+.dark body {
+  background: var(--background-start);
+  color: var(--text-primary);
+}
+
+.dark .bg-white {
+  @apply bg-gray-800;
+}
+
+.dark .bg-gray-50 {
+  @apply bg-gray-900;
+}
+
+.dark .text-gray-900 {
+  @apply text-white;
+}
+
+.dark .text-gray-600 {
+  @apply text-gray-300;
+}
+
+.dark .text-gray-500 {
+  @apply text-gray-400;
+}
+
+.dark .border-gray-200 {
+  @apply border-gray-700;
+}
+
+.dark .border-gray-300 {
+  @apply border-gray-600;
+}
+
+/* Enhanced animations for dark mode */
+.dark .hover\:shadow-lg:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+}
+
+/* Smooth transitions for theme switching */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
 * {
   border-color: var(--border-color); /* Apply custom border color */
 }

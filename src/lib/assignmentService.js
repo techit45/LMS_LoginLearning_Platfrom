@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import NotificationIntegrations from './notificationIntegrations';
 
 // ==========================================
 // ASSIGNMENT MANAGEMENT
@@ -91,10 +92,42 @@ export const createSubmission = async (assignmentId, submissionData) => {
         assignment_id: assignmentId,
         submission_text: submissionData.text || ''
       }])
-      .select()
+      .select(`
+        *,
+        assignments(
+          title,
+          course_id,
+          courses(
+            title,
+            instructor_id
+          )
+        )
+      `)
       .single();
 
     if (error) throw error;
+
+    // Send assignment submission notification to instructor
+    try {
+      if (data && data.assignments && data.assignments.courses) {
+        await NotificationIntegrations.handleAssignmentSubmission(
+          user.id,
+          {
+            id: assignmentId,
+            title: data.assignments.title
+          },
+          {
+            id: data.assignments.course_id,
+            title: data.assignments.courses.title,
+            instructor_id: data.assignments.courses.instructor_id
+          }
+        );
+        console.log('Assignment submission notification sent');
+      }
+    } catch (notificationError) {
+      console.error('Error sending assignment submission notification:', notificationError);
+      // Don't fail the submission if notification fails
+    }
 
     return { data, error: null };
   } catch (error) {

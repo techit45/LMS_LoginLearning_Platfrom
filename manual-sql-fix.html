@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual SQL Fix - Time Format</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .btn {
+            background: #3b82f6;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover { background: #2563eb; }
+        .btn.danger { background: #dc2626; }
+        .btn.danger:hover { background: #b91c1c; }
+        .sql-box {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin: 15px 0;
+            white-space: pre;
+        }
+        .log {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+        }
+        .success { color: #16a34a; }
+        .error { color: #dc2626; }
+        .warning { color: #ea580c; }
+        .info { color: #0ea5e9; }
+        .step { 
+            background: #f0f9ff; 
+            border-left: 4px solid #0ea5e9; 
+            padding: 15px; 
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠️ Manual SQL Fix - Time Format Issues</h1>
+        <p>วิธีการแก้ไขปัญหาด้วย SQL commands โดยตรง</p>
+        
+        <div class="step">
+            <h3>Step 1: Execute Raw SQL</h3>
+            <p>ใช้ rpc() function เพื่อเรียก SQL โดยตรงผ่าน Supabase</p>
+            <button id="step1Btn" class="btn">🚀 Execute Raw SQL Fix</button>
+        </div>
+        
+        <div class="step">
+            <h3>Step 2: Force Insert New Records</h3>
+            <p>สร้าง records ใหม่ด้วย time format ที่ถูกต้อง</p>
+            <button id="step2Btn" class="btn">➕ Insert Fixed Records</button>
+        </div>
+        
+        <div class="step">
+            <h3>Step 3: Cleanup Old Records</h3>
+            <p>ลบ records เดิมที่มีปัญหา (หลังจาก insert สำเร็จ)</p>
+            <button id="step3Btn" class="btn danger">🗑️ Delete Old Records</button>
+        </div>
+        
+        <div class="step">
+            <h3>Step 4: Verify Results</h3>
+            <button id="verifyBtn" class="btn">✅ ตรวจสอบผลลัพธ์</button>
+        </div>
+        
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        // Supabase configuration
+        const supabaseUrl = 'https://vuitwzisazvikrhtfthh.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+        
+        const { createClient } = supabase;
+        const supabaseClient = createClient(supabaseUrl, supabaseKey);
+        
+        const logElement = document.getElementById('log');
+        let originalData = {};
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('th-TH');
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info';
+            logElement.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        async function step1_RawSQLFix() {
+            log('🚀 Step 1: พยายามใช้ Raw SQL...', 'info');
+            
+            try {
+                // ลองใช้ rpc function (หากมี)
+                const { data, error } = await supabaseClient.rpc('fix_time_format_records');
+                
+                if (error) {
+                    log(`❌ RPC Error: ${error.message}`, 'error');
+                    log('💡 RPC function อาจไม่มี - ข้ามไป Step 2', 'warning');
+                } else {
+                    log(`✅ RPC Success: ${JSON.stringify(data)}`, 'success');
+                }
+                
+            } catch (error) {
+                log(`❌ Step 1 Failed: ${error.message}`, 'error');
+                log('💡 ข้ามไป Step 2 - Force Insert', 'info');
+            }
+        }
+        
+        async function step2_ForceInsert() {
+            log('➕ Step 2: สร้าง records ใหม่ด้วย time format ถูกต้อง...', 'info');
+            
+            try {
+                // ดึงข้อมูลเดิมก่อน
+                const { data: oldRecords, error: fetchError } = await supabaseClient
+                    .from('weekly_schedules')
+                    .select('*')
+                    .in('id', [79, 83]);
+                
+                if (fetchError) {
+                    log(`❌ ไม่สามารถดึงข้อมูลเดิมได้: ${fetchError.message}`, 'error');
+                    return;
+                }
+                
+                originalData.records = oldRecords;
+                log(`📊 ได้ข้อมูลเดิม ${oldRecords.length} records`, 'info');
+                
+                // สร้าง records ใหม่
+                for (const oldRecord of oldRecords) {
+                    const newRecord = {
+                        year: oldRecord.year,
+                        week_number: oldRecord.week_number,
+                        schedule_type: oldRecord.schedule_type,
+                        instructor_id: oldRecord.instructor_id,
+                        course_id: oldRecord.course_id,
+                        day_of_week: oldRecord.day_of_week,
+                        time_slot: '08:00', // แก้ไขเป็น format ถูกต้อง
+                        start_time: '08:00',
+                        end_time: oldRecord.id === 79 ? '09:00' : '12:00',
+                        duration: oldRecord.duration,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString(),
+                        created_by: oldRecord.created_by
+                    };
+                    
+                    log(`➕ สร้าง record ใหม่สำหรับ ID ${oldRecord.id}...`, 'info');
+                    
+                    const { data: insertResult, error: insertError } = await supabaseClient
+                        .from('weekly_schedules')
+                        .insert(newRecord)
+                        .select()
+                        .single();
+                    
+                    if (insertError) {
+                        log(`❌ Insert failed: ${insertError.message}`, 'error');
+                    } else {
+                        log(`✅ สร้าง record ใหม่สำเร็จ - ID ${insertResult.id}`, 'success');
+                        log(`   เวลา: ${insertResult.time_slot} → ${insertResult.start_time} → ${insertResult.end_time}`, 'success');
+                        
+                        // เก็บ mapping ของ record เก่า -> ใหม่
+                        if (!originalData.mapping) originalData.mapping = {};
+                        originalData.mapping[oldRecord.id] = insertResult.id;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                
+                log('🎉 Step 2 เสร็จสิ้น!', 'success');
+                
+            } catch (error) {
+                log(`💥 Step 2 Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function step3_CleanupOld() {
+            log('🗑️ Step 3: ลบ records เดิมที่มีปัญหา...', 'warning');
+            
+            if (!originalData.mapping || Object.keys(originalData.mapping).length === 0) {
+                log('❌ ไม่มีข้อมูล mapping - ไม่สามารถลบได้', 'error');
+                return;
+            }
+            
+            try {
+                for (const oldId of [79, 83]) {
+                    log(`🗑️ ลบ record ID ${oldId}...`, 'warning');
+                    
+                    const { error: deleteError } = await supabaseClient
+                        .from('weekly_schedules')
+                        .delete()
+                        .eq('id', oldId);
+                    
+                    if (deleteError) {
+                        log(`❌ ลบ ID ${oldId} ไม่สำเร็จ: ${deleteError.message}`, 'error');
+                    } else {
+                        log(`✅ ลบ ID ${oldId} สำเร็จ`, 'success');
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+                
+                log('🎉 Step 3 เสร็จสิ้น!', 'success');
+                
+            } catch (error) {
+                log(`💥 Step 3 Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function verifyResults() {
+            log('✅ ตรวจสอบผลลัพธ์สุดท้าย...', 'info');
+            
+            try {
+                // ตรวจสอบว่า records เก่าหายไปแล้วไหม
+                const { data: oldCheck, error: oldError } = await supabaseClient
+                    .from('weekly_schedules')
+                    .select('id, time_slot, start_time')
+                    .in('id', [79, 83]);
+                
+                if (oldError) {
+                    log(`❌ Error checking old records: ${oldError.message}`, 'error');
+                } else {
+                    log(`🔍 Records เดิม (ID 79, 83): ${oldCheck.length} records found`, oldCheck.length > 0 ? 'warning' : 'success');
+                    oldCheck.forEach(record => {
+                        log(`   ID ${record.id}: ${record.time_slot} → ${record.start_time}`, 'warning');
+                    });
+                }
+                
+                // ตรวจสอบ records ใหม่ที่มี time format ถูกต้อง
+                const { data: newRecords, error: newError } = await supabaseClient
+                    .from('weekly_schedules')
+                    .select('id, time_slot, start_time, end_time, day_of_week, course_id')
+                    .eq('time_slot', '08:00')
+                    .eq('day_of_week', 1)
+                    .order('id', { ascending: false })
+                    .limit(5);
+                
+                if (newError) {
+                    log(`❌ Error checking new records: ${newError.message}`, 'error');
+                } else {
+                    log(`✅ Records ใหม่ที่มี time format ถูกต้อง: ${newRecords.length} records`, 'success');
+                    newRecords.forEach(record => {
+                        log(`   ID ${record.id}: ${record.time_slot} → ${record.start_time} → ${record.end_time} ✅`, 'success');
+                    });
+                }
+                
+                // ตรวจสอบ records ที่ยังมีปัญหา time format
+                const { data: allRecords, error: allError } = await supabaseClient
+                    .from('weekly_schedules')
+                    .select('id, time_slot, start_time')
+                    .limit(100);
+                
+                if (allError) {
+                    log(`❌ Error checking all records: ${allError.message}`, 'error');
+                } else {
+                    const problematicRecords = allRecords.filter(record => 
+                        !record.time_slot.match(/^[0-9]{2}:[0-9]{2}$/) || 
+                        !record.start_time.match(/^[0-9]{2}:[0-9]{2}$/)
+                    );
+                    
+                    if (problematicRecords.length > 0) {
+                        log(`⚠️ ยังมี records ที่มีปัญหา time format: ${problematicRecords.length} records`, 'warning');
+                        problematicRecords.slice(0, 5).forEach(record => {
+                            log(`   ID ${record.id}: ${record.time_slot} → ${record.start_time}`, 'warning');
+                        });
+                    } else {
+                        log('🎉 ไม่มี records ที่มีปัญหา time format แล้ว!', 'success');
+                    }
+                }
+                
+            } catch (error) {
+                log(`💥 Verify Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('step1Btn').addEventListener('click', step1_RawSQLFix);
+        document.getElementById('step2Btn').addEventListener('click', step2_ForceInsert);
+        document.getElementById('step3Btn').addEventListener('click', step3_CleanupOld);
+        document.getElementById('verifyBtn').addEventListener('click', verifyResults);
+        
+        // Auto start
+        log('🛠️ Manual SQL Fix Tool พร้อมใช้งาน', 'info');
+        log('💡 เริ่มจาก Step 2: Force Insert เนื่องจาก UPDATE ถูก RLS บล็อก', 'info');
+    </script>
+</body>
+</html>

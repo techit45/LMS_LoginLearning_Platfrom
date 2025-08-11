@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สร้าง User Profiles</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .card { background: #f9f9f9; padding: 20px; margin: 10px 0; border-radius: 8px; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #45a049; }
+        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 สร้าง User Profiles</h1>
+    
+    <div class="card">
+        <h2>ขั้นตอน:</h2>
+        <ol>
+            <li>กดปุ่ม "สร้าง Profiles" เพื่อสร้าง user_profiles สำหรับทุกคนใน auth.users</li>
+            <li>กลับไปหน้าจัดการตารางสอน จะเห็นผู้สอนครบแล้ว</li>
+        </ol>
+    </div>
+
+    <div class="card">
+        <button onclick="createProfiles()">🚀 สร้าง User Profiles</button>
+        <button onclick="checkProfiles()">📋 ตรวจสอบ Profiles</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        const supabase = window.supabase.createClient(
+            'https://vuitwzisazvikrhtfthh.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE'
+        )
+
+        async function createProfiles() {
+            const result = document.getElementById('result')
+            result.innerHTML = '⏳ กำลังสร้าง profiles...'
+
+            try {
+                // ข้อมูลผู้ใช้ที่จะสร้าง
+                const users = [
+                    {
+                        user_id: '033e1583-465a-4734-b637-53ce3023370c',
+                        email: 'techit.y@login-learning.com',
+                        full_name: 'Login-Learning Admin',
+                        role: 'admin'
+                    },
+                    {
+                        user_id: '938c55f3-1cf9-427a-93ff-a6b7ff324f9e',
+                        email: 'tanachat.s@login-learning.com',
+                        full_name: 'TANACHAT SRINURAT',
+                        role: 'instructor'
+                    },
+                    {
+                        user_id: '2ada1118-ba00-4ac0-9dbe-a6a4bd69161f',
+                        email: 'tham.p@login-learning.com',
+                        full_name: 'Tham Pongjia',
+                        role: 'instructor'
+                    },
+                    {
+                        user_id: '214dcd4d-b46d-4fc4-a578-c6336d4b1299',
+                        email: 'techit45t@gmail.com',
+                        full_name: 'techit45t',
+                        role: 'instructor'
+                    },
+                    {
+                        user_id: '28aaaf26-4e81-42c0-9fcb-1149330b534b',
+                        email: 's6402013610021@email.kmutnb.ac.th',
+                        full_name: 'Test NEW',
+                        role: 'instructor'
+                    },
+                    {
+                        user_id: '9e2d82f6-49c5-44be-8848-7e212e237276',
+                        email: 'pethj02@gmail.com',
+                        full_name: 'Peth J',
+                        role: 'instructor'
+                    }
+                ]
+
+                const profilesData = users.map(user => ({
+                    ...user,
+                    is_active: true,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }))
+
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .upsert(profilesData, {
+                        onConflict: 'user_id'
+                    })
+
+                if (error) {
+                    result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`
+                } else {
+                    result.innerHTML = `
+                        <div class="success">
+                            ✅ สร้าง profiles สำเร็จ! สร้างแล้ว ${profilesData.length} profiles
+                            <br><br>
+                            <strong>รายชื่อที่สร้าง:</strong>
+                            <ul>
+                                ${profilesData.map(p => `<li>${p.full_name} (${p.email}) - ${p.role}</li>`).join('')}
+                            </ul>
+                            <br>
+                            <strong>🎉 ตอนนี้กลับไปหน้าจัดการตารางสอนได้แล้ว จะเห็นผู้สอนครบ!</strong>
+                        </div>
+                    `
+                }
+
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Unexpected error: ${error.message}</div>`
+            }
+        }
+
+        async function checkProfiles() {
+            const result = document.getElementById('result')
+            result.innerHTML = '⏳ ตรวจสอบ profiles...'
+
+            try {
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+
+                if (error) {
+                    result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`
+                } else {
+                    result.innerHTML = `
+                        <div class="success">
+                            📋 พบ ${data.length} profiles
+                            <ul>
+                                ${data.map(p => `<li>${p.full_name || p.email} - ${p.role} - ${p.is_active ? 'Active' : 'Inactive'}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Unexpected error: ${error.message}</div>`
+            }
+        }
+    </script>
+</body>
+</html>

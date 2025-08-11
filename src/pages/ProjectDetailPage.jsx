@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import DOMPurify from 'dompurify';
 import SEOHead from '../components/SEOHead';
 import { 
   ArrowLeft, 
@@ -490,7 +491,12 @@ const ProjectDetailPage = () => {
                     <h3 className="text-lg font-semibold text-gray-900 mb-3">เนื้อหาเพิ่มเติม</h3>
                     <div 
                       className="prose prose-gray max-w-none"
-                      dangerouslySetInnerHTML={{ __html: project.content_html }}
+                      dangerouslySetInnerHTML={{ 
+                        __html: DOMPurify.sanitize(project.content_html, {
+                          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'pre', 'code'],
+                          ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'target', 'rel']
+                        })
+                      }}
                     />
                   </div>
                 )}

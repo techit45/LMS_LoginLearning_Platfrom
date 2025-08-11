@@ -35,11 +35,11 @@ const WorkSummaryReport = ({ userId = null, showExport = true }) => {
     monthlyTrend: []
   });
   const [expandedSections, setExpandedSections] = useState({
-    overview: true,
-    byCompany: true,
-    byType: true,
+    overview: false,
+    byCompany: false,
+    byType: false,
     dailyBreakdown: false,
-    monthlyTrend: true
+    monthlyTrend: false
   });
 
   useEffect(() => {

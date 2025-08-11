@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import NotificationIntegrations from './notificationIntegrations';
 
 // ==========================================
 // COURSE CONTENT SERVICE
@@ -205,6 +206,25 @@ export const addCourseContent = async (courseId, contentData) => {
     } catch (driveError) {
       console.error('⚠️ Google Drive folder creation failed:', driveError);
       // Don't fail the entire operation - content is still saved to database
+    }
+
+    // Send new content notification to enrolled students
+    try {
+      await NotificationIntegrations.handleNewCourseContent(
+        {
+          id: courseId,
+          title: courseInfo.title
+        },
+        {
+          id: data.id,
+          title: data.title,
+          content_type: data.content_type
+        }
+      );
+      console.log('New course content notification sent');
+    } catch (notificationError) {
+      console.error('Error sending new content notification:', notificationError);
+      // Don't fail the content creation if notification fails
     }
 
     return { data, error: null };

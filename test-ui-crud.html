@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบ CRUD Operations</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #7dd3fc;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .loading {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 ทดสอบ CRUD Operations - ระบบตารางสอนใหม่</h1>
+    
+    <div class="test-container">
+        <h2>📋 การทดสอบ</h2>
+        <button onclick="runAllTests()" id="runBtn">🚀 เริ่มทดสอบทั้งหมด</button>
+        <button onclick="testFrontendIntegration()">🖥️ ทดสอบ Frontend Service</button>
+        <button onclick="testRealTimeFeatures()">⚡ ทดสอบ Real-time</button>
+        <div id="results"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>📊 สถิติการทดสอบ</h2>
+        <div id="stats">
+            <div>✅ ผ่าน: <span id="passCount">0</span></div>
+            <div>❌ ไม่ผ่าน: <span id="failCount">0</span></div>
+            <div>⏱️ เวลาทั้งหมด: <span id="totalTime">0</span>ms</div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import Supabase
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+        
+        const supabase = createClient(
+            'https://vuitwzisazvikrhtfthh.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE'
+        )
+
+        let passCount = 0
+        let failCount = 0
+        let startTime = 0
+        
+        function logResult(message, success = true) {
+            const resultsDiv = document.getElementById('results')
+            const div = document.createElement('div')
+            div.className = `test-result ${success ? 'success' : 'error'}`
+            div.innerHTML = `${success ? '✅' : '❌'} ${message}`
+            resultsDiv.appendChild(div)
+            resultsDiv.scrollTop = resultsDiv.scrollHeight
+            
+            if (success) passCount++
+            else failCount++
+            
+            updateStats()
+        }
+        
+        function logInfo(message) {
+            const resultsDiv = document.getElementById('results')
+            const div = document.createElement('div')
+            div.className = 'test-result info'
+            div.innerHTML = `ℹ️ ${message}`
+            resultsDiv.appendChild(div)
+            resultsDiv.scrollTop = resultsDiv.scrollHeight
+        }
+        
+        function updateStats() {
+            document.getElementById('passCount').textContent = passCount
+            document.getElementById('failCount').textContent = failCount
+            document.getElementById('totalTime').textContent = Date.now() - startTime
+        }
+        
+        async function runAllTests() {
+            startTime = Date.now()
+            passCount = 0
+            failCount = 0
+            document.getElementById('results').innerHTML = ''
+            document.getElementById('runBtn').disabled = true
+            document.getElementById('runBtn').className = 'loading'
+            
+            try {
+                logInfo('เริ่มการทดสوบ CRUD Operations ทั้งหมด...')
+                
+                // Test 1: Read existing data
+                await testReadOperations()
+                
+                // Test 2: Create operations
+                await testCreateOperations()
+                
+                // Test 3: Update operations  
+                await testUpdateOperations()
+                
+                // Test 4: Real-time features
+                await testRealTimeFeatures()
+                
+                // Test 5: Error handling
+                await testErrorHandling()
+                
+                logInfo(`การทดสอบเสร็จสิ้น - ผ่าน: ${passCount}, ไม่ผ่าน: ${failCount}`)
+                
+            } catch (error) {
+                logResult(`การทดสอบล้มเหลว: ${error.message}`, false)
+            } finally {
+                document.getElementById('runBtn').disabled = false
+                document.getElementById('runBtn').className = ''
+            }
+        }
+        
+        async function testReadOperations() {
+            logInfo('1️⃣ ทดสอบการอ่านข้อมูล (READ)...')
+            
+            try {
+                // Test reading courses
+                const { data: courses, error: coursesError } = await supabase
+                    .from('teaching_courses')
+                    .select('*')
+                    .limit(5)
+                
+                if (coursesError) throw coursesError
+                
+                logResult(`อ่านคอร์ส: พบ ${courses?.length || 0} คอร์ส`)
+                
+                // Test reading schedules with JOIN
+                const { data: schedules, error: schedulesError } = await supabase
+                    .from('teaching_schedules')
+                    .select(`
+                        *,
+                        teaching_courses(id, name, company_color)
+                    `)
+                    .limit(3)
+                
+                if (schedulesError) throw schedulesError
+                
+                logResult(`อ่านตาราง + JOIN: พบ ${schedules?.length || 0} ตาราง`)
+                
+                // Test specific week query
+                const weekStart = getWeekStartDate(new Date())
+                const { data: weekSchedules, error: weekError } = await supabase
+                    .from('teaching_schedules')
+                    .select('*')
+                    .eq('week_start_date', weekStart)
+                    .eq('company', 'login')
+                
+                if (weekError) throw weekError
+                
+                logResult(`อ่านตารางสัปดาห์นี้: พบ ${weekSchedules?.length || 0} ตาราง`)
+                
+            } catch (error) {
+                logResult(`การอ่านข้อมูลล้มเหลว: ${error.message}`, false)
+            }
+        }
+        
+        async function testCreateOperations() {
+            logInfo('2️⃣ ทดสอบการสร้างข้อมูล (CREATE)...')
+            
+            try {
+                // Need to be authenticated to create
+                const { data: { user } } = await supabase.auth.getUser()
+                
+                if (!user) {
+                    logResult('ต้องเข้าสู่ระบบก่อนทดสอบการสร้าง', false)
+                    return
+                }
+                
+                // Test create course
+                const testCourse = {
+                    name: `ทดสอบคอร์ส ${Date.now()}`,
+                    company: 'Login Learning',
+                    location: 'ศรีราชา',
+                    company_color: '#6366f1',
+                    duration_hours: 2,
+                    description: 'คอร์สทดสอบจาก UI'
+                }
+                
+                const { data: newCourse, error: createError } = await supabase
+                    .from('teaching_courses')
+                    .insert(testCourse)
+                    .select()
+                    .single()
+                
+                if (createError) throw createError
+                
+                logResult(`สร้างคอร์สสำเร็จ: ${newCourse.name}`)
+                window.testCourseId = newCourse.id
+                
+                // Test create schedule
+                const testSchedule = {
+                    week_start_date: getWeekStartDate(new Date()),
+                    company: 'login',
+                    day_of_week: 1,
+                    time_slot_index: 10,
+                    duration: 2,
+                    course_id: newCourse.id,
+                    course_title: newCourse.name,
+                    instructor_name: 'ครูทดสอบ',
+                    room: 'ห้อง A1',
+                    color: '#6366f1'
+                }
+                
+                const { data: newSchedule, error: scheduleError } = await supabase
+                    .from('teaching_schedules')
+                    .insert(testSchedule)
+                    .select()
+                    .single()
+                
+                if (scheduleError) throw scheduleError
+                
+                logResult(`สร้างตารางสำเร็จ: ${newSchedule.course_title}`)
+                window.testScheduleId = newSchedule.id
+                
+            } catch (error) {
+                logResult(`การสร้างข้อมูลล้มเหลว: ${error.message}`, false)
+            }
+        }
+        
+        async function testUpdateOperations() {
+            logInfo('3️⃣ ทดสอบการแก้ไขข้อมูล (UPDATE)...')
+            
+            try {
+                if (window.testCourseId) {
+                    // Test update course
+                    const { data: updatedCourse, error: updateError } = await supabase
+                        .from('teaching_courses')
+                        .update({
+                            name: `ทดสอบคอร์ส (แก้ไขแล้ว) ${Date.now()}`,
+                            duration_hours: 3
+                        })
+                        .eq('id', window.testCourseId)
+                        .select()
+                        .single()
+                    
+                    if (updateError) throw updateError
+                    
+                    logResult(`แก้ไขคอร์สสำเร็จ: ${updatedCourse.name}`)
+                }
+                
+                if (window.testScheduleId) {
+                    // Test move schedule
+                    const { data: movedSchedule, error: moveError } = await supabase
+                        .from('teaching_schedules')
+                        .update({
+                            day_of_week: 2,
+                            time_slot_index: 11
+                        })
+                        .eq('id', window.testScheduleId)
+                        .select()
+                        .single()
+                    
+                    if (moveError) throw moveError
+                    
+                    logResult(`ย้ายตารางสำเร็จ: วัน ${movedSchedule.day_of_week} เวลา ${movedSchedule.time_slot_index}`)
+                    
+                    // Test resize schedule
+                    const { data: resizedSchedule, error: resizeError } = await supabase
+                        .from('teaching_schedules')
+                        .update({ duration: 3 })
+                        .eq('id', window.testScheduleId)
+                        .select()
+                        .single()
+                    
+                    if (resizeError) throw resizeError
+                    
+                    logResult(`ปรับขนาดตารางสำเร็จ: ${resizedSchedule.duration} ชั่วโมง`)
+                }
+                
+            } catch (error) {
+                logResult(`การแก้ไขข้อมูลล้มเหลว: ${error.message}`, false)
+            }
+        }
+        
+        async function testRealTimeFeatures() {
+            logInfo('4️⃣ ทดสอบ Real-time Features...')
+            
+            try {
+                // Test subscription setup
+                const channel = supabase
+                    .channel(`test-schedules-${Date.now()}`)
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'teaching_schedules'
+                    }, (payload) => {
+                        logResult(`Real-time update ได้รับ: ${payload.eventType}`)
+                    })
+                
+                const subscription = await channel.subscribe()
+                
+                if (subscription === 'SUBSCRIBED') {
+                    logResult('Real-time subscription ทำงานได้')
+                    
+                    // Cleanup
+                    setTimeout(() => {
+                        supabase.removeChannel(channel)
+                    }, 1000)
+                } else {
+                    logResult('Real-time subscription ล้มเหลว', false)
+                }
+                
+            } catch (error) {
+                logResult(`Real-time features ล้มเหลว: ${error.message}`, false)
+            }
+        }
+        
+        async function testErrorHandling() {
+            logInfo('5️⃣ ทดสอบการจัดการข้อผิดพลาด...')
+            
+            try {
+                // Test duplicate insert (should fail)
+                if (window.testScheduleId) {
+                    const { error } = await supabase
+                        .from('teaching_schedules')
+                        .insert({
+                            week_start_date: getWeekStartDate(new Date()),
+                            company: 'login',
+                            day_of_week: 2, // Same as updated schedule
+                            time_slot_index: 11, // Same as updated schedule  
+                            duration: 1,
+                            course_title: 'Duplicate Test',
+                            instructor_name: 'Test'
+                        })
+                    
+                    if (error) {
+                        logResult('Constraint violation ตรวจจับได้ถูกต้อง')
+                    } else {
+                        logResult('Constraint validation ไม่ทำงาน', false)
+                    }
+                }
+                
+                // Test invalid foreign key
+                const { error: fkError } = await supabase
+                    .from('teaching_schedules')
+                    .insert({
+                        week_start_date: getWeekStartDate(new Date()),
+                        company: 'login',
+                        day_of_week: 0,
+                        time_slot_index: 0,
+                        course_id: '00000000-0000-0000-0000-000000000000', // Invalid ID
+                        course_title: 'FK Test',
+                        instructor_name: 'Test'
+                    })
+                
+                if (fkError) {
+                    logResult('Foreign key constraint ตรวจจับได้ถูกต้อง')
+                } else {
+                    logResult('Foreign key validation ไม่ทำงาน', false)
+                }
+                
+            } catch (error) {
+                logResult(`การทดสอบ error handling: ${error.message}`)
+            }
+        }
+        
+        async function testFrontendIntegration() {
+            logInfo('🖥️ ทดสอบ Frontend Service Integration...')
+            
+            try {
+                // Test if we can load the teaching schedule service
+                const response = await fetch('http://localhost:5174/src/lib/teachingScheduleService.js')
+                
+                if (response.ok) {
+                    logResult('Frontend service accessible')
+                } else {
+                    logResult('Frontend service ไม่สามารถเข้าถึงได้', false)
+                }
+                
+                // Test main schedule page
+                const pageResponse = await fetch('http://localhost:5174/#/admin/teaching-schedule')
+                
+                if (pageResponse.ok) {
+                    logResult('Teaching schedule page accessible')
+                } else {
+                    logResult('Teaching schedule page ไม่สามารถเข้าถึงได้', false)
+                }
+                
+            } catch (error) {
+                logResult(`Frontend integration test: ${error.message}`, false)
+            }
+        }
+        
+        function getWeekStartDate(date) {
+            const d = new Date(date)
+            const day = d.getDay()
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+            const monday = new Date(d.setDate(diff))
+            return monday.toISOString().split('T')[0]
+        }
+        
+        // Cleanup function
+        async function cleanup() {
+            if (window.testScheduleId) {
+                await supabase
+                    .from('teaching_schedules')
+                    .delete()
+                    .eq('id', window.testScheduleId)
+            }
+            
+            if (window.testCourseId) {
+                await supabase
+                    .from('teaching_courses')
+                    .delete()
+                    .eq('id', window.testCourseId)
+            }
+        }
+        
+        // Expose functions to global scope
+        window.runAllTests = runAllTests
+        window.testFrontendIntegration = testFrontendIntegration
+        window.testRealTimeFeatures = testRealTimeFeatures
+        window.cleanup = cleanup
+        
+        // Auto cleanup on page unload
+        window.addEventListener('beforeunload', cleanup)
+    </script>
+</body>
+</html>

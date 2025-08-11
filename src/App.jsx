@@ -8,6 +8,7 @@ import { ToastProvider } from "./hooks/use-toast.jsx"
 import ToastDisplay from './components/ToastDisplay';
 import { AuthProvider } from './contexts/AuthContext';
 import { CompanyProvider } from './contexts/CompanyContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -28,6 +29,7 @@ const ForgotPasswordPage = React.lazy(() => import('./pages/ForgotPasswordPage')
 const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPageNew'));
 const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
 const UserProfilePage = React.lazy(() => import('./pages/UserProfilePage'));
+const ProgressPage = React.lazy(() => import('./pages/ProgressPage'));
 const SettingsPageDatabase = React.lazy(() => import('./pages/SettingsPageDatabase'));
 const ProjectsPage = React.lazy(() => import('./pages/ProjectsPage'));
 const ProjectDetailPage = React.lazy(() => import('./pages/ProjectDetailPage'));
@@ -45,8 +47,13 @@ const AdminCourseContentPage = React.lazy(() => import('./pages/AdminCourseConte
 const AdminAssignmentGradingPage = React.lazy(() => import('./pages/AdminAssignmentGradingPage'));
 const AdminProjectsPage = React.lazy(() => import('./pages/AdminProjectsPage'));
 const TeachingSchedulePageNew = React.lazy(() => import('./pages/TeachingSchedulePageNew'));
+const TeachingSchedulePageHybrid = React.lazy(() => import('./pages/TeachingSchedulePageHybrid'));
+const TeachingSchedulePageSimple = React.lazy(() => import('./pages/TeachingSchedulePageSimple'));
 const AdminGoogleDrivePage = React.lazy(() => import('./pages/AdminGoogleDrivePage'));
 const GoogleDriveIntegrationTest = React.lazy(() => import('./components/GoogleDriveIntegrationTest'));
+const CalComTestComponent = React.lazy(() => import('./components/CalComTestComponent'));
+const CalComSchedulePage = React.lazy(() => import('./pages/CalComSchedulePage'));
+const GoogleWorkspaceSchedulePage = React.lazy(() => import('./pages/GoogleWorkspaceSchedulePage'));
 
 // Time Tracking components (direct import to avoid lazy load issues)
 import TimeClockWidget from './components/TimeClockWidget';
@@ -222,6 +229,14 @@ const AppLayout = () => {
             } 
           />
           <Route 
+            path="/progress" 
+            element={
+              <ProtectedRoute>
+                <ProgressPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/settings" 
             element={
               <ProtectedRoute>
@@ -307,12 +322,17 @@ const AppLayout = () => {
             <Route path="courses/:courseId/content" element={<AdminCourseContentPage />} />
             <Route path="assignments/:assignmentId/grading" element={<AdminAssignmentGradingPage />} />
             <Route path="projects" element={<AdminProjectsPage />} />
-            <Route path="teaching-schedule" element={<TeachingSchedulePageNew />} />
+            <Route path="teaching-schedule-old" element={<TeachingSchedulePageNew />} />
+            <Route path="teaching-schedule-hybrid" element={<TeachingSchedulePageHybrid />} />
+            <Route path="teaching-schedule" element={<TeachingSchedulePageSimple />} />
             <Route path="time-management" element={<AdminTimeManagement />} />
             <Route path="time-debug" element={<TimeTrackingDebug />} />
             <Route path="location-management" element={<AdminLocationManagement />} />
             <Route path="google-drive" element={<AdminGoogleDrivePage />} />
             <Route path="google-drive-test" element={<GoogleDriveIntegrationTest />} />
+            <Route path="calcom-test" element={<CalComTestComponent />} />
+            <Route path="calcom-schedule" element={<CalComSchedulePage />} />
+            <Route path="google-workspace-schedule" element={<GoogleWorkspaceSchedulePage />} />
           </Route>
           
           {/* Catch-all route for Supabase recovery URLs */}
@@ -335,22 +355,24 @@ function App() {
           <title>Login Learning - แพลตฟอร์มเรียนรู้วิศวกรรมออนไลน์</title>
           <meta name="description" content="เรียนรู้การทำโครงงานวิศวกรรมกับผู้เชี่ยวชาญ ค้นหาตัวตนสำหรับน้องมัธยม เพื่อตัดสินใจเข้าเรียนต่อ พร้อมคอร์สเรียนที่หลากหลายและการสนับสนุนตลอด 24 ชั่วโมง" />
         </Helmet>
-        <ToastProvider>
-          <Router 
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true
-            }}
-          >
-            <AuthProvider>
-              <CompanyProvider>
-                <React.Suspense fallback={<LoadingSpinner />}>
-                  <AppLayout />
-                </React.Suspense>
-              </CompanyProvider>
-            </AuthProvider>
-          </Router>
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <Router 
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true
+              }}
+            >
+              <AuthProvider>
+                <CompanyProvider>
+                  <React.Suspense fallback={<LoadingSpinner />}>
+                    <AppLayout />
+                  </React.Suspense>
+                </CompanyProvider>
+              </AuthProvider>
+            </Router>
+          </ToastProvider>
+        </ThemeProvider>
       </HelmetProvider>
     </ErrorBoundary>
   );

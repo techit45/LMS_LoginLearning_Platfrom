@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { ensureUserProfile } from './userProfileHelper';
+import NotificationIntegrations from './notificationIntegrations';
 
 // ==========================================
 // ENROLLMENT OPERATIONS
@@ -90,6 +91,22 @@ export const enrollInCourse = async (courseId) => {
     }
 
     console.log('enrollmentService: Enrollment created successfully:', data);
+    
+    // Send enrollment notification
+    try {
+      if (data && data.courses) {
+        await NotificationIntegrations.handleCourseEnrollment(user.id, {
+          id: courseId,
+          title: data.courses.title,
+          instructor_id: data.courses.user_profiles?.id || null
+        });
+        console.log('enrollmentService: Enrollment notification sent');
+      }
+    } catch (notificationError) {
+      console.error('enrollmentService: Error sending enrollment notification:', notificationError);
+      // Don't fail the enrollment if notification fails
+    }
+    
     return { data, error: null };
   } catch (error) {
     console.error('enrollmentService: Error enrolling in course:', error);
@@ -211,11 +228,25 @@ export const updateEnrollmentProgress = async (courseId, progressPercentage) => 
       .eq('course_id', courseId)
       .select(`
         *,
-        courses(title)
+        courses(title, instructor_id)
       `)
       .single();
 
     if (error) throw error;
+
+    // Send course completion notification if progress reached 100%
+    if (progressPercentage >= 100 && data) {
+      try {
+        await NotificationIntegrations.handleCourseCompletion(user.id, {
+          id: courseId,
+          title: data.courses.title
+        });
+        console.log('Course completion notification sent');
+      } catch (notificationError) {
+        console.error('Error sending course completion notification:', notificationError);
+        // Don't fail the progress update if notification fails
+      }
+    }
 
     return { data, error: null };
   } catch (error) {

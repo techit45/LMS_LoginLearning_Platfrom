@@ -35,6 +35,24 @@ const ItemTypes = {
   INSTRUCTOR: 'instructor'
 }
 
+// Function to get short company names
+const getShortCompanyName = (fullName) => {
+  const nameMap = {
+    'Login Learning Platform': 'Login',
+    'Medical Learning Hub': 'Med',
+    'Med Solutions': 'Med', 
+    'W2D': 'W2D',
+    'W2D Studio': 'W2D',
+    'Meta Tech Academy': 'Meta',
+    'Meta': 'Meta',
+    'EdTech Solutions': 'EdTech',
+    'Innovation Technology Lab': 'Innotech',
+    'Industrial Research & Engineering': 'IRE'
+  }
+  
+  return nameMap[fullName] || fullName.slice(0, 6)
+}
+
 // ===================================================================
 // SCHEDULE ITEM COMPONENT
 // ===================================================================
@@ -58,8 +76,8 @@ const ScheduleItem = memo(({
     }
   }, [handleResizeMove, handleResizeEnd])
 
-  // Drag functionality
-  const [{ isDragging }, drag, dragPreview] = useDrag({
+  // Drag functionality - only for drag handle
+  const [{ isDragging }, dragHandle] = useDrag({
     type: ItemTypes.SCHEDULE,
     item: { schedule, type: ItemTypes.SCHEDULE },
     collect: (monitor) => ({
@@ -119,26 +137,27 @@ const ScheduleItem = memo(({
 
   return (
     <div
-      ref={dragPreview}
-      className={`absolute inset-1 rounded-lg shadow-lg border-2 transition-all duration-200 ${
-        isDragging ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
+      className={`absolute inset-1 rounded-xl shadow-xl border transition-all duration-200 ${
+        isDragging ? 'opacity-50 scale-95 rotate-3' : 'opacity-100 scale-100 hover:scale-105 hover:shadow-2xl'
       }`}
       style={{
         height: scheduleHeight,
-        backgroundColor: schedule.teaching_courses?.company_color || schedule.color || '#3B82F6',
-        borderColor: isDragging ? '#EF4444' : 'rgba(255,255,255,0.3)'
+        background: `linear-gradient(135deg, ${schedule.teaching_courses?.company_color || schedule.color || '#3B82F6'}, ${adjustBrightness(schedule.teaching_courses?.company_color || schedule.color || '#3B82F6', -10)})`,
+        borderColor: isDragging ? '#EF4444' : 'rgba(255,255,255,0.2)',
+        backdropFilter: 'blur(10px)'
       }}
     >
       {/* Drag handle */}
       <div 
-        ref={drag}
-        className="absolute top-1 left-1 p-1 cursor-move hover:bg-black hover:bg-opacity-20 rounded bg-black bg-opacity-10"
+        ref={dragHandle}
+        className="absolute top-2 left-2 p-1.5 cursor-move hover:bg-white hover:bg-opacity-30 rounded-lg bg-white bg-opacity-20 backdrop-blur-sm border border-white border-opacity-30 transition-all duration-200 z-40"
       >
-        <GripVertical className={`${zoomLevel <= 75 ? 'w-3 h-3' : 'w-4 h-4'} text-white drop-shadow-md`} />
+        <GripVertical className={`${zoomLevel <= 75 ? 'w-3 h-3' : 'w-4 h-4'} text-white drop-shadow-lg`} />
       </div>
 
+
       {/* Content */}
-      <div className={`${zoomLevel >= 100 ? 'p-3 pt-6' : zoomLevel >= 75 ? 'p-2 pt-4' : 'p-1.5'} text-white h-full flex flex-col justify-center`}>
+      <div className={`${zoomLevel >= 100 ? 'p-4 pt-12 pr-12' : zoomLevel >= 75 ? 'p-3 pt-8 pr-10' : 'p-2 pt-6 pr-8'} text-white h-full flex flex-col justify-center`}>
         <div className="font-bold leading-tight text-center px-1"
              style={{ 
                fontSize: zoomLevel <= 50 ? '12px' : `${Math.max(14, 16 * (zoomLevel / 100))}px`,
@@ -150,7 +169,7 @@ const ScheduleItem = memo(({
                wordBreak: 'break-word',
                textShadow: zoomLevel <= 50 ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
              }}>
-          {schedule.course_title || schedule.teaching_courses?.name || 'ไม่ระบุวิชา'}
+{schedule.course_title || schedule.teaching_courses?.name || 'ไม่ระบุวิชา'}
         </div>
         
         {schedule.course_code && zoomLevel > 75 && (
@@ -159,6 +178,13 @@ const ScheduleItem = memo(({
           </div>
         )}
         
+        {/* Company name */}
+        {schedule.teaching_courses?.company_name && zoomLevel > 50 && (
+          <div className="text-white text-opacity-80 text-center mb-1 text-xs font-semibold">
+            {getShortCompanyName(schedule.teaching_courses.company_name)}
+          </div>
+        )}
+
         {zoomLevel > 75 && (
           <div className="flex items-center gap-2 mb-2">
             <User className="w-4 h-4" />
@@ -186,27 +212,24 @@ const ScheduleItem = memo(({
           </div>
         )}
         
-        <div className="mt-auto flex gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete(schedule.id)
-            }}
-            className="p-1 hover:bg-white hover:bg-opacity-20 rounded"
-            title="ลบ"
-          >
-            <Trash2 className={`${zoomLevel <= 75 ? 'w-3 h-3' : 'w-4 h-4'}`} />
-          </button>
-        </div>
       </div>
 
-      {/* Resize handle */}
+      {/* Resize handle - bottom */}
       <div
         className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize flex items-center justify-center hover:bg-white hover:bg-opacity-20"
         onMouseDown={handleResizeStart}
         title="ลากเพื่อปรับขนาด"
       >
         <div className="w-8 h-1 bg-white bg-opacity-50 rounded"></div>
+      </div>
+
+      {/* Resize handle - top right corner */}
+      <div
+        className="absolute top-0 right-0 w-4 h-4 cursor-nw-resize hover:bg-white hover:bg-opacity-20 flex items-center justify-center z-30"
+        onMouseDown={handleResizeStart}
+        title="ลากเพื่อปรับขนาด"
+      >
+        <div className="w-2 h-2 border-t-2 border-r-2 border-white border-opacity-60"></div>
       </div>
     </div>
   )
@@ -229,6 +252,17 @@ const DropZone = memo(({
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: [ItemTypes.SCHEDULE, ItemTypes.COURSE],
     drop: (item) => onDrop(item, dayOfWeek, timeSlotIndex),
+    canDrop: (item) => {
+      // Always allow SCHEDULE drops (for moving schedules around)
+      if (item.type === ItemTypes.SCHEDULE) {
+        return true
+      }
+      // Allow COURSE drops only on empty slots
+      if (item.type === ItemTypes.COURSE && schedule) {
+        return false
+      }
+      return true
+    },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
       canDrop: monitor.canDrop()
@@ -348,17 +382,21 @@ const InstructorDropZone = memo(({
   timeSlotIndex, 
   instructorId,
   schedule, 
+  originalSchedule = null,
   onDrop, 
   onDelete, 
   onResize,
   timeSlots,
-  instructorName
+  instructorName,
+  isCovered = false
 }) => {
-  // Drag functionality for existing schedule
+  // Drag functionality for existing schedule (allow dragging from covered slots too)
+  // Use originalSchedule for covered slots to ensure proper drag reference
+  const scheduleForDrag = originalSchedule || schedule
   const [{ isDragging }, drag, dragPreview] = useDrag({
     type: ItemTypes.SCHEDULE,
-    item: schedule ? { schedule, type: ItemTypes.SCHEDULE } : null,
-    canDrag: () => !!schedule,
+    item: scheduleForDrag ? { schedule: scheduleForDrag, type: ItemTypes.SCHEDULE } : null,
+    canDrag: () => !!scheduleForDrag,
     collect: (monitor) => ({
       isDragging: monitor.isDragging()
     })
@@ -389,9 +427,17 @@ const InstructorDropZone = memo(({
       return onDrop(item, dayOfWeek, timeSlotIndex, instructorId)
     },
     canDrop: (item, monitor) => {
+      // Always allow SCHEDULE drops (for moving schedules around)
+      if (item.type === ItemTypes.SCHEDULE) {
+        return true
+      }
       // Prevent instructor drops on occupied time slots
       if (item.type === ItemTypes.INSTRUCTOR && schedule) {
-        return false // Don't allow dropping instructor on occupied slots
+        return false
+      }
+      // Allow COURSE drops only on empty slots
+      if (item.type === ItemTypes.COURSE && schedule) {
+        return false
       }
       return true
     },
@@ -417,7 +463,7 @@ const InstructorDropZone = memo(({
         minWidth: '90px'
       }}
     >
-      {schedule && (
+      {schedule && !isCovered && (
         <div
           ref={dragPreview}
           className={`absolute inset-1 rounded-lg shadow-lg border-2 transition-all duration-200 ${
@@ -428,99 +474,98 @@ const InstructorDropZone = memo(({
             borderColor: isDragging ? '#EF4444' : 'rgba(255,255,255,0.3)',
             width: `${(schedule.duration || 1) * 80 - 8}px`,
             minWidth: `${(schedule.duration || 1) * 80 - 8}px`,
-            height: '62px',
-            zIndex: 15
+            height: '66px',
+            zIndex: 15  // Lower z-index for covered slots to show it's part of a larger schedule
           }}
         >
-          {/* Drag handle */}
+          {/* Fixed Layout Card */}
           <div 
-            ref={drag}
-            className="absolute top-0.5 left-0.5 p-0.5 cursor-move hover:bg-black hover:bg-opacity-20 rounded bg-black bg-opacity-10 z-10"
+            className="group relative w-full h-full flex flex-col"
+            style={{ 
+              backgroundColor: schedule.teaching_courses?.company_color || schedule.color || '#3B82F6',
+              borderRadius: '8px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}
           >
-            <GripVertical className="w-3 h-3 text-white drop-shadow-md" />
-          </div>
-          {/* Simple Clean Design */}
-          <div className="p-1 text-white h-full flex flex-col">
-            {/* Course Name - Clean and Bold */}
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center font-bold text-white"
-                   style={{ 
-                     fontSize: '14px',
-                     lineHeight: '1.2',
-                     textShadow: '0 1px 2px rgba(0,0,0,0.7)',
-                     fontWeight: 'bold',
-                     display: '-webkit-box',
-                     WebkitLineClamp: 4,
-                     WebkitBoxOrient: 'vertical',
-                     overflow: 'hidden',
-                     wordBreak: 'break-word'
-                   }}>
-                {schedule.course_title || schedule.teaching_courses?.name || 'ไม่ระบุวิชา'}
+            {/* Drag Handle */}
+            <div 
+              ref={drag}
+              className="absolute top-2 left-2 opacity-60 z-10 cursor-move p-1 hover:bg-white hover:bg-opacity-20 rounded"
+            >
+              <GripVertical className="w-3 h-3 text-white" />
+            </div>
+
+            {/* Main Content Area - takes remaining space */}
+            <div className="flex-1 flex items-center justify-center p-2 overflow-hidden">
+              <div className="text-center">
+                <h3 className="font-semibold text-white leading-tight text-sm"
+                    style={{ 
+                      textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                      fontSize: '12px',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 1,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}>
+                  {schedule.course_title || schedule.teaching_courses?.name || 'ไม่ระบุวิชา'}
+                </h3>
+                
+                {/* Company Info - only if space */}
+                {(schedule.teaching_courses?.company || schedule.teaching_courses?.location) && (
+                  <div className="text-white/70 mt-0.5" style={{ fontSize: '9px' }}>
+                    {[
+                      schedule.teaching_courses?.company && getShortCompanyName(schedule.teaching_courses.company),
+                      schedule.teaching_courses?.location && schedule.teaching_courses.location.slice(0, 6)
+                    ].filter(Boolean).join('•')}
+                  </div>
+                )}
               </div>
             </div>
-            
-            {/* Small Info Row */}
-            {(schedule.teaching_courses?.company || schedule.teaching_courses?.location) && (
-              <div className="text-xs text-center text-white opacity-75 mt-1"
-                   style={{ 
-                     fontSize: '9px',
-                     textShadow: '0 0.5px 1px rgba(0,0,0,0.5)'
-                   }}>
-                {[
-                  schedule.teaching_courses?.company && schedule.teaching_courses.company.slice(0, 6),
-                  schedule.teaching_courses?.location && schedule.teaching_courses.location.slice(0, 6)
-                ].filter(Boolean).join(' • ')}
+
+            {/* Bottom Control Bar - fixed height */}
+            <div className="h-7 bg-black/20 group-hover:bg-black/40 flex items-center justify-between px-2 rounded-b-lg transition-all duration-300 opacity-0 group-hover:opacity-100">
+              {/* Duration Controls */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const newDuration = Math.max(1, (schedule.duration || 1) - 1)
+                    onResize(schedule.id, newDuration)
+                  }}
+                  className="w-5 h-5 flex items-center justify-center bg-white text-gray-800 hover:bg-gray-100 rounded text-xs font-bold transition-colors disabled:opacity-50"
+                  disabled={(schedule.duration || 1) <= 1}
+                  title="ลดชั่วโมง"
+                >
+                  −
+                </button>
+                
+                <span className="text-white text-xs font-semibold">
+                  {schedule.duration || 1}h
+                </span>
+                
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const newDuration = Math.min(4, (schedule.duration || 1) + 1)
+                    onResize(schedule.id, newDuration)
+                  }}
+                  className="w-5 h-5 flex items-center justify-center bg-white text-gray-800 hover:bg-gray-100 rounded text-xs font-bold transition-colors disabled:opacity-50"
+                  disabled={(schedule.duration || 1) >= 4}
+                  title="เพิ่มชั่วโมง"
+                >
+                  +
+                </button>
               </div>
-            )}
-            
-            <div className="mt-auto flex gap-0.5 justify-center items-center">
-              {/* Duration Control Buttons */}
+              
+              {/* Delete Button */}
               <button
                 onClick={(e) => {
-                  e.stopPropagation()
-                  const newDuration = Math.max(1, (schedule.duration || 1) - 1)
-                  onResize(schedule.id, newDuration)
-                }}
-                className="p-0.5 hover:bg-white hover:bg-opacity-30 rounded text-white font-bold"
-                title="ลดชั่วโมง"
-                style={{ fontSize: '10px' }}
-                disabled={(schedule.duration || 1) <= 1}
-              >
-                −
-              </button>
-              
-              <span className="text-white text-xs font-medium px-1"
-                    style={{ 
-                      fontSize: '9px',
-                      minWidth: '16px',
-                      textAlign: 'center',
-                      textShadow: '0 0.5px 1px rgba(0,0,0,0.7)'
-                    }}>
-                {schedule.duration || 1}h
-              </span>
-              
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const newDuration = Math.min(4, (schedule.duration || 1) + 1)
-                  onResize(schedule.id, newDuration)
-                }}
-                className="p-0.5 hover:bg-white hover:bg-opacity-30 rounded text-white font-bold"
-                title="เพิ่มชั่วโมง (สูงสุด 4 ชม.)"
-                style={{ fontSize: '10px' }}
-                disabled={(schedule.duration || 1) >= 4}
-              >
-                +
-              </button>
-              
-              <div className="w-px h-3 bg-white bg-opacity-30 mx-0.5"></div>
-              
-              <button
-                onClick={(e) => {
+                  e.preventDefault()
                   e.stopPropagation()
                   onDelete(schedule.id)
                 }}
-                className="p-0.5 hover:bg-white hover:bg-opacity-30 rounded"
+                className="w-6 h-6 flex items-center justify-center bg-red-500 hover:bg-red-600 rounded-full text-white transition-colors border border-white shadow-sm"
+                style={{ zIndex: 30 }}
                 title="ลบ"
               >
                 <Trash2 className="w-3 h-3" />
@@ -530,7 +575,26 @@ const InstructorDropZone = memo(({
         </div>
       )}
       
-      {!schedule && isOver && canDrop && (
+      {isCovered && (
+        <div>
+          {/* Hidden drag handle for covered slots - DISABLED */}
+          <div 
+            ref={drag}
+            className="absolute top-2 left-2 w-6 h-6 cursor-move bg-transparent z-20 hover:bg-white hover:bg-opacity-20 rounded"
+            title="ลากเพื่อย้าย"
+          />
+          {/* Visual indicator */}
+          <div className={`absolute inset-0 flex items-center justify-center pointer-events-none ${
+            isOver && canDrop ? 'bg-blue-200 opacity-30' : 'opacity-10'
+          }`}>
+            <div className="text-xs text-gray-600 font-medium bg-white bg-opacity-80 px-1 py-0.5 rounded">
+              ส่วนของ {(originalSchedule || schedule)?.course_title || 'ตาราง'} ({(originalSchedule || schedule)?.duration}h)
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {!schedule && !isCovered && isOver && canDrop && (
         <div className="absolute inset-2 border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 flex items-center justify-center">
           <div className="text-center">
             <Plus className="w-6 h-6 text-blue-500 mx-auto mb-1" />
@@ -655,14 +719,31 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
   // Get all available instructors (not just from current day's schedules)
   const [allInstructors, setAllInstructors] = useState([])
   const [removedInstructors, setRemovedInstructors] = useState(() => {
-    // โหลดรายการผู้สอนที่ถูกลบจาก sessionStorage
+    // โหลดรายการผู้สอนที่ถูกลบจาก localStorage แยกตามวัน
     try {
-      const saved = sessionStorage.getItem('removedInstructors')
-      return saved ? new Set(JSON.parse(saved)) : new Set()
+      const saved = localStorage.getItem('removedInstructorsByDay')
+      return saved ? JSON.parse(saved) : {}
     } catch {
-      return new Set()
+      return {}
     }
   })
+
+  // Sync removedInstructors across tabs
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'removedInstructorsByDay') {
+        try {
+          const newValue = e.newValue ? JSON.parse(e.newValue) : {}
+          setRemovedInstructors(newValue)
+        } catch (error) {
+          console.error('Error parsing removedInstructorsByDay from storage event:', error)
+        }
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
   
 
   // Load all instructors
@@ -698,13 +779,17 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
         
         const instructorList = Array.from(instructorMap.values())
         
-        // กรองผู้สอนที่ถูกลบออกจากตาราง
+        // กรองผู้สอนที่ถูกลบออกจากตารางในวันที่เลือก
+        const selectedDayName = DAYS.find(d => d.index === selectedDay)?.name?.toLowerCase()
+        const removedForDay = removedInstructors[selectedDayName] || []
         const filteredInstructors = instructorList.filter(instructor => 
-          !removedInstructors.has(instructor.id)
+          !removedForDay.includes(instructor.id)
         )
         
         setAllInstructors(filteredInstructors)
-        // console.log('📚 Loaded instructors:', instructorList.length, 'total,', filteredInstructors.length, 'after filtering removed')
+        console.log('📚 Loaded instructors:', instructorList.length, 'total,', filteredInstructors.length, 'after filtering removed')
+        console.log('📅 Selected day:', selectedDayName, 'Removed for day:', removedForDay)
+        console.log('🗂️ Full removedInstructors state:', removedInstructors)
       } catch (error) {
         console.error('Error loading instructors:', error)
         toast({
@@ -716,7 +801,7 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
     }
     
     loadInstructors()
-  }, [removedInstructors])
+  }, [removedInstructors, selectedDay])
   
   // Get instructors for the selected day (show all instructors) - memoized
   const getInstructorsForDay = useMemo(() => {
@@ -786,14 +871,20 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
         // No schedules to delete, just hide instructor
         console.log('🗑️ Removing instructor from schedule (no schedules):', { instructorId, instructorName })
         
-        // เพิ่มผู้สอนเข้ารายการที่ถูกลบและบันทึกใน sessionStorage
-        const newRemovedInstructors = new Set(removedInstructors)
-        newRemovedInstructors.add(instructorId)
+        // เพิ่มผู้สอนเข้ารายการที่ถูกลบในวันที่เลือกและบันทึกใน localStorage
+        const selectedDayName = DAYS.find(d => d.index === selectedDay)?.name?.toLowerCase()
+        const newRemovedInstructors = { ...removedInstructors }
+        if (!newRemovedInstructors[selectedDayName]) {
+          newRemovedInstructors[selectedDayName] = []
+        }
+        if (!newRemovedInstructors[selectedDayName].includes(instructorId)) {
+          newRemovedInstructors[selectedDayName].push(instructorId)
+        }
         setRemovedInstructors(newRemovedInstructors)
-        sessionStorage.setItem('removedInstructors', JSON.stringify([...newRemovedInstructors]))
+        localStorage.setItem('removedInstructorsByDay', JSON.stringify(newRemovedInstructors))
         
-        // ลบผู้สอนออกจาก allInstructors state
-        setAllInstructors(prev => prev.filter(instructor => instructor.id !== instructorId))
+        // Re-trigger loadInstructors เพื่อ update UI
+        // (loadInstructors จะถูกเรียกใหม่เพราะ removedInstructors state เปลี่ยน)
         
         toast({
           title: "ลบผู้สอนออกจากตารางสำเร็จ",
@@ -820,14 +911,20 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
       // ลบผู้สอนออกจากตาราง แต่ยังคงอยู่ในระบบ
       console.log('🗑️ Removing instructor from schedule table (not deleting from system):', { instructorId, instructorName })
       
-      // เพิ่มผู้สอนเข้ารายการที่ถูกลบและบันทึกใน sessionStorage
-      const newRemovedInstructors = new Set(removedInstructors)
-      newRemovedInstructors.add(instructorId)
+      // เพิ่มผู้สอนเข้ารายการที่ถูกลบในวันที่เลือกและบันทึกใน localStorage
+      const selectedDayName = DAYS.find(d => d.index === selectedDay)?.name?.toLowerCase()
+      const newRemovedInstructors = { ...removedInstructors }
+      if (!newRemovedInstructors[selectedDayName]) {
+        newRemovedInstructors[selectedDayName] = []
+      }
+      if (!newRemovedInstructors[selectedDayName].includes(instructorId)) {
+        newRemovedInstructors[selectedDayName].push(instructorId)
+      }
       setRemovedInstructors(newRemovedInstructors)
-      sessionStorage.setItem('removedInstructors', JSON.stringify([...newRemovedInstructors]))
+      localStorage.setItem('removedInstructorsByDay', JSON.stringify(newRemovedInstructors))
       
-      // ลบผู้สอนออกจาก allInstructors state
-      setAllInstructors(prev => prev.filter(instructor => instructor.id !== instructorId))
+      // Re-trigger loadInstructors เพื่อ update UI  
+      // (loadInstructors จะถูกเรียกใหม่เพราะ removedInstructors state เปลี่ยน)
 
       toast({
         title: "✅ ลบผู้สอนออกจากตารางสำเร็จ",
@@ -1005,15 +1102,19 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
         name: draggedInstructor.full_name || draggedInstructor.email || 'ไม่ระบุ'
       }
       
-      // ลบผู้สอนออกจากรายการที่ถูกลบ (ถ้าอยู่)
-      if (removedInstructors.has(draggedInstructor.user_id)) {
-        const newRemovedInstructors = new Set(removedInstructors)
-        newRemovedInstructors.delete(draggedInstructor.user_id)
+      // ลบผู้สอนออกจากรายการที่ถูกลบในวันที่เลือก (ถ้าอยู่)
+      const selectedDayName = DAYS.find(d => d.index === selectedDay)?.name?.toLowerCase()
+      if (removedInstructors[selectedDayName]?.includes(draggedInstructor.user_id)) {
+        const newRemovedInstructors = { ...removedInstructors }
+        newRemovedInstructors[selectedDayName] = newRemovedInstructors[selectedDayName].filter(
+          id => id !== draggedInstructor.user_id
+        )
         setRemovedInstructors(newRemovedInstructors)
-        sessionStorage.setItem('removedInstructors', JSON.stringify([...newRemovedInstructors]))
+        localStorage.setItem('removedInstructorsByDay', JSON.stringify(newRemovedInstructors))
       }
       
-      setAllInstructors(prev => [...prev, newInstructor])
+      // Re-trigger loadInstructors เพื่อ update UI
+      // (loadInstructors จะถูกเรียกใหม่เพราะ removedInstructors state เปลี่ยน)
       
       toast({
         title: "เพิ่มผู้สอนสำเร็จ",
@@ -1080,7 +1181,7 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
         
         // Use specified instructor if provided
         if (instructorId && !instructorId.startsWith('empty-')) {
-          const instructors = getInstructorsForDay()
+          const instructors = getInstructorsForDay
           const specificInstructor = instructors.find(i => i.id === instructorId)
           if (specificInstructor) {
             finalInstructorId = instructorId
@@ -1093,12 +1194,15 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
             
             // หาชื่อจาก removedInstructors หรือ original data
             const removedId = instructorId
-            if (removedInstructors.has(removedId)) {
-              // ลบออกจาก removedInstructors
-              const newRemovedInstructors = new Set(removedInstructors)
-              newRemovedInstructors.delete(removedId)
+            const selectedDayName = DAYS.find(d => d.index === selectedDay)?.name?.toLowerCase()
+            if (removedInstructors[selectedDayName]?.includes(removedId)) {
+              // ลบออกจาก removedInstructors ในวันที่เลือก
+              const newRemovedInstructors = { ...removedInstructors }
+              newRemovedInstructors[selectedDayName] = newRemovedInstructors[selectedDayName].filter(
+                id => id !== removedId
+              )
               setRemovedInstructors(newRemovedInstructors)
-              sessionStorage.setItem('removedInstructors', JSON.stringify([...newRemovedInstructors]))
+              localStorage.setItem('removedInstructorsByDay', JSON.stringify(newRemovedInstructors))
             }
           }
         }
@@ -1112,8 +1216,10 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
         }
         
         console.log('📝 Schedule data to create:', scheduleData)
+        
+        // Create schedule with optimistic UI (hook already handles instant update)
         await createSchedule(scheduleData)
-        console.log('✅ Schedule created successfully')
+        console.log('✅ Schedule created successfully - UI already updated optimistically')
         
         // หาก instructor ถูกลบไปแล้ว ให้เพิ่มกลับมา
         if (shouldAddInstructorBack) {
@@ -1500,26 +1606,21 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
                         <td key={`${instructor.id}-${timeSlot.index}`} 
                             className={`p-0 border-b ${coveringSchedule ? 'bg-gray-100' : ''}`}
                             style={{
-                              position: 'relative',
-                              opacity: coveringSchedule ? 0.3 : 1
+                              position: 'relative'
                             }}>
-                          {!coveringSchedule ? (
-                            <InstructorDropZone
-                              dayOfWeek={selectedDay}
-                              timeSlotIndex={timeSlot.index}
-                              instructorId={instructor.id}
-                              schedule={schedule}
-                              onDrop={handleDrop}
-                              onDelete={handleDelete}
-                              onResize={handleResize}
-                              timeSlots={TIME_SLOTS}
-                              instructorName={instructor.name}
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">
-                              {coveringSchedule.course_title || coveringSchedule.teaching_courses?.name}
-                            </div>
-                          )}
+                          <InstructorDropZone
+                            dayOfWeek={selectedDay}
+                            timeSlotIndex={timeSlot.index}
+                            instructorId={instructor.id}
+                            schedule={coveringSchedule || schedule}
+                            originalSchedule={coveringSchedule} 
+                            onDrop={handleDrop}
+                            onDelete={handleDelete}
+                            onResize={handleResize}
+                            timeSlots={TIME_SLOTS}
+                            instructorName={instructor.name}
+                            isCovered={!!coveringSchedule}
+                          />
                         </td>
                       )
                     })}

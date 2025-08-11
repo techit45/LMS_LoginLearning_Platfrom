@@ -101,8 +101,17 @@ export const getAllCourses = async () => {
       // Try simple database query first
       console.log('Attempting to fetch courses from database...');
       
+      // Check authentication status
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('User status for courses:', user ? 'Authenticated' : 'Anonymous');
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Courses query timeout')), 5000);
+      });
+      
       try {
-        const { data, error } = await supabase
+        const queryPromise = supabase
           .from('courses')
           .select(`
             id,
@@ -120,7 +129,9 @@ export const getAllCourses = async () => {
           `)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
-          .limit(10);
+          .limit(20);
+        
+        const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
         if (error) {
           console.error('Database error:', error);

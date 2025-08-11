@@ -171,7 +171,7 @@ export const registerUserLocation = async (locationId, userGpsData) => {
       timestamp: new Date().toISOString()
     };
 
-    // Register location
+    // Register location - ใช้ user_latitude และ user_longitude ตามโครงสร้างตาราง
     const registrationData = {
       user_id: user.user.id,
       location_id: locationId,

@@ -114,17 +114,70 @@ const PayrollReport = ({ selectedUserId = null, showDetails = true }) => {
 
       if (profileError) throw profileError;
 
-      // Try to get advanced payroll settings (if migration is complete)
+      // Get payroll settings from both user_profiles and payroll_settings
       let advancedSettings = null;
       try {
-        const { data: settings, error: settingsError } = await supabase
-          .rpc('get_user_payroll_settings', { target_user_id: userId });
-        
-        if (!settingsError && settings && settings.length > 0) {
-          advancedSettings = settings[0];
-        }
+        // First try to get position-based settings
+        const { data: positionSettings, error: positionError } = await supabase
+          .from('payroll_settings')
+          .select('*')
+          .eq('setting_type', 'position')
+          .eq('reference_id', userProfile.employment_type)
+          .eq('is_active', true)
+          .single();
+
+        // Merge settings with priority: Individual settings > Position settings > Defaults  
+        advancedSettings = {
+          user_id: userId,
+          employment_type: userProfile.employment_type,
+          // Individual settings have highest priority (including 0 values)
+          hourly_rate: (userProfile.hourly_rate !== null && userProfile.hourly_rate !== undefined) ? userProfile.hourly_rate : (positionSettings?.hourly_rate || 500),
+          base_salary: (userProfile.base_salary !== null && userProfile.base_salary !== undefined) ? userProfile.base_salary : (positionSettings?.base_salary || 0),
+          overtime_multiplier: positionSettings?.overtime_multiplier || 1.5,
+          enable_social_security: (userProfile.social_security_eligible !== null && userProfile.social_security_eligible !== undefined) ? userProfile.social_security_eligible : (positionSettings?.enable_social_security ?? true),
+          enable_tax_withholding: (userProfile.tax_withholding_rate !== null && userProfile.tax_withholding_rate !== undefined) ? (userProfile.tax_withholding_rate > 0) : (positionSettings?.enable_tax_withholding ?? true),
+          enable_provident_fund: (userProfile.provident_fund_rate !== null && userProfile.provident_fund_rate !== undefined) ? (userProfile.provident_fund_rate > 0) : (positionSettings?.enable_provident_fund ?? false),
+          social_security_rate: positionSettings?.social_security_rate || 0.05,
+          tax_withholding_rate: positionSettings?.tax_withholding_rate || userProfile.tax_withholding_rate || 0.03,
+          provident_fund_rate: positionSettings?.provident_fund_rate || userProfile.provident_fund_rate || 0.03,
+          transport_allowance: (userProfile.transport_allowance !== null && userProfile.transport_allowance !== undefined) ? userProfile.transport_allowance : (positionSettings?.transport_allowance || 0),
+          meal_allowance: (userProfile.meal_allowance !== null && userProfile.meal_allowance !== undefined) ? userProfile.meal_allowance : (positionSettings?.meal_allowance || 0),
+          phone_allowance: (userProfile.phone_allowance !== null && userProfile.phone_allowance !== undefined) ? userProfile.phone_allowance : (positionSettings?.phone_allowance || 0),
+          housing_allowance: (userProfile.housing_allowance !== null && userProfile.housing_allowance !== undefined) ? userProfile.housing_allowance : (positionSettings?.housing_allowance || 0),
+          health_insurance: positionSettings?.health_insurance_amount || userProfile.health_insurance || 0
+        };
+
+        console.log('💰 Merged payroll settings:', {
+          userProfile: {
+            hourly_rate: userProfile.hourly_rate,
+            employment_type: userProfile.employment_type,
+            transport_allowance: userProfile.transport_allowance
+          },
+          positionSettings,
+          final: advancedSettings
+        });
+
       } catch (err) {
-        console.log('Advanced payroll settings not available yet (migration pending)');
+        console.error('Error loading payroll settings:', err);
+        // Fallback to user profile only
+        advancedSettings = {
+          user_id: userId,
+          employment_type: userProfile.employment_type,
+          hourly_rate: userProfile.hourly_rate || 500,
+          base_salary: userProfile.base_salary || 0,
+          overtime_multiplier: 1.5,
+          enable_social_security: userProfile.social_security_eligible ?? true,
+          enable_tax_withholding: true,
+          enable_provident_fund: userProfile.provident_fund_rate > 0,
+          social_security_rate: 0.05,
+          tax_withholding_rate: userProfile.tax_withholding_rate || 0.03,
+          provident_fund_rate: userProfile.provident_fund_rate || 0.03,
+          transport_allowance: userProfile.transport_allowance || 0,
+          meal_allowance: userProfile.meal_allowance || 0,
+          phone_allowance: userProfile.phone_allowance || 0,
+          housing_allowance: userProfile.housing_allowance || 0,
+          health_insurance: userProfile.health_insurance || 0
+        };
       }
 
       // Calculate payroll
@@ -136,6 +189,40 @@ const PayrollReport = ({ selectedUserId = null, showDetails = true }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper functions for position default values
+  const getPositionDefaultRate = (employmentType) => {
+    const rates = {
+      'intern': 300,
+      'parttime': 400, 
+      'probation': 450,
+      'fulltime': 600,
+      'leader': 800
+    };
+    return rates[employmentType] || 500;
+  };
+
+  const getPositionDefaultSalary = (employmentType) => {
+    const salaries = {
+      'intern': 0,
+      'parttime': 0,
+      'probation': 18000,
+      'fulltime': 25000,
+      'leader': 35000
+    };
+    return salaries[employmentType] || 0;
+  };
+
+  const getPositionDefaultAllowance = (employmentType, type) => {
+    const allowances = {
+      'intern': { transport: 1000, meal: 1500, phone: 0, housing: 0 },
+      'parttime': { transport: 1500, meal: 2000, phone: 300, housing: 0 },
+      'probation': { transport: 1500, meal: 2000, phone: 500, housing: 0 },
+      'fulltime': { transport: 2000, meal: 3000, phone: 800, housing: 0 },
+      'leader': { transport: 3000, meal: 4000, phone: 1200, housing: 2000 }
+    };
+    return allowances[employmentType]?.[type] || 0;
   };
 
   const calculatePayroll = (timeEntries, userProfile, advancedSettings = null) => {
@@ -197,10 +284,10 @@ const PayrollReport = ({ selectedUserId = null, showDetails = true }) => {
     // Get employment type and calculate rates accordingly
     const employmentType = userProfile.employment_type || 'fulltime';
     
-    // Use advanced settings if available, otherwise fall back to user profile or defaults
+    // Use advanced settings if available, otherwise fall back to user profile or position defaults
     const effectiveSettings = advancedSettings || {
-      hourly_rate: userProfile.hourly_rate || salarySettings.baseHourlyRate,
-      base_salary: userProfile.base_salary || 0,
+      hourly_rate: userProfile.hourly_rate || getPositionDefaultRate(employmentType),
+      base_salary: userProfile.base_salary || getPositionDefaultSalary(employmentType),
       overtime_multiplier: salarySettings.overtimeMultiplier,
       enable_social_security: true,
       enable_tax_withholding: true,
@@ -208,12 +295,31 @@ const PayrollReport = ({ selectedUserId = null, showDetails = true }) => {
       social_security_rate: salarySettings.socialSecurityRate,
       tax_withholding_rate: salarySettings.taxWithholdingRate,
       provident_fund_rate: salarySettings.providentFundRate,
-      transport_allowance: userProfile.transport_allowance || salarySettings.transportAllowance,
-      meal_allowance: userProfile.meal_allowance || salarySettings.mealAllowance,
-      phone_allowance: userProfile.phone_allowance || salarySettings.phoneAllowance,
-      housing_allowance: userProfile.housing_allowance || salarySettings.housingAllowance,
+      transport_allowance: userProfile.transport_allowance || getPositionDefaultAllowance(employmentType, 'transport'),
+      meal_allowance: userProfile.meal_allowance || getPositionDefaultAllowance(employmentType, 'meal'),
+      phone_allowance: userProfile.phone_allowance || getPositionDefaultAllowance(employmentType, 'phone'),
+      housing_allowance: userProfile.housing_allowance || getPositionDefaultAllowance(employmentType, 'housing'),
       health_insurance_amount: userProfile.health_insurance || salarySettings.healthInsurance
     };
+
+    console.log('🧮 Payroll calculation details:', {
+      employmentType,
+      totalRegularHours,
+      totalOvertimeHours,
+      positionDefaults: {
+        hourly_rate: getPositionDefaultRate(employmentType),
+        base_salary: getPositionDefaultSalary(employmentType),
+        transport: getPositionDefaultAllowance(employmentType, 'transport'),
+        meal: getPositionDefaultAllowance(employmentType, 'meal')
+      },
+      effectiveSettings: {
+        hourly_rate: effectiveSettings.hourly_rate,
+        base_salary: effectiveSettings.base_salary,
+        transport_allowance: effectiveSettings.transport_allowance,
+        meal_allowance: effectiveSettings.meal_allowance,
+        phone_allowance: effectiveSettings.phone_allowance
+      }
+    });
 
     const baseHourlyRate = effectiveSettings.hourly_rate;
     const monthlyBaseSalary = effectiveSettings.base_salary;
@@ -223,17 +329,29 @@ const PayrollReport = ({ selectedUserId = null, showDetails = true }) => {
     const hourlyRate = baseHourlyRate;
     const regularPay = totalRegularHours * hourlyRate;
     const overtimePay = totalOvertimeHours * hourlyRate * overtimeMultiplier;
-    const baseSalary = monthlyBaseSalary || regularPay + overtimePay;
+    const baseSalary = monthlyBaseSalary || 0; // เงินเดือนฐาน (ถ้ามี)
     
-    // Calculate allowances using effective settings
+    // Calculate allowances using effective settings (excluding phone allowance)
     const transportAllowance = effectiveSettings.transport_allowance;
     const mealAllowance = effectiveSettings.meal_allowance;
-    const phoneAllowance = effectiveSettings.phone_allowance;
     const housingAllowance = effectiveSettings.housing_allowance;
-    const totalAllowances = transportAllowance + mealAllowance + phoneAllowance + housingAllowance;
+    const totalAllowances = transportAllowance + mealAllowance + housingAllowance;
 
-    // Calculate gross income
-    const grossIncome = baseSalary + totalAllowances;
+    // Calculate gross income - รวมเงินเดือนฐาน + ค่าแรงจากชั่วโมง + เบี้ยเลี้ยง
+    const grossIncome = baseSalary + regularPay + overtimePay + totalAllowances;
+
+    console.log('💰 Income breakdown:', {
+      baseSalary,
+      regularPay: `${totalRegularHours} hrs × ${hourlyRate} = ${regularPay}`,
+      overtimePay: `${totalOvertimeHours} hrs × ${hourlyRate} × ${overtimeMultiplier} = ${overtimePay}`,
+      totalAllowances: {
+        transport: transportAllowance,
+        meal: mealAllowance,
+        housing: housingAllowance,
+        total: totalAllowances
+      },
+      grossIncome
+    });
 
     // Calculate deductions using effective settings and toggles
     const socialSecurity = effectiveSettings.enable_social_security ? 
@@ -300,7 +418,6 @@ const PayrollReport = ({ selectedUserId = null, showDetails = true }) => {
         overtimePay,
         transportAllowance,
         mealAllowance,
-        phoneAllowance,
         housingAllowance,
         totalAllowances,
         grossIncome
@@ -344,7 +461,6 @@ const PayrollReport = ({ selectedUserId = null, showDetails = true }) => {
       ['ค่าล่วงเวลา', payrollData.totalOvertimeHours.toFixed(2), 'ชั่วโมง', formatNumber(payrollData.earnings.overtimePay)],
       ['ค่าเดินทาง', '', '', formatNumber(payrollData.earnings.transportAllowance)],
       ['ค่าอาหาร', '', '', formatNumber(payrollData.earnings.mealAllowance)],
-      ['ค่าโทรศัพท์', '', '', formatNumber(payrollData.earnings.phoneAllowance)],
       ['ค่าที่พัก', '', '', formatNumber(payrollData.earnings.housingAllowance)],
       ['รวมรายได้', '', '', formatNumber(payrollData.earnings.grossIncome)],
       ['', '', '', ''],
@@ -630,12 +746,6 @@ const PayrollReport = ({ selectedUserId = null, showDetails = true }) => {
                     <div className="flex justify-between">
                       <span className="text-gray-700">ค่าอาหาร</span>
                       <span className="font-medium">{formatCurrency(payrollData.earnings.mealAllowance)}</span>
-                    </div>
-                  )}
-                  {payrollData.earnings.phoneAllowance > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-700">ค่าโทรศัพท์</span>
-                      <span className="font-medium">{formatCurrency(payrollData.earnings.phoneAllowance)}</span>
                     </div>
                   )}
                   {payrollData.earnings.housingAllowance > 0 && (

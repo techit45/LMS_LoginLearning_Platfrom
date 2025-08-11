@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบ Instructor Preferences</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        h2 { color: #666; font-size: 1.2em; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #45a049; }
+        button.danger { background: #f44336; }
+        button.danger:hover { background: #da190b; }
+        button.info { background: #2196F3; }
+        button.info:hover { background: #0b7dda; }
+        .preference-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f9f9f9;
+            border-left: 3px solid #4CAF50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .hidden { 
+            background: #fee; 
+            border-left-color: #f44336;
+        }
+        #status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th { background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <h1>🔍 ทดสอบระบบ Instructor Display Preferences</h1>
+
+    <div class="card">
+        <h2>1. ข้อมูล User ปัจจุบัน</h2>
+        <div id="userInfo">กำลังโหลด...</div>
+    </div>
+
+    <div class="card">
+        <h2>2. ตรวจสอบตาราง</h2>
+        <button onclick="checkTable()">🔍 ตรวจสอบโครงสร้างตาราง</button>
+        <button onclick="loadAllPreferences()">📋 ดู Preferences ทั้งหมด</button>
+        <button onclick="loadInstructors()">👥 ดูรายชื่อผู้สอน</button>
+        <div id="tableInfo"></div>
+    </div>
+
+    <div class="card">
+        <h2>3. ทดสอบ CRUD Operations</h2>
+        <button onclick="testSavePreference()">💾 ทดสอบบันทึก Preference</button>
+        <button onclick="testLoadPreference()">📥 ทดสอบโหลด Preference</button>
+        <button onclick="testDeletePreference()" class="danger">🗑️ ทดสอบลบ Preference</button>
+        <div id="crudResult"></div>
+    </div>
+
+    <div class="card">
+        <h2>4. จัดการ Preferences</h2>
+        <div id="instructorsList"></div>
+    </div>
+
+    <div id="status"></div>
+
+    <script>
+        // Supabase config
+        const SUPABASE_URL = 'https://vuitwzisazvikrhtfthh.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+
+        // Show status message
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = type;
+            setTimeout(() => status.textContent = '', 5000);
+        }
+
+        // Load current user
+        async function loadUser() {
+            const { data: { user }, error } = await supabase.auth.getUser();
+            if (error) {
+                document.getElementById('userInfo').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                return;
+            }
+            
+            currentUser = user;
+            if (user) {
+                document.getElementById('userInfo').innerHTML = `
+                    <table>
+                        <tr><th>User ID:</th><td>${user.id}</td></tr>
+                        <tr><th>Email:</th><td>${user.email}</td></tr>
+                        <tr><th>Role:</th><td>${user.role}</td></tr>
+                    </table>
+                `;
+            } else {
+                document.getElementById('userInfo').innerHTML = '<div class="error">ไม่ได้ login</div>';
+            }
+        }
+
+        // Check table structure
+        async function checkTable() {
+            try {
+                const { data, error } = await supabase
+                    .from('instructor_display_preferences')
+                    .select('*')
+                    .limit(1);
+
+                if (error) {
+                    document.getElementById('tableInfo').innerHTML = `
+                        <div class="error">
+                            <h3>❌ Error accessing table:</h3>
+                            <pre>${JSON.stringify(error, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('tableInfo').innerHTML = `
+                        <div class="success">
+                            <h3>✅ ตารางทำงานปกติ</h3>
+                            <p>สามารถเข้าถึงตาราง instructor_display_preferences ได้</p>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                document.getElementById('tableInfo').innerHTML = `
+                    <div class="error">Error: ${err.message}</div>
+                `;
+            }
+        }
+
+        // Load all preferences
+        async function loadAllPreferences() {
+            if (!currentUser) {
+                showStatus('กรุณา login ก่อน', 'error');
+                return;
+            }
+
+            const { data, error } = await supabase
+                .from('instructor_display_preferences')
+                .select('*')
+                .eq('user_id', currentUser.id);
+
+            if (error) {
+                document.getElementById('tableInfo').innerHTML = `
+                    <div class="error">Error: ${error.message}</div>
+                `;
+            } else {
+                document.getElementById('tableInfo').innerHTML = `
+                    <h3>Preferences ทั้งหมด (${data.length} รายการ):</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Instructor ID</th>
+                                <th>Visible</th>
+                                <th>Created</th>
+                                <th>Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.map(pref => `
+                                <tr>
+                                    <td>${pref.instructor_user_id}</td>
+                                    <td>${pref.is_visible ? '✅ แสดง' : '❌ ซ่อน'}</td>
+                                    <td>${new Date(pref.created_at).toLocaleString('th-TH')}</td>
+                                    <td>${new Date(pref.updated_at).toLocaleString('th-TH')}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+        }
+
+        // Load instructors
+        async function loadInstructors() {
+            const { data, error } = await supabase
+                .from('user_profiles')
+                .select('user_id, full_name, email, is_active')
+                .neq('role', 'student')
+                .order('full_name');
+
+            if (error) {
+                document.getElementById('instructorsList').innerHTML = `
+                    <div class="error">Error: ${error.message}</div>
+                `;
+                return;
+            }
+
+            // Load preferences
+            const { data: prefs } = await supabase
+                .from('instructor_display_preferences')
+                .select('instructor_user_id, is_visible')
+                .eq('user_id', currentUser?.id);
+
+            const prefsMap = {};
+            prefs?.forEach(p => {
+                prefsMap[p.instructor_user_id] = p.is_visible;
+            });
+
+            document.getElementById('instructorsList').innerHTML = `
+                <h3>ผู้สอนทั้งหมด (${data.length} คน):</h3>
+                ${data.map(instructor => {
+                    const isVisible = prefsMap[instructor.user_id] !== false;
+                    return `
+                        <div class="preference-item ${!isVisible ? 'hidden' : ''}">
+                            <div>
+                                <strong>${instructor.full_name || instructor.email}</strong>
+                                <small>(${instructor.user_id})</small>
+                                ${!isVisible ? ' - <span style="color:red">ซ่อนอยู่</span>' : ''}
+                            </div>
+                            <div>
+                                <button onclick="toggleVisibility('${instructor.user_id}', ${!isVisible})" 
+                                        class="${isVisible ? 'danger' : 'info'}">
+                                    ${isVisible ? '🙈 ซ่อน' : '👁️ แสดง'}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            `;
+        }
+
+        // Toggle visibility
+        async function toggleVisibility(instructorId, makeVisible) {
+            if (!currentUser) {
+                showStatus('กรุณา login ก่อน', 'error');
+                return;
+            }
+
+            const { error } = await supabase
+                .from('instructor_display_preferences')
+                .upsert({
+                    user_id: currentUser.id,
+                    instructor_user_id: instructorId,
+                    is_visible: makeVisible
+                }, {
+                    onConflict: 'user_id,instructor_user_id'
+                });
+
+            if (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+            } else {
+                showStatus(`✅ ${makeVisible ? 'แสดง' : 'ซ่อน'}ผู้สอนสำเร็จ`, 'success');
+                loadInstructors();
+            }
+        }
+
+        // Test save preference
+        async function testSavePreference() {
+            if (!currentUser) {
+                showStatus('กรุณา login ก่อน', 'error');
+                return;
+            }
+
+            // Get first instructor
+            const { data: instructors } = await supabase
+                .from('user_profiles')
+                .select('user_id')
+                .neq('role', 'student')
+                .limit(1);
+
+            if (!instructors || instructors.length === 0) {
+                showStatus('ไม่พบผู้สอน', 'error');
+                return;
+            }
+
+            const testInstructorId = instructors[0].user_id;
+            
+            const { error } = await supabase
+                .from('instructor_display_preferences')
+                .upsert({
+                    user_id: currentUser.id,
+                    instructor_user_id: testInstructorId,
+                    is_visible: false
+                }, {
+                    onConflict: 'user_id,instructor_user_id'
+                });
+
+            if (error) {
+                document.getElementById('crudResult').innerHTML = `
+                    <div class="error">❌ Save failed: ${error.message}</div>
+                `;
+            } else {
+                document.getElementById('crudResult').innerHTML = `
+                    <div class="success">✅ บันทึกสำเร็จ - ซ่อนผู้สอน ID: ${testInstructorId}</div>
+                `;
+                loadAllPreferences();
+            }
+        }
+
+        // Test load preference
+        async function testLoadPreference() {
+            if (!currentUser) {
+                showStatus('กรุณา login ก่อน', 'error');
+                return;
+            }
+
+            const { data, error } = await supabase
+                .from('instructor_display_preferences')
+                .select('*')
+                .eq('user_id', currentUser.id);
+
+            if (error) {
+                document.getElementById('crudResult').innerHTML = `
+                    <div class="error">❌ Load failed: ${error.message}</div>
+                `;
+            } else {
+                document.getElementById('crudResult').innerHTML = `
+                    <div class="success">
+                        ✅ โหลดสำเร็จ - พบ ${data.length} preferences
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        // Test delete preference
+        async function testDeletePreference() {
+            if (!currentUser) {
+                showStatus('กรุณา login ก่อน', 'error');
+                return;
+            }
+
+            // Get first preference to delete
+            const { data: prefs } = await supabase
+                .from('instructor_display_preferences')
+                .select('instructor_user_id')
+                .eq('user_id', currentUser.id)
+                .limit(1);
+
+            if (!prefs || prefs.length === 0) {
+                showStatus('ไม่มี preferences ให้ลบ', 'error');
+                return;
+            }
+
+            const { error } = await supabase
+                .from('instructor_display_preferences')
+                .delete()
+                .eq('user_id', currentUser.id)
+                .eq('instructor_user_id', prefs[0].instructor_user_id);
+
+            if (error) {
+                document.getElementById('crudResult').innerHTML = `
+                    <div class="error">❌ Delete failed: ${error.message}</div>
+                `;
+            } else {
+                document.getElementById('crudResult').innerHTML = `
+                    <div class="success">✅ ลบสำเร็จ</div>
+                `;
+                loadAllPreferences();
+            }
+        }
+
+        // Initialize
+        window.onload = async () => {
+            await loadUser();
+            if (currentUser) {
+                await loadInstructors();
+            }
+        };
+    </script>
+</body>
+</html>

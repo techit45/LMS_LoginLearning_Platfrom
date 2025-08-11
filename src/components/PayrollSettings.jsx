@@ -21,9 +21,11 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/use-toast';
 
 const PayrollSettings = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('general'); // general, positions, individuals
@@ -141,16 +143,106 @@ const PayrollSettings = () => {
   const [employees, setEmployees] = useState([]);
   const [individualSettings, setIndividualSettings] = useState({});
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [employeeFormData, setEmployeeFormData] = useState({
+    hourlyRate: 0,
+    baseSalary: 0,
+    transportAllowance: 0,
+    mealAllowance: 0,
+    phoneAllowance: 0,
+    housingAllowance: 0,
+    enableSocialSecurity: true,
+    enableTaxWithholding: true,
+    enableProvidentFund: true,
+    taxWithholdingRate: 0.03,
+    providentFundRate: 0.03
+  });
 
   useEffect(() => {
     loadSettings();
     loadEmployees();
   }, []);
 
+  // Load employee data when selected employee changes
+  useEffect(() => {
+    if (selectedEmployee) {
+      setEmployeeFormData({
+        hourlyRate: parseFloat(selectedEmployee.hourly_rate) || 0,
+        baseSalary: parseFloat(selectedEmployee.base_salary) || 0,
+        transportAllowance: parseFloat(selectedEmployee.transport_allowance) || 0,
+        mealAllowance: parseFloat(selectedEmployee.meal_allowance) || 0,
+        phoneAllowance: parseFloat(selectedEmployee.phone_allowance) || 0,
+        housingAllowance: parseFloat(selectedEmployee.housing_allowance) || 0,
+        enableSocialSecurity: selectedEmployee.social_security_eligible || false,
+        enableTaxWithholding: true, // Usually always true
+        enableProvidentFund: (parseFloat(selectedEmployee.provident_fund_rate) || 0) > 0,
+        taxWithholdingRate: parseFloat(selectedEmployee.tax_withholding_rate) || 0.03,
+        providentFundRate: parseFloat(selectedEmployee.provident_fund_rate) || 0.03
+      });
+    }
+  }, [selectedEmployee]);
+
   const loadSettings = async () => {
     try {
-      // Load general settings from database or use defaults
-      // This would typically come from a settings table
+      // Load general settings
+      const { data: generalData, error: generalError } = await supabase
+        .from('payroll_settings')
+        .select('*')
+        .eq('setting_type', 'general')
+        .eq('reference_id', 'default')
+        .single();
+
+      if (generalError && generalError.code !== 'PGRST116') {
+        console.error('Error loading general settings:', generalError);
+      } else if (generalData) {
+        setGeneralSettings({
+          defaultHourlyRate: parseFloat(generalData.hourly_rate) || 500,
+          overtimeMultiplier: parseFloat(generalData.overtime_multiplier) || 1.5,
+          enableSocialSecurity: generalData.enable_social_security,
+          enableTaxWithholding: generalData.enable_tax_withholding,
+          enableProvidentFund: generalData.enable_provident_fund,
+          enableHealthInsurance: generalData.enable_health_insurance,
+          enableLifeInsurance: generalData.enable_life_insurance,
+          socialSecurityRate: parseFloat(generalData.social_security_rate) || 0.05,
+          taxWithholdingRate: parseFloat(generalData.tax_withholding_rate) || 0.03,
+          providentFundRate: parseFloat(generalData.provident_fund_rate) || 0.03,
+          defaultTransportAllowance: parseFloat(generalData.transport_allowance) || 0,
+          defaultMealAllowance: parseFloat(generalData.meal_allowance) || 0,
+          defaultPhoneAllowance: parseFloat(generalData.phone_allowance) || 0,
+          defaultHousingAllowance: parseFloat(generalData.housing_allowance) || 0
+        });
+      }
+
+      // Load position settings
+      const { data: positionData, error: positionError } = await supabase
+        .from('payroll_settings')
+        .select('*')
+        .eq('setting_type', 'position')
+        .order('reference_id');
+
+      if (positionError) {
+        console.error('Error loading position settings:', positionError);
+      } else if (positionData && positionData.length > 0) {
+        const positions = positionData.map(pos => ({
+          id: pos.reference_id,
+          name: pos.name,
+          hourlyRate: parseFloat(pos.hourly_rate),
+          baseSalary: parseFloat(pos.base_salary) || 0,
+          overtimeMultiplier: parseFloat(pos.overtime_multiplier) || 1.5,
+          enableSocialSecurity: pos.enable_social_security,
+          enableTaxWithholding: pos.enable_tax_withholding,
+          enableProvidentFund: pos.enable_provident_fund || false,
+          socialSecurityRate: parseFloat(pos.social_security_rate) || 0,
+          taxWithholdingRate: parseFloat(pos.tax_withholding_rate) || 0,
+          providentFundRate: parseFloat(pos.provident_fund_rate) || 0,
+          transportAllowance: parseFloat(pos.transport_allowance) || 0,
+          mealAllowance: parseFloat(pos.meal_allowance) || 0,
+          phoneAllowance: parseFloat(pos.phone_allowance) || 0,
+          housingAllowance: parseFloat(pos.housing_allowance) || 0,
+          description: pos.description
+        }));
+        setPositionSettings(positions);
+      }
+
       setLoading(false);
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -176,15 +268,74 @@ const PayrollSettings = () => {
   const saveGeneralSettings = async () => {
     setSaving(true);
     try {
-      // Save to database - this would typically update a settings table
-      // For now, we'll just show success
-      console.log('Saving general settings:', generalSettings);
+      console.log('🔄 Saving general settings...', generalSettings);
       
-      // Show success message
-      alert('บันทึกการตั้งค่าทั่วไปเรียบร้อยแล้ว');
+      // Check if general settings already exist
+      const { data: existingData, error: checkError } = await supabase
+        .from('payroll_settings')
+        .select('id')
+        .eq('setting_type', 'general')
+        .eq('reference_id', 'default')
+        .single();
+
+      console.log('🔍 Existing data check:', { existingData, checkError });
+
+      const settingsData = {
+        setting_type: 'general',
+        reference_id: 'default',
+        hourly_rate: generalSettings.defaultHourlyRate,
+        overtime_multiplier: generalSettings.overtimeMultiplier,
+        enable_social_security: generalSettings.enableSocialSecurity,
+        enable_tax_withholding: generalSettings.enableTaxWithholding,
+        enable_provident_fund: generalSettings.enableProvidentFund,
+        enable_health_insurance: generalSettings.enableHealthInsurance,
+        enable_life_insurance: generalSettings.enableLifeInsurance,
+        social_security_rate: generalSettings.socialSecurityRate,
+        tax_withholding_rate: generalSettings.taxWithholdingRate,
+        provident_fund_rate: generalSettings.providentFundRate,
+        transport_allowance: generalSettings.defaultTransportAllowance,
+        meal_allowance: generalSettings.defaultMealAllowance,
+        phone_allowance: generalSettings.defaultPhoneAllowance,
+        housing_allowance: generalSettings.defaultHousingAllowance,
+        name: 'การตั้งค่าทั่วไป',
+        description: 'การตั้งค่าเริ่มต้นสำหรับระบบ',
+        is_active: true,
+        updated_at: new Date().toISOString()
+      };
+
+      let result;
+      if (existingData) {
+        // Update existing record
+        result = await supabase
+          .from('payroll_settings')
+          .update(settingsData)
+          .eq('id', existingData.id);
+      } else {
+        // Insert new record
+        settingsData.created_by = user?.id;
+        result = await supabase
+          .from('payroll_settings')
+          .insert(settingsData);
+      }
+
+      if (result.error) throw result.error;
+      
+      console.log('✅ General settings saved successfully:', generalSettings);
+      
+      // Show success notification
+      toast({
+        title: "✅ บันทึกเรียบร้อย",
+        description: "บันทึกการตั้งค่าทั่วไปเรียบร้อยแล้ว",
+        duration: 3000
+      });
     } catch (error) {
-      console.error('Error saving settings:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึก');
+      console.error('❌ Error saving settings:', error);
+      toast({
+        title: "❌ เกิดข้อผิดพลาด",
+        description: "เกิดข้อผิดพลาดในการบันทึก: " + error.message,
+        variant: "destructive",
+        duration: 5000
+      });
     } finally {
       setSaving(false);
     }
@@ -193,13 +344,76 @@ const PayrollSettings = () => {
   const savePositionSettings = async () => {
     setSaving(true);
     try {
-      // Save position settings to database
-      console.log('Saving position settings:', positionSettings);
+      // Save each position setting individually, handling existing records
+      const savePromises = positionSettings.map(async (position) => {
+        // Check if this position already exists
+        const { data: existingData } = await supabase
+          .from('payroll_settings')
+          .select('id')
+          .eq('setting_type', 'position')
+          .eq('reference_id', position.id)
+          .single();
+
+        const positionData = {
+          setting_type: 'position',
+          reference_id: position.id,
+          hourly_rate: position.hourlyRate,
+          base_salary: position.baseSalary,
+          overtime_multiplier: position.overtimeMultiplier || 1.5,
+          enable_social_security: position.enableSocialSecurity,
+          enable_tax_withholding: position.enableTaxWithholding,
+          enable_provident_fund: position.enableProvidentFund || false,
+          social_security_rate: position.socialSecurityRate,
+          tax_withholding_rate: position.taxWithholdingRate,
+          provident_fund_rate: position.providentFundRate,
+          transport_allowance: position.transportAllowance,
+          meal_allowance: position.mealAllowance,
+          phone_allowance: position.phoneAllowance,
+          housing_allowance: position.housingAllowance,
+          name: position.name,
+          description: position.description,
+          is_active: true,
+          updated_at: new Date().toISOString()
+        };
+
+        if (existingData) {
+          // Update existing record
+          return await supabase
+            .from('payroll_settings')
+            .update(positionData)
+            .eq('id', existingData.id);
+        } else {
+          // Insert new record
+          positionData.created_by = user?.id;
+          return await supabase
+            .from('payroll_settings')
+            .insert(positionData);
+        }
+      });
+
+      const results = await Promise.all(savePromises);
+      const errors = results.filter(result => result.error);
       
-      alert('บันทึกการตั้งค่าตำแหน่งเรียบร้อยแล้ว');
+      if (errors.length > 0) {
+        console.error('Errors saving positions:', errors);
+        throw new Error(`Failed to save ${errors.length} position settings`);
+      }
+      
+      console.log('✅ Position settings saved successfully:', positionSettings);
+      
+      toast({
+        title: "✅ บันทึกเรียบร้อย",
+        description: "บันทึกการตั้งค่าตำแหน่งเรียบร้อยแล้ว",
+        duration: 3000
+      });
     } catch (error) {
-      console.error('Error saving position settings:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึก');
+      console.error('❌ Error saving position settings:', error);
+      toast({
+        title: "❌ เกิดข้อผิดพลาด",
+        description: "เกิดข้อผิดพลาดในการบันทึก: " + error.message,
+        variant: "destructive",
+        duration: 5000
+      });
     } finally {
       setSaving(false);
     }
@@ -208,29 +422,69 @@ const PayrollSettings = () => {
   const saveIndividualSettings = async (employeeId, settings) => {
     setSaving(true);
     try {
-      // Update user_profiles table with individual settings
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          hourly_rate: settings.hourlyRate,
-          base_salary: settings.baseSalary,
-          transport_allowance: settings.transportAllowance,
-          meal_allowance: settings.mealAllowance,
-          phone_allowance: settings.phoneAllowance,
-          housing_allowance: settings.housingAllowance,
-          health_insurance: settings.healthInsurance || 0,
-          provident_fund_rate: settings.providentFundRate,
-          tax_withholding_rate: settings.taxWithholdingRate,
-          social_security_eligible: settings.enableSocialSecurity
-        })
-        .eq('user_id', employeeId);
-
-      if (error) throw error;
+      console.log('🔄 Saving individual settings for employee:', employeeId, settings);
       
-      alert('บันทึกการตั้งค่ารายบุคคลเรียบร้อยแล้ว');
+      // Check if user profile exists first
+      const { data: existingProfile } = await supabase
+        .from('user_profiles')
+        .select('user_id')
+        .eq('user_id', employeeId)
+        .single();
+
+      const profileData = {
+        hourly_rate: settings.hourlyRate,
+        base_salary: settings.baseSalary,
+        transport_allowance: settings.transportAllowance,
+        meal_allowance: settings.mealAllowance,
+        phone_allowance: settings.phoneAllowance,
+        housing_allowance: settings.housingAllowance,
+        health_insurance: settings.healthInsurance || 0,
+        provident_fund_rate: settings.providentFundRate,
+        tax_withholding_rate: settings.taxWithholdingRate,
+        social_security_eligible: settings.enableSocialSecurity,
+        updated_at: new Date().toISOString()
+      };
+
+      let result;
+      if (existingProfile) {
+        // Update existing profile
+        result = await supabase
+          .from('user_profiles')
+          .update(profileData)
+          .eq('user_id', employeeId);
+      } else {
+        // Insert new profile
+        profileData.user_id = employeeId;
+        profileData.full_name = selectedEmployee?.full_name || 'Unknown';
+        profileData.role = 'admin';
+        profileData.employment_type = 'leader';
+        profileData.created_at = new Date().toISOString();
+        
+        result = await supabase
+          .from('user_profiles')
+          .insert(profileData);
+      }
+
+      if (result.error) throw result.error;
+      
+      console.log('✅ Individual settings saved successfully');
+      
+      // Reload employees to reflect changes
+      loadEmployees();
+      
+      toast({
+        title: "✅ บันทึกเรียบร้อย",
+        description: `บันทึกการตั้งค่าสำหรับ ${selectedEmployee?.full_name} เรียบร้อยแล้ว`,
+        duration: 3000
+      });
     } catch (error) {
-      console.error('Error saving individual settings:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึก');
+      console.error('❌ Error saving individual settings:', error);
+      toast({
+        title: "❌ เกิดข้อผิดพลาด", 
+        description: "เกิดข้อผิดพลาดในการบันทึก: " + error.message,
+        variant: "destructive",
+        duration: 5000
+      });
     } finally {
       setSaving(false);
     }
@@ -461,12 +715,19 @@ const PayrollSettings = () => {
         
         <div className="mt-6 pt-4 border-t">
           <button
-            onClick={saveGeneralSettings}
+            onClick={async () => {
+              console.log('🔄 Starting to save all settings...');
+              await saveGeneralSettings();
+              console.log('✅ General settings saved');
+              await savePositionSettings();
+              console.log('✅ Position settings saved');
+              console.log('🎉 All settings saved successfully!');
+            }}
             disabled={saving}
             className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400"
           >
             <Save className="w-4 h-4" />
-            <span>{saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}</span>
+            <span>{saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่าทั้งหมด'}</span>
           </button>
         </div>
       </div>
@@ -675,7 +936,11 @@ const PayrollSettings = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">ค่าแรงต่อชั่วโมง</label>
                       <input
                         type="number"
-                        defaultValue={selectedEmployee.hourly_rate || 0}
+                        value={employeeFormData.hourlyRate}
+                        onChange={(e) => setEmployeeFormData({
+                          ...employeeFormData,
+                          hourlyRate: parseFloat(e.target.value) || 0
+                        })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
@@ -683,7 +948,11 @@ const PayrollSettings = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">เงินเดือนฐาน</label>
                       <input
                         type="number"
-                        defaultValue={selectedEmployee.base_salary || 0}
+                        value={employeeFormData.baseSalary}
+                        onChange={(e) => setEmployeeFormData({
+                          ...employeeFormData,
+                          baseSalary: parseFloat(e.target.value) || 0
+                        })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
@@ -694,7 +963,11 @@ const PayrollSettings = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">ค่าเดินทาง</label>
                       <input
                         type="number"
-                        defaultValue={selectedEmployee.transport_allowance || 0}
+                        value={employeeFormData.transportAllowance}
+                        onChange={(e) => setEmployeeFormData({
+                          ...employeeFormData,
+                          transportAllowance: parseFloat(e.target.value) || 0
+                        })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
@@ -702,7 +975,11 @@ const PayrollSettings = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">ค่าอาหาร</label>
                       <input
                         type="number"
-                        defaultValue={selectedEmployee.meal_allowance || 0}
+                        value={employeeFormData.mealAllowance}
+                        onChange={(e) => setEmployeeFormData({
+                          ...employeeFormData,
+                          mealAllowance: parseFloat(e.target.value) || 0
+                        })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
@@ -711,7 +988,18 @@ const PayrollSettings = () => {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-gray-700">ประกันสังคม</span>
-                      <ToggleRight className="w-6 h-6 text-green-600" />
+                      <button
+                        onClick={() => setEmployeeFormData({
+                          ...employeeFormData,
+                          enableSocialSecurity: !employeeFormData.enableSocialSecurity
+                        })}
+                        className="p-1"
+                      >
+                        {employeeFormData.enableSocialSecurity ? 
+                          <ToggleRight className="w-6 h-6 text-green-600" /> : 
+                          <ToggleLeft className="w-6 h-6 text-gray-400" />
+                        }
+                      </button>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-gray-700">ภาษีหัก ณ ที่จ่าย</span>
@@ -719,25 +1007,32 @@ const PayrollSettings = () => {
                         <input
                           type="number"
                           step="0.001"
-                          defaultValue={selectedEmployee.tax_withholding_rate || 0.03}
+                          value={employeeFormData.taxWithholdingRate}
+                          onChange={(e) => setEmployeeFormData({
+                            ...employeeFormData,
+                            taxWithholdingRate: parseFloat(e.target.value) || 0
+                          })}
                           className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                          disabled={!employeeFormData.enableTaxWithholding}
                         />
-                        <ToggleRight className="w-6 h-6 text-green-600" />
+                        <button
+                          onClick={() => setEmployeeFormData({
+                            ...employeeFormData,
+                            enableTaxWithholding: !employeeFormData.enableTaxWithholding
+                          })}
+                          className="p-1"
+                        >
+                          {employeeFormData.enableTaxWithholding ? 
+                            <ToggleRight className="w-6 h-6 text-green-600" /> : 
+                            <ToggleLeft className="w-6 h-6 text-gray-400" />
+                          }
+                        </button>
                       </div>
                     </div>
                   </div>
 
                   <button
-                    onClick={() => saveIndividualSettings(selectedEmployee.user_id, {
-                      // Get values from form inputs
-                      hourlyRate: 600, // This would come from the form
-                      baseSalary: 25000,
-                      transportAllowance: 2000,
-                      mealAllowance: 3000,
-                      enableSocialSecurity: true,
-                      taxWithholdingRate: 0.03,
-                      providentFundRate: 0.03
-                    })}
+                    onClick={() => saveIndividualSettings(selectedEmployee.user_id, employeeFormData)}
                     disabled={saving}
                     className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400"
                   >

@@ -221,6 +221,9 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
       })
     }
     
+    // Generate a temporary ID for optimistic UI
+    const tempId = `temp-${Date.now()}-${Math.random()}`
+    
     try {
       // console.log('➕ Creating schedule:', scheduleData)
       
@@ -241,6 +244,16 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
         course_id: scheduleData.course_id,
         instructor_id: scheduleData.instructor_id
       }
+      
+      // Add optimistic UI entry with temp ID
+      const optimisticEntry = {
+        ...newSchedule,
+        id: tempId,
+        teaching_courses: scheduleData.course_data || null // Add course data if available
+      }
+      
+      // Immediately update UI (Optimistic)
+      setSchedules(prev => [...prev, optimisticEntry])
       
       // console.log('📝 useSimpleSchedule: Final schedule data to insert:', newSchedule)
       // console.log('📝 Course data received:', scheduleData)
@@ -264,9 +277,15 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
         recentManualUpdatesRef.current.delete(data.id)
       }, 3000) // Clear after 3 seconds
       
-      // Immediately update local state for instant UI feedback
+      // Replace temp entry with real data from server
       setSchedules(prev => {
-        const newSchedules = [...prev, data]
+        // Remove temp entry and add real data
+        const withoutTemp = prev.filter(s => s.id !== tempId)
+        // Check if already exists to prevent duplicates
+        const exists = withoutTemp.some(s => s.id === data.id)
+        if (exists) return withoutTemp
+        
+        const newSchedules = [...withoutTemp, data]
         console.log('🔄 Added schedule to local state:', {
           id: data.id,
           course_name: data.teaching_courses?.name,
@@ -283,15 +302,15 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
         description: `สร้าง ${data.course_title || data.teaching_courses?.name || 'ตาราง'} แล้ว`
       })
       
-      // Force refresh after a short delay to ensure UI consistency
-      setTimeout(() => {
-        console.log('🔄 Force refresh after successful create')
-        fetchSchedules()
-      }, 500)
+      // No delay needed - UI already updated optimistically
+      // Real-time subscription will sync any discrepancies
       
       return data
       
     } catch (err) {
+      // Rollback optimistic UI on error
+      setSchedules(prev => prev.filter(s => s.id !== tempId))
+      
       console.error('❌ Error creating schedule:', err)
       console.log('🔍 Error object type:', typeof err)
       console.log('🔍 Error properties:', Object.keys(err))
@@ -464,11 +483,8 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
         return updated
       })
       
-      // Also trigger a delayed refresh to ensure consistency
-      setTimeout(() => {
-        console.log('🔄 Delayed refresh to ensure consistency')
-        fetchSchedules()
-      }, 1000)
+      // No delay needed - UI already updated optimistically
+      // Real-time subscription will sync any discrepancies
       
       toast({
         title: "แก้ไขตารางสำเร็จ",
@@ -541,14 +557,14 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
         recentManualUpdatesRef.current.delete(scheduleId)
       }, 5000) // เพิ่มเวลาเป็น 5 วินาที
       
-      // Manually update local state for immediate UI update
+      // Immediately update local state for instant UI feedback (Optimistic UI)
       setSchedules(prev => {
         const updated = prev.filter(s => s.id !== scheduleId)
-        // console.log('🔄 Manual state update: Removed schedule from local state', {
-        //   beforeCount: prev.length,
-        //   afterCount: updated.length,
-        //   removedId: scheduleId
-        // })
+        console.log('🔄 Manual state update: Removed schedule from local state', {
+          beforeCount: prev.length,
+          afterCount: updated.length,
+          removedId: scheduleId
+        })
         return updated
       })
       
@@ -557,11 +573,8 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
         description: `ลบ ${schedule?.course_title || schedule?.teaching_courses?.name || 'ตาราง'} แล้ว`
       })
       
-      // Force refresh after a longer delay to verify consistency
-      setTimeout(() => {
-        console.log('🔄 Force refresh after deletion to verify state')
-        fetchSchedules()
-      }, 2000)
+      // No delay needed - UI already updated optimistically
+      // Real-time subscription will sync any discrepancies
       
       return true
       

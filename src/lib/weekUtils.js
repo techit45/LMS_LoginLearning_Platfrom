@@ -94,6 +94,8 @@ export function getCurrentDays(scheduleType) {
 
 /**
  * Get time slots based on schedule type
+ * TEMPORARILY LIMITED due to database constraint (time_slot_index 0-6 only)
+ * TODO: Fix database constraint to allow full range (0-12)
  */
 export function getTimeSlots(scheduleType) {
   const allSlots = [
@@ -102,9 +104,14 @@ export function getTimeSlots(scheduleType) {
     '18:00', '19:00', '20:00'
   ];
   
-  if (scheduleType === 'weekends') {
-    return allSlots; // Full range for weekends
-  } else {
-    return allSlots.slice(0, 11); // 08:00-18:00 for weekdays
-  }
+  // TEMPORARY FIX: Limit to 7 slots (0-6) due to database constraint
+  // Original logic would be:
+  // if (scheduleType === 'weekends') {
+  //   return allSlots; // Full range for weekends  
+  // } else {
+  //   return allSlots.slice(0, 11); // 08:00-18:00 for weekdays
+  // }
+  
+  // Current limited implementation:
+  return allSlots.slice(0, 7); // 08:00-14:00 for all types (slots 0-6)
 }

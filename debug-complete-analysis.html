@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Complete System Analysis</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #f5f5f5; }
+        .section { background: white; margin: 20px 0; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .error { color: red; background: #ffe6e6; padding: 10px; border-radius: 4px; }
+        .success { color: green; background: #e6ffe6; padding: 10px; border-radius: 4px; }
+        .warning { color: orange; background: #fff3e6; padding: 10px; border-radius: 4px; }
+        .data { background: #f0f0f0; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        pre { background: #f8f8f8; padding: 10px; border-radius: 4px; overflow: auto; }
+        button { padding: 10px 20px; margin: 5px; border: none; background: #007bff; color: white; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        h2 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        .metric { display: inline-block; margin: 10px; padding: 10px; background: #e9ecef; border-radius: 4px; min-width: 120px; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Complete System Analysis</h1>
+    
+    <div class="section">
+        <h2>📊 System Metrics</h2>
+        <div id="metrics"></div>
+        <button onclick="checkMetrics()">🔄 Check Metrics</button>
+    </div>
+
+    <div class="section">
+        <h2>💾 SessionStorage Analysis</h2>
+        <div id="sessionStorage"></div>
+        <button onclick="checkSessionStorage()">🔍 Check SessionStorage</button>
+        <button onclick="clearSessionStorage()">🗑️ Clear SessionStorage</button>
+    </div>
+
+    <div class="section">
+        <h2>🗄️ Database Analysis</h2>
+        <div id="database"></div>
+        <button onclick="checkDatabase()">🔍 Check Database</button>
+    </div>
+
+    <div class="section">
+        <h2>⚛️ Component State Analysis</h2>
+        <div id="componentState"></div>
+        <button onclick="checkComponentState()">🔍 Check Component State</button>
+    </div>
+
+    <div class="section">
+        <h2>🎨 UI Analysis</h2>
+        <div id="uiAnalysis"></div>
+        <button onclick="checkUI()">🔍 Check UI</button>
+    </div>
+
+    <div class="section">
+        <h2>📝 Console Logs Analysis</h2>
+        <div id="consoleLogs"></div>
+        <button onclick="captureConsoleLogs()">📋 Capture Console Logs</button>
+    </div>
+
+    <script>
+        let capturedLogs = [];
+        
+        // Override console methods to capture logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            capturedLogs.push({type: 'log', args, timestamp: new Date().toISOString()});
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            capturedLogs.push({type: 'error', args, timestamp: new Date().toISOString()});
+            originalError.apply(console, args);
+        };
+
+        async function checkMetrics() {
+            const metricsDiv = document.getElementById('metrics');
+            metricsDiv.innerHTML = '<div class="warning">📊 Collecting metrics...</div>';
+            
+            try {
+                // DOM elements count
+                const instructorRows = document.querySelectorAll('tr[class*="group"]').length;
+                const scheduleElements = document.querySelectorAll('[class*="schedule"]').length;
+                const dropZones = document.querySelectorAll('[class*="border-dashed"]').length;
+                
+                // Performance metrics
+                const performance = window.performance || {};
+                const memory = performance.memory || {};
+                
+                metricsDiv.innerHTML = `
+                    <div class="metric"><strong>👥 Instructor Rows</strong><br>${instructorRows}</div>
+                    <div class="metric"><strong>📚 Schedule Elements</strong><br>${scheduleElements}</div>
+                    <div class="metric"><strong>🎯 Drop Zones</strong><br>${dropZones}</div>
+                    <div class="metric"><strong>💾 Memory Used</strong><br>${Math.round((memory.usedJSHeapSize || 0) / 1024 / 1024)}MB</div>
+                    <div class="metric"><strong>📊 Console Logs</strong><br>${capturedLogs.length}</div>
+                `;
+            } catch (error) {
+                metricsDiv.innerHTML = `<div class="error">❌ Error collecting metrics: ${error.message}</div>`;
+            }
+        }
+
+        function checkSessionStorage() {
+            const sessionDiv = document.getElementById('sessionStorage');
+            
+            try {
+                const removedInstructors = sessionStorage.getItem('removedInstructors');
+                const allItems = {};
+                
+                // Get all sessionStorage items
+                for (let i = 0; i < sessionStorage.length; i++) {
+                    const key = sessionStorage.key(i);
+                    allItems[key] = sessionStorage.getItem(key);
+                }
+                
+                sessionDiv.innerHTML = `
+                    <div class="data">
+                        <h3>🔑 All SessionStorage Items:</h3>
+                        <pre>${JSON.stringify(allItems, null, 2)}</pre>
+                    </div>
+                    <div class="data">
+                        <h3>❌ Removed Instructors:</h3>
+                        <pre>${removedInstructors || 'null'}</pre>
+                        <div class="success">✅ Status: ${removedInstructors === 'null' || !removedInstructors ? 'No hidden instructors' : 'Has hidden instructors'}</div>
+                    </div>
+                `;
+            } catch (error) {
+                sessionDiv.innerHTML = `<div class="error">❌ Error checking sessionStorage: ${error.message}</div>`;
+            }
+        }
+
+        function clearSessionStorage() {
+            sessionStorage.clear();
+            alert('✅ SessionStorage cleared! Refresh page to see changes.');
+        }
+
+        async function checkDatabase() {
+            const dbDiv = document.getElementById('database');
+            dbDiv.innerHTML = '<div class="warning">🗄️ Checking database...</div>';
+            
+            try {
+                // This would need to be implemented with actual Supabase client
+                dbDiv.innerHTML = `
+                    <div class="warning">⚠️ Database check requires manual inspection.</div>
+                    <div class="data">
+                        <h3>📝 Manual Database Check:</h3>
+                        <ol>
+                            <li>Open browser DevTools → Network tab</li>
+                            <li>Look for requests to: <code>weekly_schedules</code></li>
+                            <li>Check response data for user_profiles</li>
+                            <li>Verify instructor_id mappings</li>
+                        </ol>
+                    </div>
+                `;
+            } catch (error) {
+                dbDiv.innerHTML = `<div class="error">❌ Error checking database: ${error.message}</div>`;
+            }
+        }
+
+        function checkComponentState() {
+            const stateDiv = document.getElementById('componentState');
+            
+            try {
+                // Check React DevTools data (if available)
+                const reactRoot = document.getElementById('root');
+                const reactFiber = reactRoot?._reactInternalFiber || reactRoot?._reactRootContainer;
+                
+                stateDiv.innerHTML = `
+                    <div class="data">
+                        <h3>⚛️ React Root Element:</h3>
+                        <div class="${reactRoot ? 'success' : 'error'}">
+                            ${reactRoot ? '✅ Found React root' : '❌ React root not found'}
+                        </div>
+                    </div>
+                    <div class="warning">
+                        ⚠️ For detailed component state, use React DevTools browser extension
+                    </div>
+                `;
+            } catch (error) {
+                stateDiv.innerHTML = `<div class="error">❌ Error checking component state: ${error.message}</div>`;
+            }
+        }
+
+        function checkUI() {
+            const uiDiv = document.getElementById('uiAnalysis');
+            
+            try {
+                // Check for schedule grid
+                const scheduleGrid = document.querySelector('[class*="schedule"]') || document.querySelector('table');
+                const instructorElements = document.querySelectorAll('[class*="instructor"]');
+                const emptySlots = document.querySelectorAll('[class*="empty"]');
+                
+                // Check for error messages
+                const errorElements = document.querySelectorAll('[class*="error"], .text-red-500, .text-red-600');
+                
+                uiDiv.innerHTML = `
+                    <div class="data">
+                        <h3>🎨 UI Elements:</h3>
+                        <div class="${scheduleGrid ? 'success' : 'error'}">
+                            ${scheduleGrid ? '✅ Schedule grid found' : '❌ Schedule grid not found'}
+                        </div>
+                        <div class="metric"><strong>👥 Instructor Elements</strong><br>${instructorElements.length}</div>
+                        <div class="metric"><strong>🕳️ Empty Slots</strong><br>${emptySlots.length}</div>
+                        <div class="metric"><strong>❌ Error Messages</strong><br>${errorElements.length}</div>
+                    </div>
+                    ${errorElements.length > 0 ? `
+                        <div class="error">
+                            <h3>❌ Found Error Messages:</h3>
+                            ${Array.from(errorElements).map(el => `<div>• ${el.textContent}</div>`).join('')}
+                        </div>
+                    ` : ''}
+                `;
+            } catch (error) {
+                uiDiv.innerHTML = `<div class="error">❌ Error checking UI: ${error.message}</div>`;
+            }
+        }
+
+        function captureConsoleLogs() {
+            const logsDiv = document.getElementById('consoleLogs');
+            
+            const recentLogs = capturedLogs.slice(-20); // Last 20 logs
+            
+            logsDiv.innerHTML = `
+                <div class="data">
+                    <h3>📝 Recent Console Logs (Last 20):</h3>
+                    <pre style="max-height: 400px; overflow: auto;">${
+                        recentLogs.map(log => 
+                            `[${log.timestamp.split('T')[1].split('.')[0]}] ${log.type.toUpperCase()}: ${
+                                log.args.map(arg => 
+                                    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+                                ).join(' ')
+                            }`
+                        ).join('\\n')
+                    }</pre>
+                </div>
+                <div class="success">✅ Total logs captured: ${capturedLogs.length}</div>
+            `;
+        }
+
+        // Auto-run initial checks
+        window.addEventListener('load', function() {
+            checkMetrics();
+            checkSessionStorage();
+            checkUI();
+        });
+    </script>
+</body>
+</html>

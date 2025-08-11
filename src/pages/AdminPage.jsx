@@ -29,7 +29,9 @@ import {
   Server,
   Database,
   Wifi,
-  Cloud
+  Cloud,
+  Bell,
+  Download
 } from 'lucide-react';
 // Recharts import removed to fix ESM module issues
 import { Button } from '../components/ui/button';
@@ -38,6 +40,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getDashboardStats, getRecentActivity, getSystemHealth, getUserGrowthData } from '../lib/dashboardService';
 import AdminAnalyticsDashboardSimple from '../components/AdminAnalyticsDashboardSimple';
 import SimpleCharts from '../components/SimpleCharts';
+import AdvancedAnalyticsDashboard from '../components/AdvancedAnalyticsDashboard';
+import EnhancedDashboardCard from '../components/EnhancedDashboardCard';
+import EnhancedLoading from '../components/EnhancedLoading';
+import ThemeToggle from '../components/ThemeToggle';
+import NotificationCenter from '../components/NotificationCenter';
+import ExportDataModal from '../components/ExportDataModal';
 
 const AdminPage = () => {
   const { user } = useAuth();
@@ -58,6 +66,8 @@ const AdminPage = () => {
     courseStatsData: [],
     projectStatsData: []
   });
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Load dashboard data from real database
   useEffect(() => {
@@ -189,7 +199,7 @@ const AdminPage = () => {
 
   const tabs = [
     { id: 'overview', label: 'ภาพรวม', icon: BarChart3 },
-    { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+    { id: 'analytics', label: 'Analytics+', icon: TrendingUp },
     { id: 'users', label: 'ผู้ใช้', icon: Users },
     { id: 'courses', label: 'คอร์ส', icon: BookOpenText },
     { id: 'projects', label: 'โครงงาน', icon: Code2 },
@@ -274,81 +284,40 @@ const AdminPage = () => {
   const renderOverview = () => {
     if (loading) {
       return (
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="animate-pulse">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-                    <div className="w-16 h-6 bg-gray-200 rounded-full"></div>
-                  </div>
-                  <div className="w-24 h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="w-16 h-8 bg-gray-200 rounded mb-2"></div>
-                  <div className="w-20 h-4 bg-gray-200 rounded"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="animate-pulse">
-              <div className="w-32 h-6 bg-gray-200 rounded mb-6"></div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="text-center">
-                    <div className="w-12 h-12 bg-gray-200 rounded-lg mx-auto mb-2"></div>
-                    <div className="w-16 h-4 bg-gray-200 rounded mx-auto mb-1"></div>
-                    <div className="w-12 h-6 bg-gray-200 rounded mx-auto"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <EnhancedLoading 
+          type="skeleton" 
+          context="dashboard"
+          message="กำลังโหลดข้อมูล Dashboard..."
+        />
       );
     }
 
     return (
       <div className="space-y-8">
-        {/* Main Statistics */}
+        {/* Enhanced Main Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {mainStats.map((stat, index) => (
-          <motion.div
-            key={stat.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => stat.path && navigate(stat.path)}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-lg bg-${stat.color}-100`}>
-                <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
-              </div>
-              <div className={`text-sm font-medium px-2 py-1 rounded-full ${
-                stat.changeType === 'positive' ? 'bg-green-100 text-green-800' :
-                stat.changeType === 'negative' ? 'bg-red-100 text-red-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
-                {stat.change}
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-sm font-medium text-gray-600 mb-1">{stat.title}</h3>
-              <p className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</p>
-              <p className="text-sm text-gray-500">{stat.subtitle}</p>
-            </div>
-            
-            {stat.path && (
-              <div className="mt-4 flex items-center text-sm text-blue-600">
-                <span>ดูรายละเอียด</span>
-                <Eye className="w-4 h-4 ml-1" />
-              </div>
-            )}
-          </motion.div>
-        ))}
-      </div>
+            <motion.div
+              key={stat.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <EnhancedDashboardCard
+                title={stat.title}
+                value={stat.value}
+                subtitle={stat.subtitle}
+                icon={stat.icon}
+                color={stat.color}
+                trend={stat.changeType === 'positive' ? 'up' : stat.changeType === 'negative' ? 'down' : 'neutral'}
+                trendValue={stat.change}
+                onClick={() => stat.path && navigate(stat.path)}
+                gradient={index % 2 === 0}
+                animation={true}
+              />
+            </motion.div>
+          ))}
+        </div>
 
       {/* Quick Insights */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -509,6 +478,13 @@ const AdminPage = () => {
               </Button>
             </Link>
             
+            <Link to="/admin/google-workspace-schedule">
+              <Button variant="outline" className="w-full justify-start bg-teal-50 border-teal-200 hover:bg-teal-100 text-teal-700">
+                <Globe className="w-4 h-4 mr-2" />
+                Google Workspace Schedule
+              </Button>
+            </Link>
+            
             <Button variant="outline" className="w-full justify-start">
               <Settings className="w-4 h-4 mr-2" />
               ตั้งค่าระบบ
@@ -612,7 +588,12 @@ const AdminPage = () => {
       case 'overview':
         return renderOverview();
       case 'analytics':
-        return <AdminAnalyticsDashboardSimple />;
+        return (
+          <AdvancedAnalyticsDashboard 
+            dashboardData={dashboardData}
+            isLoading={loading}
+          />
+        );
       case 'users':
         return (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -667,11 +648,36 @@ const AdminPage = () => {
                 <ShieldAlert className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">แดชบอร์ดผู้ดูแลระบบ</h1>
-                <p className="text-gray-600 mt-1">ยินดีต้อนรับ, {user?.email}</p>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">แดชบอร์ดผู้ดูแลระบบ</h1>
+                <p className="text-gray-600 dark:text-gray-300 mt-1">ยินดีต้อนรับ, {user?.email}</p>
               </div>
-              <div className="ml-auto">
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <div className="ml-auto flex items-center space-x-4">
+                {/* Export Button */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowExportModal(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">Export</span>
+                </motion.button>
+
+                {/* Notification Bell */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowNotifications(true)}
+                  className="relative p-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                    3
+                  </span>
+                </motion.button>
+                
+                <ThemeToggle variant="dropdown" size="md" />
+                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
                   <Calendar className="w-4 h-4" />
                   <span>{new Date().toLocaleDateString('th-TH', { 
                     year: 'numeric', 
@@ -721,6 +727,19 @@ const AdminPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Notification Center */}
+      <NotificationCenter 
+        isOpen={showNotifications} 
+        onClose={() => setShowNotifications(false)} 
+      />
+
+      {/* Export Data Modal */}
+      <ExportDataModal 
+        isOpen={showExportModal} 
+        onClose={() => setShowExportModal(false)}
+        context="dashboard"
+      />
     </div>
   );
 };

@@ -268,9 +268,27 @@ const TimeClockWidget = ({
 
         setAvailableCenters(approvedCenters);
         
-        // Auto-select first center if available
+        // Auto-select first center if available and no center currently selected
         if (approvedCenters.length > 0 && !selectedCenter) {
           setSelectedCenter(approvedCenters[0].id);
+        }
+        
+        // If we have a selectedCenter but it's not in the list, keep it (might be from auto-detection)
+        if (selectedCenter && !approvedCenters.find(c => c.id === selectedCenter)) {
+          // Try to get the selected center info from database
+          try {
+            const { data: centerData, error: centerError } = await locationService.getCompanyLocation(selectedCenter);
+            if (!centerError && centerData) {
+              const additionalCenter = {
+                id: selectedCenter,
+                name: centerData.location_name,
+                company: centerData.company || selectedCompany
+              };
+              setAvailableCenters([...approvedCenters, additionalCenter]);
+            }
+          } catch (err) {
+            console.warn('Could not fetch selected center info:', err);
+          }
         }
       } else {
         // No GPS or no company locations - use existing registrations only
@@ -289,6 +307,23 @@ const TimeClockWidget = ({
         
         if (approvedCenters.length > 0 && !selectedCenter) {
           setSelectedCenter(approvedCenters[0].id);
+        }
+        
+        // If we have a selectedCenter but it's not in the list, keep it (might be from auto-detection)
+        if (selectedCenter && !approvedCenters.find(c => c.id === selectedCenter)) {
+          try {
+            const { data: centerData, error: centerError } = await locationService.getCompanyLocation(selectedCenter);
+            if (!centerError && centerData) {
+              const additionalCenter = {
+                id: selectedCenter,
+                name: centerData.location_name,
+                company: centerData.company || selectedCompany
+              };
+              setAvailableCenters([...approvedCenters, additionalCenter]);
+            }
+          } catch (err) {
+            console.warn('Could not fetch selected center info:', err);
+          }
         }
       }
     } catch (err) {
@@ -336,11 +371,8 @@ const TimeClockWidget = ({
           }
 
           // Auto-select the nearest center if found
-          if (nearestCenter && nearestCenter.id !== selectedCenter) {
-            setSelectedCenter(nearestCenter.id);
-            setSuccess(`🎯 ตรวจพบศูนย์: ${foundLocation.location_name} อัตโนมัติ (ระยะ ${Math.round(shortestDistance)}m)`);
-            
-            // Update available centers list
+          if (nearestCenter) {
+            // Update available centers list first
             const approvedCenters = updatedRegistrations
               ?.filter(reg => reg.is_verified === true || reg.location?.company === selectedCompany)
               ?.map(reg => ({
@@ -353,8 +385,38 @@ const TimeClockWidget = ({
               ) || [];
             
             setAvailableCenters(approvedCenters);
+            
+            // Add the detected center to availableCenters if not already there
+            const centerInList = approvedCenters.find(c => c.id === nearestCenter.id);
+            if (!centerInList) {
+              const updatedCenters = [...approvedCenters, nearestCenter];
+              setAvailableCenters(updatedCenters);
+            }
+            
+            // Then set the selected center if different
+            if (nearestCenter.id !== selectedCenter) {
+              setSelectedCenter(nearestCenter.id);
+              setSuccess(`🎯 ตรวจพบศูนย์: ${foundLocation.location_name} อัตโนมัติ (ระยะ ${Math.round(shortestDistance)}m)`);
+            }
           } else {
-            setError('ไม่พบศูนย์ในรัศมีที่อนุญาต - ลองเข้าใกล้ศูนย์มากขึ้น');
+            // Still update available centers even if no nearest center found
+            const approvedCenters = updatedRegistrations
+              ?.filter(reg => reg.is_verified === true || reg.location?.company === selectedCompany)
+              ?.map(reg => ({
+                id: reg.location_id,
+                name: reg.location?.location_name,
+                company: reg.location?.company || 'login'
+              }))
+              ?.filter((center, index, self) => 
+                index === self.findIndex(c => c.id === center.id)
+              ) || [];
+            
+            setAvailableCenters(approvedCenters);
+            
+            // Only show error if no centers at all
+            if (approvedCenters.length === 0) {
+              setError('ไม่พบศูนย์ในรัศมีที่อนุญาต - ลองเข้าใกล้ศูนย์มากขึ้น');
+            }
           }
         } else {
           setError('ไม่พบศูนย์ของบริษัทนี้ในพื้นที่ปัจจุบัน');
@@ -868,29 +930,124 @@ const TimeClockWidget = ({
               </button>
             </div>
             
-            {availableCenters.length > 0 ? (
-              <select
-                value={selectedCenter}
-                onChange={(e) => setSelectedCenter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="">เลือกศูนย์...</option>
-                {availableCenters.map((center) => (
-                  <option key={center.id} value={center.id}>
-                    {center.name}
-                  </option>
-                ))}
-              </select>
-            ) : selectedCenter ? (
-              <div className="w-full px-3 py-2 border border-green-300 rounded-lg bg-green-50 text-green-700 text-sm">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-4 h-4" />
-                  <div>
-                    <div className="font-medium">เลือกศูนย์แล้ว</div>
-                    <div className="text-xs">พร้อมเช็คอิน - ระบบได้ตรวจจับศูนย์ให้แล้ว</div>
+            
+            {(availableCenters.length > 0 || selectedCenter) ? (
+              selectedCenter && availableCenters.length === 0 ? (
+                <div className="w-full px-3 py-2 border border-green-300 rounded-lg bg-green-50 text-green-700 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4" />
+                    <div>
+                      <div className="font-medium">เลือกศูนย์แล้ว</div>
+                      <div className="text-xs">พร้อมเช็คอิน - ระบบได้ตรวจจับศูนย์ให้แล้ว</div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  <select
+                    value={selectedCenter}
+                    onChange={(e) => setSelectedCenter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="">เลือกศูนย์...</option>
+                    {availableCenters.map((center) => (
+                      <option key={center.id} value={center.id}>
+                        {center.name}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      หรือเลือกสถานที่ทำงาน:
+                    </label>
+                    <select
+                      value={sessionDetails.workLocation}
+                      onChange={(e) => {
+                        setSessionDetails(prev => ({ 
+                          ...prev, 
+                          workLocation: e.target.value 
+                        }));
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                      <option value="onsite">ที่ศูนย์/สำนักงาน</option>
+                      <option value="remote">ทำงานนอกสถานที่</option>
+                      <option value="online">สอนออนไลน์</option>
+                    </select>
+                  </div>
+                  
+                  {/* Show additional fields for remote/online work */}
+                  {sessionDetails.workLocation === 'remote' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        เหตุผลในการทำงานนอกสถานที่:
+                      </label>
+                      <select
+                        value={sessionDetails.remoteReason}
+                        onChange={(e) => setSessionDetails(prev => ({ 
+                          ...prev, 
+                          remoteReason: e.target.value 
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                        <option value="">เลือกเหตุผล...</option>
+                        <option value="home_office">ทำงานที่บ้าน (Home Office)</option>
+                        <option value="client_visit">ออกพบลูกค้า/นักเรียน</option>
+                        <option value="meeting_external">ประชุมนอกสถานที่</option>
+                        <option value="field_work">งานภาคสนาม</option>
+                        <option value="health_reason">เหตุผลด้านสุขภาพ</option>
+                        <option value="emergency">เหตุฉุกเฉิน</option>
+                        <option value="other">อื่นๆ</option>
+                      </select>
+                    </div>
+                  )}
+                  
+                  {sessionDetails.workLocation === 'online' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          แพลตฟอร์มสอนออนไลน์:
+                        </label>
+                        <select
+                          value={sessionDetails.onlineClassPlatform}
+                          onChange={(e) => setSessionDetails(prev => ({ 
+                            ...prev, 
+                            onlineClassPlatform: e.target.value 
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                          <option value="">เลือกแพลตฟอร์ม...</option>
+                          <option value="google_meet">Google Meet</option>
+                          <option value="zoom">Zoom</option>
+                          <option value="microsoft_teams">Microsoft Teams</option>
+                          <option value="line">LINE</option>
+                          <option value="facebook_messenger">Facebook Messenger</option>
+                          <option value="discord">Discord</option>
+                          <option value="webex">Cisco Webex</option>
+                          <option value="other">อื่นๆ</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ลิงก์คลาสออนไลน์ (ถ้ามี):
+                        </label>
+                        <input
+                          type="url"
+                          value={sessionDetails.onlineClassUrl}
+                          onChange={(e) => setSessionDetails(prev => ({ 
+                            ...prev, 
+                            onlineClassUrl: e.target.value 
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          placeholder="https://zoom.us/j/..."
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
             ) : (
               <div className="space-y-3">
                 <div className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-blue-50 text-blue-700 text-sm">
@@ -903,18 +1060,21 @@ const TimeClockWidget = ({
                   </div>
                 </div>
                 
-                {/* Quick work location selector when no center available */}
+                {/* Work location selector when no center available */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    หรือเลือกสถานที่ทำงาน:
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    เลือกสถานที่ทำงาน:
                   </label>
                   <select
                     value={sessionDetails.workLocation}
-                    onChange={(e) => setSessionDetails(prev => ({ 
-                      ...prev, 
-                      workLocation: e.target.value 
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    onChange={(e) => {
+                      console.log('Work location changed to:', e.target.value);
+                      setSessionDetails(prev => ({ 
+                        ...prev, 
+                        workLocation: e.target.value 
+                      }));
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   >
                     <option value="onsite">ที่ศูนย์/สำนักงาน</option>
                     <option value="remote">ทำงานนอกสถานที่</option>

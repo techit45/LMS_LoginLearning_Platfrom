@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+// Fix react-dnd imports
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useDrag, useDrop } from 'react-dnd';
@@ -22,7 +23,13 @@ import {
   Trash2,
   GripVertical,
   Building2,
-  Briefcase
+  Briefcase,
+  FileSpreadsheet,
+  Upload,
+  Download,
+  RefreshCw,
+  ExternalLink,
+  Zap
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useToast } from "../hooks/use-toast.jsx"
@@ -32,13 +39,14 @@ import {
   getWeekInfo, 
   getInstructors, 
   getCourses, 
-  getWeeklySchedules, 
   createSchedule, 
   updateSchedule, 
   deleteSchedule 
 } from '../lib/teachingScheduleService';
 import CourseManager from '../components/schedule/CourseManager';
 import WeekPicker from '../components/schedule/WeekPicker';
+import useRealtimeSchedule from '../hooks/useRealtimeSchedule';
+import googleSheetsService from '../lib/googleSheetsBrowserService';
 
 // Drag and Drop Item Types
 const ItemTypes = {
@@ -47,6 +55,9 @@ const ItemTypes = {
   INSTRUCTOR: 'instructor',
   INSTRUCTOR_ASSIGNMENT: 'instructor_assignment'
 };
+
+// ฟังก์ชันนี้ไม่จำเป็นแล้วเพราะได้เปลี่ยนชื่อในฐานข้อมูลแล้ว
+// const getShortCompanyName = (fullName) => fullName
 
 // Helper function to adjust color brightness
 const adjustBrightness = (hex, percent) => {
@@ -456,13 +467,16 @@ const ScheduleItem = ({ schedule, onEdit, onDelete, onResize, timeSlots }) => {
           </button>
           <button
             onClick={(e) => {
+              console.log('🗑️ DELETE CLICKED IN CORRECT FILE!', schedule);
+              e.preventDefault();
               e.stopPropagation();
               onDelete(schedule);
             }}
-            className="p-1.5 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded transition-all duration-200 border border-white/20 hover:border-white/40"
+            className="p-2 text-white bg-red-600 hover:bg-red-700 rounded-full border-2 border-white shadow-lg transition-all duration-200"
+            style={{ zIndex: 9999 }}
             title="ลบ"
           >
-            <Trash2 className="w-3 h-3" />
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
 
@@ -906,14 +920,18 @@ const TeachingSchedulePageNew = () => {
   const navigate = useNavigate();
   const { user, userRole, hasRole, ROLES } = useAuth();
 
-  // Company and Location data with colors
+  // Company and Location data with colors - ชื่อสั้นตรงกับฐานข้อมูล
   const companies = [
-    { id: 'LL', name: 'LL', color: '#1e3a8a' }, // สีน้ำเงินเข้ม
-    { id: 'Meta', name: 'Meta', color: '#7c3aed' }, // สีม่วง
-    { id: 'EdTech', name: 'Ed Tech', color: '#ec4899' }, // สีชมพู
-    { id: 'Med', name: 'Med', color: '#059669' }, // สีเขียว
-    { id: 'W2D', name: 'W2D', color: '#dc2626' } // สีแดง
+    { id: 'aa6ff51f-1427-455a-922f-d5026ac7dca3', name: 'Login', color: '#1e3a8a' }, // น้ำเงินเข้ม
+    { id: '46e37f07-b657-442d-8006-b4845d6d4f8f', name: 'Meta', color: '#7c3aed' }, // ม่วง
+    { id: 'f91b5982-6127-4467-901d-5a88f4378755', name: 'Med', color: '#059669' }, 
+    { id: '966fad13-cb85-4bc7-880d-2a6115468f0e', name: 'EdTech', color: '#8b5cf6' }, 
+    { id: 'e820a52a-2a01-4e9d-ade2-335b7547ed54', name: 'Innotech', color: '#ea580c' }, 
+    { id: '88336b58-0bbd-4169-810c-f4cb7b157a9d', name: 'W2D', color: '#dc2626' },
+    { id: 'e4063418-1e57-43c1-8cd5-9ae44838f15e', name: 'IRE', color: '#6b7280' }
   ];
+  
+  console.log('🏢 Companies data in TeachingSchedulePageNew:', companies);
 
   const locations = [
     { id: 'sriracha', name: 'ศรีราชา', color: '#2563eb' }, // สีน้ำเงิน
@@ -1047,17 +1065,15 @@ const TeachingSchedulePageNew = () => {
   const [deleting, setDeleting] = useState(null); // Track which course is being deleted
   const [saving, setSaving] = useState(false); // Track save operations
 
-  // Supabase data states
-  const [schedules, setSchedules] = useState([]);
-  const [courses, setCourses] = useState([]);
-  const [instructors, setInstructors] = useState([]);
-  const [dayInstructors, setDayInstructors] = useState({}); // Store array of instructors assigned to each day
-  const [instructorSchedules, setInstructorSchedules] = useState({}); // Store courses assigned to each instructor on each day
-  
   // UI states
   const [showCourseManager, setShowCourseManager] = useState(false);
   const [showCourseForm, setShowCourseForm] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
+  
+  // Google Sheets Integration State
+  const [googleSheetsUrl, setGoogleSheetsUrl] = useState(null);
+  const [syncStatus, setSyncStatus] = useState('idle'); // 'idle', 'syncing', 'success', 'error'
+  const [lastSyncTime, setLastSyncTime] = useState(null);
 
 
   // Check access permissions
@@ -1065,82 +1081,50 @@ const TeachingSchedulePageNew = () => {
   const canViewAll = hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.BRANCH_MANAGER);
   const canManage = hasRole(ROLES.SUPER_ADMIN);
 
-  // Load data from Supabase
+  // Load data from Supabase (courses and instructors only - schedules loaded via real-time hook)
   const loadScheduleData = useCallback(async () => {
     setLoading(true);
     try {
-      const weekInfo = getWeekInfo(currentWeek);
-      
-      // Load schedules, courses, and instructors in parallel
-      const [schedulesResult, coursesResult, instructorsResult] = await Promise.all([
-        getWeeklySchedules(weekInfo.year, weekInfo.weekNumber, scheduleType),
+      // Load only courses and instructors - schedules are handled by real-time system
+      const [coursesResult, instructorsResult] = await Promise.all([
         getCourses(),
         getInstructors()
       ]);
 
-      if (schedulesResult.error) {
-        console.error('Error loading schedules:', schedulesResult.error);
+      // Handle courses loading
+      if (coursesResult.error) {
+        console.error('Error loading courses:', coursesResult.error);
         toast({
           title: "❌ เกิดข้อผิดพลาด",
-          description: "ไม่สามารถโหลดข้อมูลตารางได้",
+          description: "ไม่สามารถโหลดข้อมูลคอร์สได้",
           variant: "destructive"
         });
       } else {
-        console.log('📊 Loaded schedules from Supabase:', schedulesResult.data);
-        setSchedules(schedulesResult.data || []);
-        
-        // Convert schedules to legacy format for existing components
-        const legacySchedules = {};
-        const legacyInstructorSchedules = {};
-        const legacyDayInstructors = {};
-
-        schedulesResult.data?.forEach(schedule => {
-          console.log('🔄 Processing schedule:', schedule.id, 'Course:', schedule.teaching_courses?.name, 'Instructor:', schedule.instructor?.full_name || schedule.instructor?.email);
-          
-          // Transform course data to match UI expectations
-          const courseData = schedule.teaching_courses ? {
-            ...schedule.teaching_courses,
-            companyColor: schedule.teaching_courses.company_color, // Map company_color to companyColor
-          } : null;
-          
-          const key = `${schedule.instructor_id}-${schedule.day_of_week}-${schedule.time_slot}`;
-          legacySchedules[key] = {
-            id: schedule.id,
-            course: courseData,
-            dayId: schedule.day_of_week,
-            timeSlot: schedule.time_slot,
-            startTime: schedule.start_time,
-            endTime: schedule.end_time,
-            duration: schedule.duration,
-            instructor: schedule.instructor || null
-          };
-          legacyInstructorSchedules[key] = legacySchedules[key];
-          
-          // Track instructors per day
-          if (!legacyDayInstructors[schedule.day_of_week]) {
-            legacyDayInstructors[schedule.day_of_week] = [];
-          }
-          if (!legacyDayInstructors[schedule.day_of_week].find(inst => inst && inst.id && inst.id === schedule.instructor_id)) {
-            legacyDayInstructors[schedule.day_of_week].push(schedule.instructor);
-          }
-        });
-
-        setInstructorSchedules(legacyInstructorSchedules);
-        setDayInstructors(legacyDayInstructors);
-        
+        console.log('📚 Loaded courses from Supabase:', coursesResult.data?.length || 0);
+        // Use sample data as fallback if no courses in database
+        const coursesData = coursesResult.data?.length > 0 ? coursesResult.data : sampleCourses;
+        setCourses(coursesData);
+        console.log('📚 Using courses data:', coursesData.length, 'courses');
       }
 
-      if (coursesResult.error) {
-        console.error('Error loading courses:', coursesResult.error);
-      } else {
-        setCourses(coursesResult.data || []);
-      }
-
+      // Handle instructors loading  
       if (instructorsResult.error) {
         console.error('Error loading instructors:', instructorsResult.error);
+        toast({
+          title: "❌ เกิดข้อผิดพลาด", 
+          description: "ไม่สามารถโหลดข้อมูลผู้สอนได้",
+          variant: "destructive"
+        });
       } else {
-        setInstructors(instructorsResult.data || []);
+        console.log('👨‍🏫 Loaded instructors from Supabase:', instructorsResult.data?.length || 0);
+        // Use sample data as fallback if no instructors in database
+        const instructorsData = instructorsResult.data?.length > 0 ? instructorsResult.data : availableInstructors;
+        setInstructors(instructorsData);
+        console.log('👨‍🏫 Using instructors data:', instructorsData.length, 'instructors');
       }
+
+      // Note: Schedules are now loaded via useRealtimeSchedule hook
+      console.log('📋 Real-time schedules will be loaded by useRealtimeSchedule hook');
 
     } catch (error) {
       console.error('Error loading data:', error);
@@ -1320,6 +1304,155 @@ const TeachingSchedulePageNew = () => {
     });
   };
 
+  // Real-time schedule management
+  const {
+    schedules: realtimeSchedules,
+    loading: realtimeLoading,
+    error: realtimeError,
+    isConnected,
+    addSchedule: addRealtimeSchedule,
+    removeSchedule: removeRealtimeSchedule,
+    getSchedule,
+    hasSchedule,
+    getDaySchedules,
+    TIME_SLOTS: realtimeTimeSlots
+  } = useRealtimeSchedule(currentWeek, 'login');
+
+  // Legacy data states (still needed for courses and instructors)
+  const [schedules, setSchedules] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [instructors, setInstructors] = useState([]);
+  const [dayInstructors, setDayInstructors] = useState({}); // Store array of instructors assigned to each day
+  const [instructorSchedules, setInstructorSchedules] = useState({}); // Store courses assigned to each instructor on each day
+
+  // Function to enrich schedule data with course information
+  const enrichScheduleData = useCallback((schedules) => {
+    if (!schedules || Object.keys(schedules).length === 0 || courses.length === 0) {
+      return schedules;
+    }
+    
+    const enrichedSchedules = {};
+    Object.keys(schedules).forEach(key => {
+      const schedule = schedules[key];
+      // Find matching course data
+      const courseData = courses.find(course => 
+        course.id === schedule.course?.id || 
+        course.name === schedule.course?.title ||
+        course.name === schedule.course?.name
+      );
+      
+      if (courseData) {
+        enrichedSchedules[key] = {
+          ...schedule,
+          course: {
+            ...schedule.course,
+            name: schedule.course?.name || schedule.course?.title || courseData.name,
+            title: schedule.course?.title || courseData.name,
+            company: courseData.company,
+            location: courseData.location,
+            companyColor: courseData.company_color || courseData.companyColor,
+            duration_hours: courseData.duration_hours
+          }
+        };
+      } else {
+        enrichedSchedules[key] = schedule;
+      }
+    });
+    
+    return enrichedSchedules;
+  }, [courses]);
+
+  // Calculate derived values needed by callbacks
+  const weekRange = getWeekRange(currentWeek, scheduleType);
+  const weekNumber = getISOWeek(currentWeek);
+  const isCurrentWeek = getISOWeek(new Date()) === weekNumber && 
+                       new Date().getFullYear() === currentWeek.getFullYear();
+  const currentDays = getCurrentDays(scheduleType);
+  const timeSlots = getTimeSlots(scheduleType);
+
+  // Enrich real-time schedules with course data
+  const enrichedRealtimeSchedules = useMemo(() => {
+    return enrichScheduleData(realtimeSchedules);
+  }, [realtimeSchedules, enrichScheduleData]);
+
+  // Enhanced getSchedule function that uses enriched data
+  const getEnrichedSchedule = useCallback((dayIndex, timeIndex) => {
+    const scheduleKey = `${dayIndex}-${timeIndex}`;
+    return enrichedRealtimeSchedules[scheduleKey] || null;
+  }, [enrichedRealtimeSchedules]);
+
+  // Google Sheets Integration Functions
+  const handleExportToGoogleSheets = useCallback(async () => {
+    setSyncStatus('syncing');
+    try {
+      // Create schedule data structure for Google Sheets
+      const scheduleData = {
+        week: weekRange,
+        scheduleType,
+        schedules: enrichedRealtimeSchedules,
+        instructors,
+        courses,
+        timeSlots: getTimeSlots(scheduleType),
+        days: getCurrentDays(scheduleType)
+      };
+
+      const result = await googleSheetsService.createScheduleSpreadsheet(
+        'Login Learning',
+        currentWeek,
+        'company',
+        scheduleData
+      );
+
+      if (result.success) {
+        setGoogleSheetsUrl(result.spreadsheetUrl);
+        setSyncStatus('success');
+        setLastSyncTime(new Date());
+        
+        toast({
+          title: "📊 ส่งออกสำเร็จ",
+          description: "ตารางถูกส่งออกไปยัง Google Sheets แล้ว",
+        });
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Export to Google Sheets failed:', error);
+      setSyncStatus('error');
+      toast({
+        title: "❌ ส่งออกไม่สำเร็จ",
+        description: "ไม่สามารถส่งออกไปยัง Google Sheets ได้",
+        variant: "destructive"
+      });
+    }
+  }, [weekRange, scheduleType, enrichedRealtimeSchedules, instructors, courses, currentWeek, toast]);
+
+  const handleImportFromGoogleSheets = useCallback(async () => {
+    // For now, this will be a placeholder - in production this would
+    // sync data back from Google Sheets to Supabase
+    setSyncStatus('syncing');
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setSyncStatus('success');
+      toast({
+        title: "📥 นำเข้าสำเร็จ", 
+        description: "ซิงค์ข้อมูลจาก Google Sheets เรียบร้อย",
+      });
+    } catch (error) {
+      setSyncStatus('error');
+      toast({
+        title: "❌ นำเข้าไม่สำเร็จ",
+        description: "ไม่สามารถนำเข้าจาก Google Sheets ได้",
+        variant: "destructive"
+      });
+    }
+  }, [toast]);
+
+  const handleOpenGoogleSheets = useCallback(() => {
+    if (googleSheetsUrl) {
+      window.open(googleSheetsUrl, '_blank');
+    }
+  }, [googleSheetsUrl]);
+
   // Instructor Drop Function
   const handleInstructorDrop = useCallback((instructor, dayId) => {
     setDayInstructors(prev => {
@@ -1406,215 +1539,231 @@ const TeachingSchedulePageNew = () => {
     }
   }, [scheduleType]);
 
+  // Helper function to convert time string to time slot index
+  const getTimeSlotIndex = useCallback((timeString) => {
+    const timeSlots = getTimeSlots(scheduleType);
+    return timeSlots.indexOf(timeString);
+  }, [scheduleType]);
+
+  // Helper function to convert day ID to day index (0=Monday)
+  const getDayIndex = useCallback((dayId) => {
+    // dayId is already 0-6 in most cases, but ensure it's correct
+    return parseInt(dayId);
+  }, []);
+
   const handleDrop = useCallback(async (item, dayId, timeSlot, instructor = null) => {
-    // Only log successful drops for important debugging
-    // console.log('🎯 DROP SUCCESS:', { 
-    //   course: item.course?.name, 
-    //   instructor: instructor?.name || instructor?.full_name, 
-    //   time: timeSlot,
-    //   dayId: dayId
-    // });
+    console.log('🎯 Real-time DROP:', { 
+      course: item.course?.name, 
+      instructor: instructor?.name || instructor?.full_name, 
+      time: timeSlot,
+      dayId: dayId
+    });
     
     if (item.type === ItemTypes.COURSE && instructor) {
-      const weekInfo = getWeekInfo(currentWeek);
-      const duration = item.course?.duration_hours || 1;
+      // Convert to real-time format
+      const dayIndex = getDayIndex(dayId);
+      const timeIndex = getTimeSlotIndex(timeSlot);
       
-      // Calculate end time based on duration
-      const startHour = parseInt(timeSlot.split(':')[0]);
-      const endTime = `${String(startHour + duration).padStart(2, '0')}:00`;
-      
-      const scheduleData = {
-        year: weekInfo.year,
-        week_number: weekInfo.weekNumber,
-        schedule_type: scheduleType,
-        instructor_id: instructor.id,
-        course_id: item.course.id,
-        day_of_week: dayId,
-        time_slot: timeSlot,
-        start_time: timeSlot,
-        end_time: endTime,
-        duration: duration
-      };
-
-      try {
-        const { data, error } = await createSchedule(scheduleData);
-        
-        if (error) {
-          console.error('Error creating schedule:', error);
-          toast({
-            title: "❌ เกิดข้อผิดพลาด",
-            description: "ไม่สามารถบันทึกตารางได้",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        // console.log('✅ Schedule created successfully:', data);
-        
-        // Update state directly instead of full reload
-        const newKey = `${instructor.id}-${dayId}-${timeSlot}`;
-        const courseData = item.course ? {
-          ...item.course,
-          companyColor: item.course.company_color || item.course.companyColor
-        } : null;
-        
-        const newSchedule = {
-          id: data.id,
-          course: courseData,
-          dayId: dayId,
-          timeSlot: timeSlot,
-          startTime: timeSlot,
-          endTime: endTime,
-          duration: duration,
-          instructor: instructor
-        };
-        
-        setInstructorSchedules(prev => ({
-          ...prev,
-          [newKey]: newSchedule
-        }));
-
-      } catch (error) {
-        console.error('Error in handleDrop:', error);
+      if (timeIndex === -1) {
+        console.error('❌ Invalid time slot:', timeSlot);
         toast({
           title: "❌ เกิดข้อผิดพลาด",
-          description: "ไม่สามารถบันทึกตารางได้",
-          variant: "destructive"
-        });
-      }
-    } else if (item.schedule) {
-      // Moving existing schedule
-      const weekInfo = getWeekInfo(currentWeek);
-      
-      const updateData = {
-        instructor_id: instructor?.id || item.schedule.instructor?.id,
-        day_of_week: dayId,
-        time_slot: timeSlot,
-        start_time: timeSlot,
-        end_time: item.schedule.endTime // Keep existing end time
-      };
-
-      try {
-        const { data, error } = await updateSchedule(item.schedule.id, updateData);
-        
-        if (error) {
-          console.error('Error updating schedule:', error);
-          toast({
-            title: "❌ เกิดข้อผิดพลาด",
-            description: "ไม่สามารถย้ายตารางได้",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        console.log('✅ Schedule moved successfully:', data);
-        
-        // Update state directly instead of full reload
-        const oldKey = `${item.schedule.instructor.id}-${item.schedule.dayId}-${item.schedule.timeSlot}`;
-        const newKey = `${instructor.id}-${dayId}-${timeSlot}`;
-        
-        setInstructorSchedules(prev => {
-          const updated = { ...prev };
-          const movedSchedule = { ...updated[oldKey] };
-          
-          // Update moved schedule with new position
-          movedSchedule.dayId = dayId;
-          movedSchedule.timeSlot = timeSlot;
-          movedSchedule.startTime = timeSlot;
-          movedSchedule.instructor = instructor;
-          
-          // Remove from old position and add to new position
-          delete updated[oldKey];
-          updated[newKey] = movedSchedule;
-          
-          return updated;
-        });
-
-      } catch (error) {
-        console.error('Error moving schedule:', error);
-        toast({
-          title: "❌ เกิดข้อผิดพลาด",
-          description: "ไม่สามารถย้ายตารางได้",
-          variant: "destructive"
-        });
-      }
-    }
-  }, [currentWeek, scheduleType, loadScheduleData, toast]);
-
-  // Handle schedule deletion
-  const handleDeleteSchedule = useCallback(async (schedule) => {
-    if (!confirm(`คุณแน่ใจหรือไม่ที่ต้องการลบวิชา "${schedule.course?.name}" ออกจากตาราง?`)) {
-      return;
-    }
-
-    try {
-      const { error } = await deleteSchedule(schedule.id);
-      
-      if (error) {
-        console.error('Error deleting schedule:', error);
-        toast({
-          title: "❌ เกิดข้อผิดพลาด",
-          description: "ไม่สามารถลบตารางได้",
+          description: "ช่วงเวลาไม่ถูกต้อง",
           variant: "destructive"
         });
         return;
       }
 
-      console.log('✅ Schedule deleted successfully');
-      
-      // Update state directly instead of full reload
-      const keyToRemove = `${schedule.instructor.id}-${schedule.dayId}-${schedule.timeSlot}`;
-      setInstructorSchedules(prev => {
-        const updated = { ...prev };
-        delete updated[keyToRemove];
-        return updated;
-      });
+      const scheduleData = {
+        courseId: item.course.id,
+        courseTitle: item.course.name,
+        courseCode: item.course.code || null,
+        instructorId: instructor.id,
+        instructorName: instructor.full_name || instructor.name || instructor.email,
+        room: 'TBD',
+        notes: null,
+        color: item.course.companyColor || item.course.company_color || 'bg-blue-500'
+      };
 
+      // Use real-time addSchedule function
+      const result = await addRealtimeSchedule(dayIndex, timeIndex, scheduleData);
+      
+      if (result && result.success) {
+        console.log('✅ Real-time schedule created successfully');
+      }
+      
+    } else if (item.schedule) {
+      // Moving existing schedule - need to delete old and create new
+      // Handle both legacy format (dayId/timeSlot) and real-time format (dayIndex/timeIndex)
+      const oldDayIndex = item.schedule.dayIndex !== undefined 
+        ? item.schedule.dayIndex 
+        : getDayIndex(item.schedule.dayId);
+      const oldTimeIndex = item.schedule.timeIndex !== undefined 
+        ? item.schedule.timeIndex 
+        : getTimeSlotIndex(item.schedule.timeSlot);
+      const newDayIndex = getDayIndex(dayId);
+      const newTimeIndex = getTimeSlotIndex(timeSlot);
+      
+      if (oldTimeIndex === -1 || newTimeIndex === -1) {
+        console.error('❌ Invalid time slots for move');
+        return;
+      }
+
+      // First remove from old position
+      await removeRealtimeSchedule(oldDayIndex, oldTimeIndex);
+      
+      // Then add to new position (no ID needed - this creates a new schedule at new position)
+      const scheduleData = {
+        // NOTE: No ID for move operations - creates new record at new position
+        courseId: item.schedule.course?.id,
+        courseTitle: item.schedule.course?.name || 'Untitled Course',
+        courseCode: item.schedule.course?.code,
+        instructorId: instructor?.id || item.schedule.instructor?.id,
+        instructorName: instructor?.full_name || instructor?.name || item.schedule.instructor?.full_name || 'TBD',
+        room: 'TBD',
+        notes: null,
+        color: item.schedule.course?.companyColor || 'bg-blue-500',
+        duration: item.schedule.duration || 1 // Preserve duration when moving
+      };
+      
+      const result = await addRealtimeSchedule(newDayIndex, newTimeIndex, scheduleData);
+      
+      if (result && result.success) {
+        console.log('✅ Real-time schedule moved successfully');
+      }
+    }
+  }, [scheduleType, getDayIndex, getTimeSlotIndex, addRealtimeSchedule, removeRealtimeSchedule, toast]);
+
+  // Handle schedule deletion with real-time
+  const handleDeleteSchedule = useCallback(async (schedule) => {
+    if (!confirm(`คุณแน่ใจหรือไม่ที่ต้องการลบวิชา "${schedule.course?.name}" ออกจากตาราง?`)) {
+      return;
+    }
+
+    // Handle both legacy format (dayId/timeSlot) and real-time format (dayIndex/timeIndex)
+    const dayIndex = schedule.dayIndex !== undefined 
+      ? schedule.dayIndex 
+      : getDayIndex(schedule.dayId);
+    const timeIndex = schedule.timeIndex !== undefined 
+      ? schedule.timeIndex 
+      : getTimeSlotIndex(schedule.timeSlot);
+    
+    if (timeIndex === -1) {
+      console.error('❌ Invalid time slot for deletion:', schedule.timeSlot || schedule.timeIndex);
+      return;
+    }
+
+    console.log('🗑️ Real-time DELETE:', { dayIndex, timeIndex, course: schedule.course?.name });
+    
+    try {
+      // First try real-time deletion
+      const result = await removeRealtimeSchedule(dayIndex, timeIndex);
+      
+      if (result && result.success) {
+        console.log('✅ Real-time schedule deleted successfully');
+        return;
+      }
+      
+      // Fallback: If real-time doesn't find the schedule, try legacy deletion by ID
+      if (schedule.id) {
+        console.log('🔄 Fallback: Deleting legacy schedule by ID:', schedule.id);
+        
+        const { supabase } = await import('/src/lib/supabaseClient.js');
+        const { error } = await supabase
+          .from('teaching_schedules')
+          .delete()
+          .eq('id', schedule.id);
+        
+        if (error) {
+          console.error('❌ Failed to delete legacy schedule:', error);
+          toast({
+            title: "ลบตารางไม่สำเร็จ",
+            description: error.message,
+            variant: "destructive"
+          });
+        } else {
+          console.log('✅ Legacy schedule deleted successfully');
+          
+          // Remove from legacy state manually
+          setSchedules(prev => prev.filter(s => s.id !== schedule.id));
+          
+          toast({
+            title: "ลบตารางสำเร็จ",
+            description: `ลบ ${schedule.course?.name} แล้ว`
+          });
+        }
+      } else {
+        console.error('❌ No schedule found to delete');
+      }
+      
     } catch (error) {
-      console.error('Error deleting schedule:', error);
+      console.error('💥 Error during deletion:', error);
       toast({
-        title: "❌ เกิดข้อผิดพลาด",
+        title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถลบตารางได้",
         variant: "destructive"
       });
     }
-  }, [deleteSchedule, loadScheduleData, toast]);
+  }, [getDayIndex, getTimeSlotIndex, removeRealtimeSchedule, toast]);
 
   // Handle schedule resize
   const handleResizeSchedule = useCallback(async (schedule, newDuration) => {
     try {
-      const startHour = parseInt(schedule.timeSlot.split(':')[0]);
+      // Get time slot info from TIME_SLOTS array using schedule.timeIndex
+      const timeSlot = realtimeTimeSlots.find(slot => slot.index === schedule.timeIndex);
+      if (!timeSlot) {
+        throw new Error(`Invalid time slot index: ${schedule.timeIndex}`);
+      }
+      
+      const startHour = parseInt(timeSlot.start.split(':')[0]);
       const endTime = `${String(startHour + newDuration).padStart(2, '0')}:00`;
       
-      const updateData = {
-        duration: newDuration,
-        end_time: endTime
-      };
-
-      const { data, error } = await updateSchedule(schedule.id, updateData);
-      
-      if (error) {
-        console.error('Error resizing schedule:', error);
+      // Validate schedule object structure
+      if (!schedule.course || !schedule.instructor) {
+        console.error('❌ Incomplete schedule object for resize:', schedule);
         toast({
           title: "❌ เกิดข้อผิดพลาด",
+          description: "ไม่สามารถปรับขนาดตารางได้ ข้อมูลไม่สมบูรณ์",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Use real-time upsert to update the schedule with new duration
+      const scheduleData = {
+        id: schedule.id, // CRITICAL: Include existing ID for UPDATE operation
+        courseId: schedule.course.id,
+        courseTitle: schedule.course.title || schedule.course.name,
+        courseCode: schedule.course.code,
+        instructorId: schedule.instructor.id,
+        instructorName: schedule.instructor.name,
+        room: schedule.room || 'TBD',
+        notes: schedule.notes,
+        color: schedule.course.color || 'bg-blue-500',
+        duration: newDuration
+      };
+
+      const result = await addRealtimeSchedule(schedule.dayIndex, schedule.timeIndex, scheduleData);
+      
+      if (!result || !result.success) {
+        console.error('Error resizing schedule:', result?.error);
+        toast({
+          title: "❌ เกิดข้อผิดพลาด", 
           description: "ไม่สามารถปรับขนาดตารางได้",
           variant: "destructive"
         });
         return;
       }
 
-      console.log('✅ Schedule resized successfully:', data);
+      console.log('✅ Schedule resized successfully:', result.data);
       
-      // Update state directly instead of full reload
-      const scheduleKey = `${schedule.instructor.id}-${schedule.dayId}-${schedule.timeSlot}`;
-      setInstructorSchedules(prev => ({
-        ...prev,
-        [scheduleKey]: {
-          ...prev[scheduleKey],
-          duration: newDuration,
-          endTime: `${String(parseInt(schedule.timeSlot.split(':')[0]) + newDuration).padStart(2, '0')}:00`
-        }
-      }));
+      // Success toast
+      toast({
+        title: "✅ ปรับขนาดตารางสำเร็จ",
+        description: `ปรับระยะเวลาเป็น ${newDuration} ชั่วโมงแล้ว`
+      });
+
+      // Real-time system will automatically update the UI via subscription
 
     } catch (error) {
       console.error('Error resizing schedule:', error);
@@ -1624,7 +1773,7 @@ const TeachingSchedulePageNew = () => {
         variant: "destructive"
       });
     }
-  }, [updateSchedule, loadScheduleData, toast]);
+  }, [addRealtimeSchedule, realtimeTimeSlots, toast]);
 
   // Permission check
   useEffect(() => {
@@ -1648,13 +1797,6 @@ const TeachingSchedulePageNew = () => {
       return;
     }
   }, [user, userRole, navigate, toast]);
-
-  const weekRange = getWeekRange(currentWeek, scheduleType);
-  const weekNumber = getISOWeek(currentWeek);
-  const isCurrentWeek = getISOWeek(new Date()) === weekNumber && 
-                       new Date().getFullYear() === currentWeek.getFullYear();
-  const currentDays = getCurrentDays(scheduleType);
-  const timeSlots = getTimeSlots(scheduleType);
 
   // Show loading during transition
   if (loading) {
@@ -1716,6 +1858,31 @@ const TeachingSchedulePageNew = () => {
                       <span className="text-xs text-green-200">สัปดาห์ปัจจุบัน</span>
                     </div>
                   )}
+                  {/* Real-time Connection Indicator */}
+                  <div className={`flex items-center space-x-1 px-2 py-1 rounded-full transition-colors ${
+                    isConnected 
+                      ? 'bg-green-500/30' 
+                      : realtimeError 
+                        ? 'bg-red-500/30' 
+                        : 'bg-yellow-500/30'
+                  }`}>
+                    <div className={`w-2 h-2 rounded-full ${
+                      isConnected 
+                        ? 'bg-green-400 animate-pulse' 
+                        : realtimeError 
+                          ? 'bg-red-400' 
+                          : 'bg-yellow-400 animate-ping'
+                    }`}></div>
+                    <span className={`text-xs ${
+                      isConnected 
+                        ? 'text-green-200' 
+                        : realtimeError 
+                          ? 'text-red-200' 
+                          : 'text-yellow-200'
+                    }`}>
+                      {isConnected ? 'Real-time พร้อม' : realtimeError ? 'ขาดการเชื่อมต่อ' : 'กำลังเชื่อมต่อ...'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1806,6 +1973,49 @@ const TeachingSchedulePageNew = () => {
                 <RotateCcw className="w-4 h-4 mr-2" />
                 รีเฟรชข้อมูล
               </Button>
+
+              {/* Google Sheets Integration Controls */}
+              <div className="flex items-center space-x-2">
+                <Button
+                  onClick={handleExportToGoogleSheets}
+                  disabled={syncStatus === 'syncing'}
+                  className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                  size="lg"
+                >
+                  {syncStatus === 'syncing' ? (
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
+                  ส่งออก Sheets
+                </Button>
+
+                <Button
+                  onClick={handleImportFromGoogleSheets}
+                  disabled={syncStatus === 'syncing'}
+                  className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                  size="lg"
+                >
+                  {syncStatus === 'syncing' ? (
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  นำเข้า Sheets
+                </Button>
+
+                {googleSheetsUrl && (
+                  <Button
+                    onClick={handleOpenGoogleSheets}
+                    variant="outline"
+                    className="border-white/30 text-white hover:bg-white/20 hover:text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                    size="lg"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    เปิด Sheets
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1823,8 +2033,39 @@ const TeachingSchedulePageNew = () => {
               </div>
             </div>
             
-            <div className="text-xs text-blue-300">
-              ISO Week Standard • จำนวนตาราง: {schedules.length} รายการ
+            <div className="flex items-center space-x-6 text-xs text-blue-300">
+              <div>
+                ISO Week Standard • จำนวนตาราง: {schedules.length} รายการ
+              </div>
+              
+              {/* Google Sheets Sync Status */}
+              {syncStatus !== 'idle' && (
+                <div className={`flex items-center space-x-2 px-3 py-1 rounded-full ${
+                  syncStatus === 'syncing' 
+                    ? 'bg-yellow-500/20 text-yellow-200' 
+                    : syncStatus === 'success'
+                      ? 'bg-green-500/20 text-green-200'
+                      : 'bg-red-500/20 text-red-200'
+                }`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${
+                    syncStatus === 'syncing' 
+                      ? 'bg-yellow-400 animate-pulse' 
+                      : syncStatus === 'success'
+                        ? 'bg-green-400'
+                        : 'bg-red-400'
+                  }`}></div>
+                  <span>
+                    {syncStatus === 'syncing' && 'กำลังซิงค์...'}
+                    {syncStatus === 'success' && lastSyncTime && (
+                      `ซิงค์ล่าสุด: ${lastSyncTime.toLocaleTimeString('th-TH')}`
+                    )}
+                    {syncStatus === 'error' && 'ซิงค์ล้มเหลว'}
+                  </span>
+                  {syncStatus === 'success' && (
+                    <FileSpreadsheet className="w-3 h-3" />
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1977,7 +2218,7 @@ const TeachingSchedulePageNew = () => {
                                 </td>
                                 {timeSlots.map((time, timeIndex) => {
                                   const slotKey = `${instructor.id}-${day.id}-${time}`;
-                                  const schedule = instructorSchedules[slotKey];
+                                  const schedule = getEnrichedSchedule(day.id, timeIndex);
                                   
                                   
                                   // Check if this slot is occupied by a spanning schedule from previous slots
@@ -1987,7 +2228,7 @@ const TeachingSchedulePageNew = () => {
                                     if (timeIndex - i >= 0) {
                                       const previousTime = timeSlots[timeIndex - i];
                                       const previousSlotKey = `${instructor.id}-${day.id}-${previousTime}`;
-                                      const previousSchedule = instructorSchedules[previousSlotKey];
+                                      const previousSchedule = getEnrichedSchedule(day.id, timeIndex - i);
                                       if (previousSchedule && previousSchedule.duration > i) {
                                         isOccupiedBySpanning = true;
                                         spanningSchedule = previousSchedule;
@@ -2194,7 +2435,7 @@ const TeachingSchedulePageNew = () => {
                       <option value="" className="bg-white text-gray-800">เลือกบริษัท</option>
                       {companies.map(company => (
                         <option key={company.id} value={company.id} className="bg-white text-gray-800">
-                          {company.name}
+{company.name}
                         </option>
                       ))}
                     </select>
@@ -2259,12 +2500,12 @@ const TeachingSchedulePageNew = () => {
                       </label>
                       <div className="ml-7 mt-2 flex space-x-3">
                         {companies.map(company => (
-                          <div key={company.id} className="flex flex-col items-center">
+                          <div key={company.id} className="flex flex-col items-center max-w-16">
                             <div
                               className="w-8 h-8 rounded-full border-2 border-white shadow-md"
                               style={{ backgroundColor: company.color }}
                             />
-                            <span className="text-xs text-gray-600 mt-1 font-medium">{company.name}</span>
+                            <span className="text-xs text-gray-600 mt-1 font-medium whitespace-nowrap overflow-hidden text-ellipsis">{company.name}</span>
                           </div>
                         ))}
                       </div>

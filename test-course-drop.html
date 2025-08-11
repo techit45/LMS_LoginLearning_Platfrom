@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบ Course Drop</title>
+</head>
+<body>
+    <h1>🔧 วิธีทดสอบ Course Drop</h1>
+    
+    <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>🔍 ขั้นตอนการทดสอบ:</h3>
+        <ol>
+            <li><strong>เปิด Console</strong> (F12 → Console tab)</li>
+            <li><strong>ลากวิชา</strong>จาก "ช่องจัดการวิชา" เข้าไปในตาราง</li>
+            <li><strong>ดู Log ใน Console</strong>:</li>
+        </ol>
+        
+        <h4>🔎 Log ที่ควรเห็น:</h4>
+        <pre style="background: #000; color: #0f0; padding: 10px;">
+➕ Creating new schedule from course: [ชื่อวิชา]
+📝 Schedule data to create: { day_of_week, time_slot_index, course_id, instructor_id, duration }
+📝 useSimpleSchedule: Final schedule data to insert: [ข้อมูล database]
+✅ Schedule created: [ข้อมูลที่สร้าง]
+🔄 Added schedule to local state: [ข้อมูล UI]
+        </pre>
+        
+        <h4>❌ Error ที่อาจพบ:</h4>
+        <ul>
+            <li><strong>instructor_id = null</strong> → วิชาไม่มีผู้สอน</li>
+            <li><strong>Foreign key violation</strong> → instructor_id ไม่มีในฐานข้อมูล</li>
+            <li><strong>UI ไม่อัพเดต</strong> → ปัญหา state management</li>
+        </ul>
+        
+        <h4>🧪 ขั้นตอนการแก้:</h4>
+        <ol>
+            <li><strong>ตรวจ Console</strong> → ดู error message</li>
+            <li><strong>ตรวจ Network tab</strong> → ดู POST request ไป weekly_schedules</li>
+            <li><strong>ตรวจ Application tab</strong> → ดู sessionStorage removedInstructors</li>
+        </ol>
+    </div>
+    
+    <div style="background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px;">
+        <strong>💡 คำแนะนำ:</strong><br>
+        หากไม่มี log เลย → ตรวจสอบ drag & drop setup<br>
+        หากมี error → copy error message มาแก้ไข<br>
+        หาก UI ไม่อัพเดต → ตรวจสอบ setSchedules function
+    </div>
+</body>
+</html>

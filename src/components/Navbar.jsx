@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, UserCircle, ShieldCheck, Home, Briefcase, Code2, Phone, LayoutDashboard, MapPin, Menu, X, ChevronDown } from 'lucide-react';
+import { LogOut, UserCircle, ShieldCheck, Home, Briefcase, Code2, Phone, LayoutDashboard, BarChart3, MapPin, Menu, X, ChevronDown } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useToast } from "../hooks/use-toast.jsx"
 import { useAuth } from '../contexts/AuthContext';
@@ -88,6 +88,12 @@ const Navbar = () => {
                   <Link to="/dashboard" className="flex items-center space-x-1">
                     <LayoutDashboard className="w-4 h-4" /> 
                     <span className="hidden lg:inline text-sm">แดชบอร์ด</span>
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="sm" className="text-black hover:bg-blue-50 hover:text-blue-700" asChild>
+                  <Link to="/progress" className="flex items-center space-x-1">
+                    <BarChart3 className="w-4 h-4" /> 
+                    <span className="hidden lg:inline text-sm">ความคืบหน้า</span>
                   </Link>
                 </Button>
                 <Button 
@@ -181,6 +187,14 @@ const Navbar = () => {
                     >
                       <LayoutDashboard className="w-5 h-5" />
                       <span className="font-medium">แดชบอร์ด</span>
+                    </Link>
+                    <Link
+                      to="/progress"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center space-x-3 px-3 py-2 rounded-lg text-black hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                    >
+                      <BarChart3 className="w-5 h-5" />
+                      <span className="font-medium">ความคืบหน้า</span>
                     </Link>
                     <button
                       onClick={() => {

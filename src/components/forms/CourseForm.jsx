@@ -1,12 +1,30 @@
-import React from 'react';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
+import React, { useState, useEffect } from 'react';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Textarea } from '../ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { X, Save, Plus } from 'lucide-react';
 import { theme } from '../../lib/theme';
+import CourseColorPicker from '../CourseColorPicker';
+
+// Function to get short company names (same as in ScheduleGrid)
+const getShortCompanyName = (fullName) => {
+  const nameMap = {
+    'Login Learning Platform': 'Login',
+    'Medical Learning Hub': 'Med',
+    'Med Solutions': 'Med', 
+    'W2D': 'W2D',
+    'W2D Studio': 'W2D',
+    'Meta Tech Academy': 'Meta',
+    'Meta': 'Meta',
+    'EdTech Solutions': 'EdTech',
+    'Innovation Technology Lab': 'Innotech',
+    'Industrial Research & Engineering': 'IRE'
+  }
+  
+  return nameMap[fullName] || fullName.slice(0, 6)
+}
 
 const CourseForm = ({
   isOpen,
@@ -16,11 +34,20 @@ const CourseForm = ({
   companies,
   locations
 }) => {
+  const [selectedColorMode, setSelectedColorMode] = useState(editingCourse?.colorSource || 'company');
+  const [selectedColor, setSelectedColor] = useState(editingCourse?.company_color || '#1e3a8a');
+
   if (!isOpen) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(e);
+    
+    // เพิ่ม color data ในฟอร์ม
+    const formData = new FormData(e.target);
+    formData.set('colorSource', selectedColorMode);
+    formData.set('company_color', selectedColor);
+    
+    onSubmit(e, { colorSource: selectedColorMode, company_color: selectedColor });
   };
 
   return (
@@ -89,7 +116,7 @@ const CourseForm = ({
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: company.color }}
                       />
-                      <span>{company.name}</span>
+                      <span>{getShortCompanyName(company.name)}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -122,25 +149,14 @@ const CourseForm = ({
             </Select>
           </div>
 
-          {/* Color Source Selection */}
+          {/* Course Color Picker */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-700">
-              สีของวิชา
-            </Label>
-            <RadioGroup name="colorSource" defaultValue={editingCourse?.colorSource || 'company'}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="company" id="company-color" />
-                <Label htmlFor="company-color" className="text-sm text-gray-600">
-                  ใช้สีของบริษัท
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="location" id="location-color" />
-                <Label htmlFor="location-color" className="text-sm text-gray-600">
-                  ใช้สีของศูนย์เรียน
-                </Label>
-              </div>
-            </RadioGroup>
+            <CourseColorPicker
+              selectedColorMode={selectedColorMode}
+              selectedColor={selectedColor}
+              onColorModeChange={setSelectedColorMode}
+              onColorChange={setSelectedColor}
+            />
           </div>
 
           {/* Form Actions */}

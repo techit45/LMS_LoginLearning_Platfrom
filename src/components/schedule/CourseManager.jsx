@@ -13,6 +13,7 @@ import {
   Palette
 } from 'lucide-react';
 import { getCourses, createCourse, updateCourse, deleteCourse } from '../../lib/teachingScheduleService.js';
+import CourseColorPicker from '../CourseColorPicker';
 
 const CourseManager = ({ isOpen, onClose, onCourseCreated }) => {
   const [courses, setCourses] = useState([]);
@@ -27,20 +28,11 @@ const CourseManager = ({ isOpen, onClose, onCourseCreated }) => {
     duration_hours: 1,
     description: ''
   });
+  
+  // Color picker state
+  const [selectedColorMode, setSelectedColorMode] = useState('company');
+  const [selectedColor, setSelectedColor] = useState('#1e3a8a');
 
-  // Color options for courses
-  const colorOptions = [
-    '#3b82f6', // Blue
-    '#10b981', // Emerald
-    '#f59e0b', // Amber
-    '#ef4444', // Red
-    '#8b5cf6', // Violet
-    '#06b6d4', // Cyan
-    '#84cc16', // Lime
-    '#f97316', // Orange
-    '#ec4899', // Pink
-    '#6366f1'  // Indigo
-  ];
 
   useEffect(() => {
     if (isOpen) {
@@ -68,11 +60,18 @@ const CourseManager = ({ isOpen, onClose, onCourseCreated }) => {
     setLoading(true);
 
     try {
+      // เพิ่มข้อมูลสีจาก color picker
+      const courseData = {
+        ...formData,
+        company_color: selectedColor,
+        color_mode: selectedColorMode
+      };
+
       let result;
       if (editingCourse) {
-        result = await updateCourse(editingCourse.id, formData);
+        result = await updateCourse(editingCourse.id, courseData);
       } else {
-        result = await createCourse(formData);
+        result = await createCourse(courseData);
       }
 
       if (result.error) {
@@ -102,6 +101,11 @@ const CourseManager = ({ isOpen, onClose, onCourseCreated }) => {
       duration_hours: course.duration_hours || 1,
       description: course.description || ''
     });
+    
+    // ตั้งค่า color picker state
+    setSelectedColorMode(course.color_mode || 'company');
+    setSelectedColor(course.company_color || '#1e3a8a');
+    
     setShowForm(true);
   };
 
@@ -135,6 +139,11 @@ const CourseManager = ({ isOpen, onClose, onCourseCreated }) => {
       duration_hours: 1,
       description: ''
     });
+    
+    // รีเซ็ต color picker state
+    setSelectedColorMode('company');
+    setSelectedColor('#1e3a8a');
+    
     setEditingCourse(null);
     setShowForm(false);
   };
@@ -251,21 +260,12 @@ const CourseManager = ({ isOpen, onClose, onCourseCreated }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       สีประจำวิชา
                     </label>
-                    <div className="flex flex-wrap gap-2">
-                      {colorOptions.map(color => (
-                        <button
-                          key={color}
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, company_color: color }))}
-                          className={`w-8 h-8 rounded-full border-2 transition-all ${
-                            formData.company_color === color 
-                              ? 'border-gray-800 scale-110' 
-                              : 'border-gray-300 hover:scale-105'
-                          }`}
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
-                    </div>
+                    <CourseColorPicker
+                      selectedColorMode={selectedColorMode}
+                      selectedColor={selectedColor}
+                      onColorModeChange={setSelectedColorMode}
+                      onColorChange={setSelectedColor}
+                    />
                   </div>
 
                   {/* Description */}

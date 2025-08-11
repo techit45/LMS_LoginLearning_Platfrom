@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แก้ไข Login-Learning Admin - Direct Fix</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .card { background: #f9f9f9; padding: 20px; margin: 10px 0; border-radius: 8px; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #45a049; }
+        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .warning { background: #fff3cd; color: #856404; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .info { background: #d1ecf1; color: #0c5460; padding: 10px; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 แก้ไข Login-Learning Admin</h1>
+    
+    <div class="info">
+        <h3>🎯 เป้าหมาย:</h3>
+        <ul>
+            <li>เปลี่ยน <strong>full_name</strong> จาก "Login-Learning" เป็น "Login-Learning Admin"</li>
+            <li>เปลี่ยน <strong>is_active</strong> จาก false เป็น true</li>
+            <li>User ID: 033e1583-465a-4734-b637-53ce3023370c</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <button onclick="checkAdmin()">🔍 ตรวจสอบสถานะ</button>
+        <button onclick="fixAdmin()">🚀 แก้ไขทันทีที่!</button>
+        <button onclick="checkAllInstructors()">👥 ดูผู้สอนทั้งหมด</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        const supabase = window.supabase.createClient(
+            'https://vuitwzisazvikrhtfthh.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE'
+        )
+
+        const targetUserId = '033e1583-465a-4734-b637-53ce3023370c'
+
+        async function checkAdmin() {
+            const result = document.getElementById('result')
+            result.innerHTML = '⏳ กำลังตรวจสอบ...'
+
+            try {
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .select('user_id, email, full_name, role, is_active')
+                    .eq('user_id', targetUserId)
+
+                if (error) throw error
+
+                if (data.length === 0) {
+                    result.innerHTML = '<div class="error">❌ ไม่พบข้อมูล Login-Learning Admin</div>'
+                    return
+                }
+
+                const admin = data[0]
+                const needsFix = admin.full_name !== 'Login-Learning Admin' || !admin.is_active
+
+                result.innerHTML = `
+                    <div class="${needsFix ? 'warning' : 'success'}">
+                        <h3>📊 สถานะปัจจุบัน:</h3>
+                        <ul>
+                            <li><strong>ID:</strong> ${admin.user_id}</li>
+                            <li><strong>Email:</strong> ${admin.email}</li>
+                            <li><strong>Name:</strong> ${admin.full_name} ${admin.full_name !== 'Login-Learning Admin' ? '❌ ต้องแก้' : '✅'}</li>
+                            <li><strong>Role:</strong> ${admin.role}</li>
+                            <li><strong>Active:</strong> ${admin.is_active} ${!admin.is_active ? '❌ ต้องแก้' : '✅'}</li>
+                        </ul>
+                        ${needsFix ? '<p><strong>⚠️ ต้องแก้ไข!</strong></p>' : '<p><strong>✅ ถูกต้องแล้ว!</strong></p>'}
+                    </div>
+                `
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`
+            }
+        }
+
+        async function fixAdmin() {
+            const result = document.getElementById('result')
+            result.innerHTML = '⏳ กำลังแก้ไข...'
+
+            try {
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .update({
+                        full_name: 'Login-Learning Admin',
+                        is_active: true
+                    })
+                    .eq('user_id', targetUserId)
+                    .select()
+
+                if (error) throw error
+
+                result.innerHTML = `
+                    <div class="success">
+                        <h3>🎉 แก้ไขสำเร็จ!</h3>
+                        <p>✅ เปลี่ยน full_name เป็น "Login-Learning Admin"</p>
+                        <p>✅ เปลี่ยน is_active เป็น true</p>
+                        <div class="warning">
+                            <strong>🚀 ขั้นตอนต่อไป:</strong>
+                            <ol>
+                                <li>กลับไปหน้าจัดการตารางสอน</li>
+                                <li>รีเฟรชหน้า (F5)</li>
+                                <li>จะเห็น Login-Learning Admin ในตารางแล้ว!</li>
+                            </ol>
+                        </div>
+                    </div>
+                `
+
+                // แสดงสถานะใหม่หลังจาก 2 วินาที
+                setTimeout(() => {
+                    checkAdmin()
+                }, 2000)
+
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`
+            }
+        }
+
+        async function checkAllInstructors() {
+            const result = document.getElementById('result')
+            result.innerHTML = '⏳ กำลังตรวจสอบผู้สอนทั้งหมด...'
+
+            try {
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .select('user_id, email, full_name, role, is_active')
+                    .neq('role', 'student')
+                    .order('full_name')
+
+                if (error) throw error
+
+                let html = `
+                    <div class="info">
+                        <h3>👥 ผู้สอนทั้งหมดในระบบ (${data.length} คน):</h3>
+                        <ul>
+                `
+
+                data.forEach((person, i) => {
+                    const status = person.is_active ? '🟢' : '🔴'
+                    html += `<li>${status} <strong>${person.full_name || person.email}</strong> - ${person.role} - ID: ${person.user_id.substring(0, 8)}...</li>`
+                })
+
+                html += `
+                        </ul>
+                        <p><strong>หมายเหตุ:</strong> 🟢 = แสดงในตาราง, 🔴 = ไม่แสดง</p>
+                    </div>
+                `
+
+                result.innerHTML = html
+
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`
+            }
+        }
+
+        // ตรวจสอบอัตโนมัติเมื่อโหลดหน้า
+        window.onload = () => {
+            checkAdmin()
+        }
+    </script>
+</body>
+</html>

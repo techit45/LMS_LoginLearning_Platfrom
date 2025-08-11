@@ -1,4 +1,5 @@
 import './lib/reactCompat'; // Load React compatibility layer first
+import './utils/logger'; // Initialize production-safe logging
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';

@@ -129,18 +129,22 @@ const ScheduleItem = ({
         </button>
         <button
           onClick={(e) => {
+            console.log('DELETE BUTTON CLICKED IN CORRECT FILE!', schedule);
+            e.preventDefault();
             e.stopPropagation();
             onDelete(schedule);
           }}
-          className="p-1 text-gray-500 hover:text-red-600 transition-colors bg-white rounded border border-gray-200 hover:border-red-300 shadow-sm"
+          className="p-2 text-white bg-red-600 hover:bg-red-700 rounded-full border-2 border-white shadow-lg transition-colors"
+          style={{ zIndex: 9999 }}
           title="ลบ"
         >
-          <Trash2 className="w-3 h-3" />
+          <Trash2 className="w-4 h-4" />
         </button>
       </div>
       
       {/* Course Details */}
       <div className="space-y-2 text-xs text-gray-600 pr-20 pb-10 overflow-hidden">
+        <div style={{color: 'red', fontWeight: 'bold'}}>TESTING - ScheduleItem.jsx</div>
         {/* เวลา */}
         <div className="text-sm text-gray-700 font-medium truncate">
           {schedule.startTime}-{schedule.endTime}
