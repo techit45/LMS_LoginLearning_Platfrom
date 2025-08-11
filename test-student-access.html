@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Student Access - Login Learning</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Student Access Test - Login Learning</h1>
+    <p>Testing database access for anonymous users and students</p>
+
+    <div id="environment-test" class="test-section">
+        <h3>📦 Environment Variables Test</h3>
+        <div id="env-result">Testing...</div>
+    </div>
+
+    <div id="anonymous-test" class="test-section">
+        <h3>👤 Anonymous User Access Test</h3>
+        <button onclick="testAnonymousAccess()">Test Anonymous Access</button>
+        <div id="anonymous-result"></div>
+    </div>
+
+    <div id="projects-test" class="test-section">
+        <h3>📂 Projects Loading Test</h3>
+        <button onclick="testProjectsLoading()">Test Projects</button>
+        <div id="projects-result"></div>
+    </div>
+
+    <div id="courses-test" class="test-section">
+        <h3>📚 Courses Loading Test</h3>
+        <button onclick="testCoursesLoading()">Test Courses</button>
+        <div id="courses-result"></div>
+    </div>
+
+    <div id="performance-test" class="test-section">
+        <h3>⚡ Performance Test</h3>
+        <button onclick="testPerformance()">Test Query Speed</button>
+        <div id="performance-result"></div>
+    </div>
+
+    <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://vuitwzisazvikrhtfthh.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+        
+        const { createClient } = supabase;
+        const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Test Environment Variables
+        function testEnvironmentVariables() {
+            const envDiv = document.getElementById('env-result');
+            
+            console.log('Testing environment variables...');
+            console.log('URL:', SUPABASE_URL);
+            console.log('Key length:', SUPABASE_ANON_KEY?.length);
+            console.log('Client type:', typeof client);
+            console.log('Client object:', client);
+            
+            if (SUPABASE_URL && SUPABASE_ANON_KEY && client) {
+                envDiv.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Environment Variables & Client OK</h4>
+                        <p><strong>URL:</strong> ${SUPABASE_URL}</p>
+                        <p><strong>Key:</strong> ${SUPABASE_ANON_KEY.substring(0, 20)}...</p>
+                        <p><strong>Client:</strong> ${client ? 'Initialized' : 'Not initialized'}</p>
+                        <p><strong>Auth:</strong> ${client?.auth ? 'Available' : 'Not available'}</p>
+                    </div>
+                `;
+                envDiv.className = 'test-section success';
+            } else {
+                envDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Setup Issues</h4>
+                        <p>URL: ${SUPABASE_URL ? 'OK' : 'MISSING'}</p>
+                        <p>Key: ${SUPABASE_ANON_KEY ? 'OK' : 'MISSING'}</p>
+                        <p>Client: ${client ? 'OK' : 'MISSING'}</p>
+                        <p>Supabase Library: ${typeof supabase !== 'undefined' ? 'OK' : 'MISSING'}</p>
+                    </div>
+                `;
+                envDiv.className = 'test-section error';
+            }
+        }
+
+        // Test Anonymous Access
+        async function testAnonymousAccess() {
+            const resultDiv = document.getElementById('anonymous-result');
+            resultDiv.innerHTML = '<div class="loading">🔄 Testing anonymous access...</div>';
+            
+            try {
+                // Check current user status
+                const { data: { user }, error } = await client.auth.getUser();
+                
+                const result = {
+                    isAuthenticated: !!user,
+                    userEmail: user?.email || null,
+                    timestamp: new Date().toISOString()
+                };
+
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Anonymous Access Test</h4>
+                        <p><strong>Authenticated:</strong> ${result.isAuthenticated}</p>
+                        <p><strong>User Email:</strong> ${result.userEmail || 'Anonymous'}</p>
+                        <p><strong>Test Time:</strong> ${result.timestamp}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Anonymous access error:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Anonymous Access Failed</h4>
+                        <p><strong>Error Message:</strong> ${error.message || 'Unknown error'}</p>
+                        <p><strong>Error Type:</strong> ${error.name || 'Unknown'}</p>
+                        <pre>${JSON.stringify(error, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        // Test Projects Loading
+        async function testProjectsLoading() {
+            const resultDiv = document.getElementById('projects-result');
+            resultDiv.innerHTML = '<div class="loading">🔄 Loading projects...</div>';
+            
+            const startTime = Date.now();
+            
+            try {
+                const { data, error } = await client
+                    .from('projects')
+                    .select(`
+                        id,
+                        title,
+                        category,
+                        is_approved,
+                        created_at
+                    `)
+                    .eq('is_approved', true)
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+
+                const loadTime = Date.now() - startTime;
+
+                if (error) throw error;
+
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Projects Loaded Successfully</h4>
+                        <p><strong>Count:</strong> ${data.length} projects</p>
+                        <p><strong>Load Time:</strong> ${loadTime}ms</p>
+                        <p><strong>Sample Projects:</strong></p>
+                        <ul>
+                            ${data.slice(0, 3).map(p => `<li>${p.title} (${p.category})</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Projects loading error:', error);
+                const loadTime = Date.now() - startTime;
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Projects Loading Failed</h4>
+                        <p><strong>Load Time:</strong> ${loadTime}ms</p>
+                        <p><strong>Error Message:</strong> ${error.message || 'Unknown error'}</p>
+                        <p><strong>Error Code:</strong> ${error.code || 'Unknown'}</p>
+                        <p><strong>Error Details:</strong> ${error.details || 'None'}</p>
+                        <pre>${JSON.stringify(error, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        // Test Courses Loading
+        async function testCoursesLoading() {
+            const resultDiv = document.getElementById('courses-result');
+            resultDiv.innerHTML = '<div class="loading">🔄 Loading courses...</div>';
+            
+            const startTime = Date.now();
+            
+            try {
+                const { data, error } = await client
+                    .from('courses')
+                    .select(`
+                        id,
+                        title,
+                        is_active,
+                        created_at
+                    `)
+                    .eq('is_active', true)
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+
+                const loadTime = Date.now() - startTime;
+
+                if (error) throw error;
+
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Courses Loaded Successfully</h4>
+                        <p><strong>Count:</strong> ${data.length} courses</p>
+                        <p><strong>Load Time:</strong> ${loadTime}ms</p>
+                        <p><strong>Sample Courses:</strong></p>
+                        <ul>
+                            ${data.map(c => `<li>${c.title}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Courses loading error:', error);
+                const loadTime = Date.now() - startTime;
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Courses Loading Failed</h4>
+                        <p><strong>Load Time:</strong> ${loadTime}ms</p>
+                        <p><strong>Error Message:</strong> ${error.message || 'Unknown error'}</p>
+                        <p><strong>Error Code:</strong> ${error.code || 'Unknown'}</p>
+                        <p><strong>Error Details:</strong> ${error.details || 'None'}</p>
+                        <pre>${JSON.stringify(error, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        // Performance Test
+        async function testPerformance() {
+            const resultDiv = document.getElementById('performance-result');
+            resultDiv.innerHTML = '<div class="loading">🔄 Running performance tests...</div>';
+            
+            const results = [];
+            
+            try {
+                // Test 1: Simple project count
+                let startTime = Date.now();
+                const { count: projectCount } = await client
+                    .from('projects')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('is_approved', true);
+                results.push({
+                    test: 'Project Count Query',
+                    time: Date.now() - startTime,
+                    result: `${projectCount} projects`
+                });
+
+                // Test 2: Course count
+                startTime = Date.now();
+                const { count: courseCount } = await client
+                    .from('courses')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('is_active', true);
+                results.push({
+                    test: 'Course Count Query',
+                    time: Date.now() - startTime,
+                    result: `${courseCount} courses`
+                });
+
+                // Test 3: Featured projects
+                startTime = Date.now();
+                const { data: featuredProjects } = await client
+                    .from('projects')
+                    .select('id, title')
+                    .eq('is_approved', true)
+                    .eq('is_featured', true)
+                    .limit(3);
+                results.push({
+                    test: 'Featured Projects Query',
+                    time: Date.now() - startTime,
+                    result: `${featuredProjects?.length || 0} featured projects`
+                });
+
+                const avgTime = results.reduce((sum, r) => sum + r.time, 0) / results.length;
+
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h4>⚡ Performance Test Results</h4>
+                        <p><strong>Average Query Time:</strong> ${avgTime.toFixed(2)}ms</p>
+                        <table border="1" style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <th style="padding: 8px;">Test</th>
+                                <th style="padding: 8px;">Time (ms)</th>
+                                <th style="padding: 8px;">Result</th>
+                            </tr>
+                            ${results.map(r => `
+                                <tr>
+                                    <td style="padding: 8px;">${r.test}</td>
+                                    <td style="padding: 8px; text-align: right;">${r.time}</td>
+                                    <td style="padding: 8px;">${r.result}</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Performance Test Failed</h4>
+                        <pre>${JSON.stringify(error, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        // Run environment test on load
+        testEnvironmentVariables();
+    </script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Supabase Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Simple Supabase Connection Test</h1>
+    <div id="output"></div>
+
+    <script>
+        console.log('Starting simple test...');
+        
+        // Check if Supabase library loaded
+        console.log('Supabase library:', typeof supabase);
+        console.log('Supabase object:', supabase);
+        
+        if (typeof supabase === 'undefined') {
+            document.getElementById('output').innerHTML = '❌ Supabase library not loaded';
+        } else {
+            console.log('Supabase library loaded successfully');
+            
+            // Try to create client
+            try {
+                const { createClient } = supabase;
+                console.log('createClient function:', typeof createClient);
+                
+                const client = createClient(
+                    'https://vuitwzisazvikrhtfthh.supabase.co',
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE'
+                );
+                
+                console.log('Client created:', client);
+                console.log('Client type:', typeof client);
+                console.log('Client has auth:', !!client.auth);
+                console.log('Client has from:', !!client.from);
+                
+                // Test simple query
+                async function testQuery() {
+                    try {
+                        console.log('Testing query...');
+                        const { data, error } = await client
+                            .from('projects')
+                            .select('id, title')
+                            .eq('is_approved', true)
+                            .limit(1);
+                        
+                        console.log('Query result:', { data, error });
+                        
+                        if (error) {
+                            document.getElementById('output').innerHTML = `❌ Query failed: ${error.message}`;
+                        } else {
+                            document.getElementById('output').innerHTML = `✅ Success! Found ${data.length} projects`;
+                        }
+                    } catch (queryError) {
+                        console.error('Query exception:', queryError);
+                        document.getElementById('output').innerHTML = `❌ Query exception: ${queryError.message}`;
+                    }
+                }
+                
+                // Run test after a short delay
+                setTimeout(testQuery, 1000);
+                
+                document.getElementById('output').innerHTML = '🔄 Testing connection...';
+                
+            } catch (clientError) {
+                console.error('Client creation error:', clientError);
+                document.getElementById('output').innerHTML = `❌ Client error: ${clientError.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

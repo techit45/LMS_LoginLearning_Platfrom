@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Production Build Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .result { margin: 10px 0; padding: 15px; border-radius: 5px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; font-size: 12px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Production Build Test</h1>
+    <p>Testing if environment variables are properly embedded in the production build</p>
+
+    <div id="build-info" class="result info">
+        <h3>📦 Build Information</h3>
+        <p>Checking if this is served from the dist/ folder...</p>
+    </div>
+
+    <div id="env-check" class="result">
+        <h3>🔧 Environment Variables Check</h3>
+        <div id="env-result">Testing...</div>
+    </div>
+
+    <div id="supabase-test" class="result">
+        <h3>🗄️ Supabase Connection Test</h3>
+        <button onclick="testSupabaseConnection()">Test Connection</button>
+        <div id="supabase-result"></div>
+    </div>
+
+    <script type="module">
+        // This should work if we're serving from the production build
+        
+        console.log('Production build test starting...');
+        
+        // Check if we're in the right environment
+        const isProduction = window.location.protocol === 'file:' || 
+                            window.location.hostname === 'localhost' ||
+                            window.location.hostname.includes('vercel.app');
+        
+        document.getElementById('build-info').innerHTML = `
+            <h3>📦 Build Information</h3>
+            <p><strong>Protocol:</strong> ${window.location.protocol}</p>
+            <p><strong>Host:</strong> ${window.location.hostname}</p>
+            <p><strong>Full URL:</strong> ${window.location.href}</p>
+            <p><strong>Environment:</strong> ${isProduction ? 'Production-like' : 'Development'}</p>
+        `;
+        
+        // Check environment variables by trying to import the actual supabase client
+        try {
+            // This won't work in a file:// context, but should work on localhost or Vercel
+            if (window.location.protocol !== 'file:') {
+                console.log('Attempting to test environment variables...');
+                
+                // Since we can't import ES modules directly in this context,
+                // let's create a test that mimics what the build should have
+                const envCheck = document.getElementById('env-result');
+                
+                // Check if Vite environment variables would be available
+                // (They should be replaced at build time)
+                envCheck.innerHTML = `
+                    <div class="info">
+                        <h4>ℹ️ Environment Variable Test</h4>
+                        <p>In a production build, Vite replaces import.meta.env.VITE_* variables with their actual values.</p>
+                        <p>To test this properly, we need to serve from the dist/ folder or deploy to Vercel.</p>
+                        <p><strong>Next step:</strong> Check the browser console on the actual deployed site.</p>
+                    </div>
+                `;
+                document.getElementById('env-check').className = 'result info';
+            } else {
+                document.getElementById('env-result').innerHTML = `
+                    <div class="error">
+                        <h4>❌ File Protocol Limitation</h4>
+                        <p>Cannot test ES modules with file:// protocol</p>
+                        <p>Please serve this from a web server or check the deployed version</p>
+                    </div>
+                `;
+                document.getElementById('env-check').className = 'result error';
+            }
+        } catch (error) {
+            console.error('Environment test error:', error);
+            document.getElementById('env-result').innerHTML = `
+                <div class="error">
+                    <h4>❌ Environment Test Failed</h4>
+                    <p>Error: ${error.message}</p>
+                </div>
+            `;
+            document.getElementById('env-check').className = 'result error';
+        }
+        
+        // Supabase connection test function
+        window.testSupabaseConnection = async function() {
+            const resultDiv = document.getElementById('supabase-result');
+            resultDiv.innerHTML = '<div class="info">🔄 Testing Supabase connection...</div>';
+            
+            try {
+                // Direct API test (this should work from any environment)
+                const response = await fetch('https://vuitwzisazvikrhtfthh.supabase.co/rest/v1/projects?select=id,title&is_approved=eq.true&limit=1', {
+                    headers: {
+                        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Supabase Connection Successful!</h4>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Projects found:</strong> ${data.length}</p>
+                            <p><strong>Sample data:</strong></p>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                            <p><em>This confirms that the Supabase API and RLS policies are working correctly.</em></p>
+                        </div>
+                    `;
+                    document.getElementById('supabase-test').className = 'result success';
+                } else {
+                    const errorText = await response.text();
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Supabase API Error</h4>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Error:</strong> ${errorText}</p>
+                        </div>
+                    `;
+                    document.getElementById('supabase-test').className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Connection Test Failed</h4>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Type:</strong> ${error.name}</p>
+                    </div>
+                `;
+                document.getElementById('supabase-test').className = 'result error';
+            }
+        };
+    </script>
+</body>
+</html>
