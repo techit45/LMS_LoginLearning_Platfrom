@@ -1,13 +1,12 @@
 import { supabase } from './supabaseClient.js';
 import * as locationService from './locationService.js';
+import { ENTRY_TYPES, WORK_LOCATIONS, getDefaultHourlyRate } from '../constants/entryTypes.js';
 
 // ==========================================
 // ERROR HANDLING UTILITY
 // ==========================================
 
 const handleSupabaseError = (error, context = '') => {
-  console.error(`${context} error:`, error);
-  
   const errorMessages = {
     '23505': 'ข้อมูลซ้ำกับที่มีอยู่แล้ว',
     '23503': 'ไม่สามารถลบข้อมูลได้เนื่องจากมีข้อมูลที่เกี่ยวข้อง',
@@ -180,7 +179,11 @@ export const updateTimePolicy = async (policyId, updates) => {
  */
 export const getUserWorkSchedule = async (userId) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    // Use local date format to avoid timezone issues
+    const today = (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })();
     
     const { data, error } = await supabase
       .from('work_schedules')
@@ -252,7 +255,11 @@ export const updateWorkSchedule = async (scheduleId, updates) => {
  */
 export const getActiveTimeEntry = async (userId, date = null) => {
   try {
-    const targetDate = date || new Date().toISOString().split('T')[0];
+    // Use local date format to avoid timezone issues
+    const targetDate = date || (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })();
     
     const { data, error } = await supabase
       .from('time_entries')
@@ -288,9 +295,9 @@ export const checkIn = async (checkInData = {}) => {
 
     const isInstructor = userProfile?.role === 'instructor' || userProfile?.role === 'admin';
 
-    // Smart teaching schedule detection for instructors (temporarily disabled)
+    // Smart teaching schedule detection for instructors
     let teachingDetection = null;
-    if (false && isInstructor && !checkInData.skipTeachingDetection) {
+    if (isInstructor && !checkInData.skipTeachingDetection) {
       try {
         const { data: scheduleMatch } = await supabase
           .rpc('smart_schedule_detection', {
@@ -300,11 +307,9 @@ export const checkIn = async (checkInData = {}) => {
 
         if (scheduleMatch && scheduleMatch.length > 0) {
           teachingDetection = scheduleMatch[0];
-          console.log('Teaching schedule detected:', teachingDetection);
-        }
+          }
       } catch (error) {
-        console.warn('Teaching detection failed:', error);
-      }
+        }
     }
 
     // Get current location if location verification is enabled
@@ -324,14 +329,12 @@ export const checkIn = async (checkInData = {}) => {
           const { data: registeredLocations, error: regError } = await locationService.getTodayRegisteredLocations();
           
           if (regError) {
-            console.error('Error getting registered locations:', regError);
             return { data: null, error: 'ไม่สามารถตรวจสอบตำแหน่งที่ลงทะเบียนได้' };
           }
 
           if (!registeredLocations || registeredLocations.length === 0) {
             // Auto-registration is handled in the UI now, so we allow check-in without prior registration
             // The UI should handle auto-registration before calling this function
-            console.warn('No registered locations found - auto-registration should have been handled by UI');
             locationVerified = false; // Allow check-in but mark location as not verified
           } else {
             // Verify if current location is within any registered location
@@ -352,13 +355,16 @@ export const checkIn = async (checkInData = {}) => {
           }
         }
       } catch (locationError) {
-        console.error('Location error:', locationError);
         return { data: null, error: locationError.message };
       }
     }
 
     // Check if user already checked in today
-    const today = new Date().toISOString().split('T')[0];
+    // Use local date format to avoid timezone issues
+    const today = (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })();
     const { data: activeEntry } = await getActiveTimeEntry(user.user.id, today);
     
     if (activeEntry) {
@@ -375,13 +381,15 @@ export const checkIn = async (checkInData = {}) => {
       check_in_time: new Date().toISOString(),
       check_in_location: location,
       location_verified: locationVerified,
-      status: 'pending'
+      status: 'approved', // Auto-approve all check-ins
+      approved_by: user.user.id,
+      approved_at: new Date().toISOString()
     };
 
     // Enhanced teaching integration
     if (teachingDetection && teachingDetection.confidence_score >= 80) {
       // Auto-detected teaching session
-      timeEntry.entry_type = 'teaching';
+      timeEntry.entry_type = ENTRY_TYPES.TEACHING;
       timeEntry.weekly_schedule_id = teachingDetection.schedule_id;
       timeEntry.teaching_course_id = teachingDetection.course_id;
       timeEntry.course_taught = teachingDetection.course_name;
@@ -392,27 +400,22 @@ export const checkIn = async (checkInData = {}) => {
       // Set teaching location if available
       timeEntry.teaching_location = checkInData.centerName || checkInData.location;
       
-      console.log('Auto-configured as teaching session:', {
-        course: teachingDetection.course_name,
-        confidence: teachingDetection.confidence_score,
-        variance: teachingDetection.time_difference
-      });
-    } else {
+      } else {
       // Manual entry or regular work
-      timeEntry.entry_type = checkInData.entryType || 'regular';
+      timeEntry.entry_type = checkInData.entryType || ENTRY_TYPES.OTHER;
       timeEntry.course_taught = checkInData.courseTaught || null;
       timeEntry.student_count = checkInData.studentCount || null;
     }
 
     // Work location and remote work details (set before potential entry_type override)
-    timeEntry.work_location = checkInData.workLocation || 'onsite';
+    timeEntry.work_location = checkInData.workLocation || WORK_LOCATIONS.ONSITE;
     timeEntry.remote_reason = checkInData.remoteReason || null;
     timeEntry.online_class_platform = checkInData.onlineClassPlatform || null;
     timeEntry.online_class_url = checkInData.onlineClassUrl || null;
 
     // Smart entry type detection based on work location
-    if (checkInData.workLocation === 'online' && (!checkInData.entryType || checkInData.entryType === 'regular')) {
-      timeEntry.entry_type = 'teaching'; // Online work is typically teaching
+    if (checkInData.workLocation === WORK_LOCATIONS.ONLINE && (!checkInData.entryType || checkInData.entryType === ENTRY_TYPES.OTHER)) {
+      timeEntry.entry_type = ENTRY_TYPES.TEACHING; // Online work is typically teaching
     }
 
     // Session details and notes
@@ -423,7 +426,6 @@ export const checkIn = async (checkInData = {}) => {
     if (checkInData.specialCase) {
       timeEntry.special_case = checkInData.specialCase;
       timeEntry.special_case_data = checkInData.specialCaseData || {};
-      timeEntry.requires_approval = true;
     }
 
     // Substitute teaching
@@ -452,11 +454,6 @@ export const checkIn = async (checkInData = {}) => {
         : null;
     }
 
-    console.log('Check-in with center info:', {
-      center: checkInData.center,
-      centerName: checkInData.centerName
-    });
-
     // Add registered_location_info if available (only if column exists in database)
     if (registeredLocationInfo) {
       try {
@@ -471,7 +468,6 @@ export const checkIn = async (checkInData = {}) => {
           )
         };
       } catch (error) {
-        console.warn('Could not add registered_location_info:', error);
         // Continue without this field if there's an error
       }
     }
@@ -511,43 +507,59 @@ export const checkOut = async (checkOutData = {}) => {
         checkOutLocation = await getCurrentLocation();
       }
     } catch (locationError) {
-      console.warn('Could not get checkout location:', locationError);
-    }
+      }
 
     const checkOutTime = new Date();
     const checkInTime = new Date(activeEntry.check_in_time);
     
     // Calculate hours worked
     const hoursWorked = (checkOutTime - checkInTime) / (1000 * 60 * 60);
-    const breakMinutes = checkOutData.breakMinutes || 0;
+    
+    // Auto-calculate lunch break (12:00-13:00) if working across lunch time - DISABLED
+    let autoLunchBreakMinutes = 0;
+    // REMOVED: Automatic lunch break deduction as requested
+    // Users should manually specify break time if needed
+    
+    const breakMinutes = checkOutData.breakMinutes || 0; // Only use manually specified break time
     const totalHours = Math.max(0, hoursWorked - (breakMinutes / 60));
 
     // Get time policy for overtime calculation
     const { data: policy } = await getTimePolicy(activeEntry.company);
     const overtimeThreshold = policy?.overtime_threshold_daily || 8.0;
     
-    const regularHours = Math.min(totalHours, overtimeThreshold);
-    const overtimeHours = Math.max(0, totalHours - overtimeThreshold);
+    // Check if has teaching schedule
+    const hasTeachingSchedule = activeEntry.entry_type === 'teaching' || 
+                                activeEntry.weekly_schedule_id || 
+                                activeEntry.teaching_course_id;
+    
+    // If has teaching schedule, count all hours
+    // If no teaching schedule and over 8 hours, cap at 8
+    let actualHours = totalHours;
+    if (!hasTeachingSchedule && totalHours > overtimeThreshold) {
+      actualHours = overtimeThreshold; // Cap at 8 hours for regular work
+    }
+    
+    // For compatibility, still set regular and overtime hours
+    const regularHours = Math.min(actualHours, overtimeThreshold);
+    const overtimeHours = Math.max(0, actualHours - overtimeThreshold);
 
     // Update time entry
     const updates = {
       check_out_time: checkOutTime.toISOString(),
       check_out_location: checkOutLocation,
-      total_hours: Math.round(totalHours * 100) / 100,
+      total_hours: Math.round(actualHours * 100) / 100,
       regular_hours: Math.round(regularHours * 100) / 100,
       overtime_hours: Math.round(overtimeHours * 100) / 100,
       break_duration_minutes: breakMinutes,
+      status: 'approved', // Auto-approve all check-outs
+      approved_by: user.user.id,
+      approved_at: new Date().toISOString(),
       employee_notes: checkOutData.notes ? 
         (activeEntry.employee_notes ? 
           `${activeEntry.employee_notes}\n\nเช็คเอาท์: ${checkOutData.notes}` : 
           checkOutData.notes) : 
         activeEntry.employee_notes
     };
-
-    // Determine if needs manager review
-    if (overtimeHours > 0 || totalHours > 10 || checkOutData.unusual) {
-      updates.needs_manager_review = true;
-    }
 
     const { data, error } = await supabase
       .from('time_entries')
@@ -628,18 +640,45 @@ export const updateTimeEntry = async (entryId, updates) => {
         
         if (checkOutTime && checkInTime) {
           const hoursWorked = (checkOutTime - checkInTime) / (1000 * 60 * 60);
-          const breakMinutes = updates.break_duration_minutes || entry.break_duration_minutes || 0;
+          
+          // Auto-calculate lunch break (12:00-13:00) if working across lunch time - DISABLED
+          let autoLunchBreakMinutes = 0;
+          // REMOVED: Automatic lunch break deduction as requested
+          // Users should manually specify break time if needed
+          
+          const breakMinutes = updates.break_duration_minutes || entry.break_duration_minutes || 0; // Only use manually specified break time
           const totalHours = Math.max(0, hoursWorked - (breakMinutes / 60));
 
           const { data: policy } = await getTimePolicy(entry.company);
           const overtimeThreshold = policy?.overtime_threshold_daily || 8.0;
           
-          updates.total_hours = Math.round(totalHours * 100) / 100;
-          updates.regular_hours = Math.round(Math.min(totalHours, overtimeThreshold) * 100) / 100;
-          updates.overtime_hours = Math.round(Math.max(0, totalHours - overtimeThreshold) * 100) / 100;
+          // Check if has teaching schedule
+          const hasTeachingSchedule = entry.entry_type === ENTRY_TYPES.TEACHING || 
+                                      entry.weekly_schedule_id || 
+                                      entry.teaching_course_id;
+          
+          // If has teaching schedule, count all hours
+          // If no teaching schedule and over 8 hours, cap at 8
+          let actualHours = totalHours;
+          if (!hasTeachingSchedule && totalHours > overtimeThreshold) {
+            actualHours = overtimeThreshold; // Cap at 8 hours for regular work
+          }
+          
+          // For compatibility, still set regular and overtime hours
+          const regularHours = Math.min(actualHours, overtimeThreshold);
+          const overtimeHours = Math.max(0, actualHours - overtimeThreshold);
+          
+          updates.total_hours = Math.round(actualHours * 100) / 100;
+          updates.regular_hours = Math.round(regularHours * 100) / 100;
+          updates.overtime_hours = Math.round(overtimeHours * 100) / 100;
         }
       }
     }
+
+    // Auto-approve all updates
+    updates.status = 'approved';
+    updates.approved_by = user.user.id;
+    updates.approved_at = new Date().toISOString();
 
     const { data, error } = await supabase
       .from('time_entries')
@@ -847,8 +886,7 @@ export const getTimeEntriesForReview = async (company = null, status = 'pending'
         .in('user_id', userIds);
 
       if (usersError) {
-        console.error('Error fetching user profiles:', usersError);
-      } else if (users) {
+        } else if (users) {
         const userMap = users.reduce((map, user) => {
           map[user.user_id] = user;
           return map;
@@ -900,8 +938,7 @@ export const getLeaveRequestsForReview = async (company = null, status = 'pendin
         .in('user_id', allUserIds);
 
       if (usersError) {
-        console.error('Error fetching user profiles:', usersError);
-      } else if (users) {
+        } else if (users) {
         const userMap = users.reduce((map, user) => {
           map[user.user_id] = user;
           return map;
@@ -930,8 +967,8 @@ export const approveTimeEntry = async (entryId, managerNotes = null) => {
 
     const updates = {
       status: 'approved',
-      approved_by: user.user.id,
-      approved_at: new Date().toISOString(),
+      reviewed_by: user.user.id,
+      reviewed_at: new Date().toISOString(),
       needs_manager_review: false
     };
 
@@ -963,8 +1000,8 @@ export const rejectTimeEntry = async (entryId, managerNotes = null) => {
 
     const updates = {
       status: 'rejected',
-      approved_by: user.user.id,
-      approved_at: new Date().toISOString(),
+      reviewed_by: user.user.id,
+      reviewed_at: new Date().toISOString(),
       needs_manager_review: false
     };
 
@@ -985,7 +1022,6 @@ export const rejectTimeEntry = async (entryId, managerNotes = null) => {
     return { data: null, error: handleSupabaseError(error, 'Rejecting time entry') };
   }
 };
-
 
 /**
  * Delete time entry (admin only)
@@ -1024,7 +1060,7 @@ export const approveLeaveRequest = async (requestId, managerNotes = null) => {
     };
 
     if (managerNotes) {
-      updates.reviewer_notes = managerNotes;
+      updates.manager_comments = managerNotes;
     }
 
     const { data, error } = await supabase
@@ -1056,7 +1092,7 @@ export const rejectLeaveRequest = async (requestId, managerNotes = null) => {
     };
 
     if (managerNotes) {
-      updates.reviewer_notes = managerNotes;
+      updates.manager_comments = managerNotes;
     }
 
     const { data, error } = await supabase
@@ -1132,8 +1168,8 @@ export const bulkApproveTimeEntries = async (entryIds, managerNotes = null) => {
       .from('time_entries')
       .update({
         status: 'approved',
-        approved_by: user.user.id,
-        approved_at: new Date().toISOString(),
+        reviewed_by: user.user.id,
+        reviewed_at: new Date().toISOString(),
         manager_notes: managerNotes,
         updated_at: new Date().toISOString()
       })
@@ -1159,9 +1195,9 @@ export const bulkApproveLeaveRequests = async (requestIds, managerNotes = null) 
       .from('leave_requests')
       .update({
         status: 'approved',
-        approved_by: user.user.id,
-        approved_at: new Date().toISOString(),
-        reviewer_notes: managerNotes,
+        reviewed_by: user.user.id,
+        reviewed_at: new Date().toISOString(),
+        manager_comments: managerNotes,
         updated_at: new Date().toISOString()
       })
       .in('id', requestIds)
@@ -1221,6 +1257,10 @@ export const getApprovedTimeEntries = async (company = null, startDate = null, e
  */
 export const getApprovedLeaveRequests = async (company = null, startDate = null, endDate = null) => {
   try {
+    // เช็ค authentication
+    const { data: user } = await supabase.auth.getUser();
+    if (!user) throw new Error('ไม่ได้เข้าสู่ระบบ');
+
     let query = supabase
       .from('leave_requests')
       .select(`
@@ -1244,7 +1284,9 @@ export const getApprovedLeaveRequests = async (company = null, startDate = null,
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     // Map user data properly
     const processedData = data?.map(request => ({
@@ -1263,7 +1305,11 @@ export const getApprovedLeaveRequests = async (company = null, startDate = null,
  */
 export const getTeamAttendanceStatus = async (managerId, date = null) => {
   try {
-    const targetDate = date || new Date().toISOString().split('T')[0];
+    // Use local date format to avoid timezone issues
+    const targetDate = date || (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })();
     
     // Get team members
     const { data: teamMembers, error: teamError } = await supabase
@@ -1304,6 +1350,262 @@ export const getTeamAttendanceStatus = async (managerId, date = null) => {
     return { data: teamStatus, error: null };
   } catch (error) {
     return { data: [], error: handleSupabaseError(error, 'Fetching team attendance') };
+  }
+};
+
+// ==========================================
+// ENHANCED TEACHING INTEGRATION FUNCTIONS
+// ==========================================
+
+/**
+ * Get teaching schedule detection for user using teachingScheduleService
+ */
+const getTeachingScheduleDetection = async (userId, checkInTime = new Date()) => {
+  console.log('🚀 getTeachingScheduleDetection started with:', { userId, checkInTime: checkInTime.toISOString() });
+  
+  try {
+    // Import teachingScheduleService
+    const teachingScheduleService = await import('./teachingScheduleService.js');
+    
+    // Get current week info
+    const now = new Date();
+    const bangkokTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Bangkok"}));
+    const checkDay = bangkokTime.getDay();
+    const checkTimeStr = `${String(bangkokTime.getHours()).padStart(2, '0')}:${String(bangkokTime.getMinutes()).padStart(2, '0')}`;
+    
+    const weekInfo = teachingScheduleService.getWeekInfo(now);
+    
+    // Debug log
+    console.log('📚 Teaching Detection Debug:', {
+      userId,
+      checkDay,
+      checkTimeStr,
+      weekInfo,
+      checkInTime: checkInTime.toISOString(),
+      bangkokTime: bangkokTime.toISOString(),
+      bangkokTimeFormatted: bangkokTime.toLocaleString('th-TH')
+    });
+
+    // Get schedules for current week from both weekdays and weekends
+    const [weekdaysResult, weekendsResult] = await Promise.all([
+      teachingScheduleService.getInstructorWeeklySchedules(
+        userId,
+        weekInfo.year,
+        weekInfo.weekNumber,
+        'weekdays'
+      ),
+      teachingScheduleService.getInstructorWeeklySchedules(
+        userId,
+        weekInfo.year,
+        weekInfo.weekNumber,
+        'weekends'
+      )
+    ]);
+
+    const allSchedules = [
+      ...(weekdaysResult.data || []),
+      ...(weekendsResult.data || [])
+    ];
+
+    // Filter schedules for current day
+    const todaySchedules = allSchedules.filter(schedule => schedule.day_of_week === checkDay);
+    
+    console.log('Found schedules for today:', todaySchedules?.map(s => ({
+      id: s.id,
+      day_of_week: s.day_of_week,
+      start_time: s.start_time,
+      end_time: s.end_time,
+      course_name: s.course?.name
+    })));
+
+    // Process schedules to find matching ones
+    const detectedSchedules = todaySchedules?.map(schedule => {
+      const startTime = schedule.start_time || '09:00';
+      const endTime = schedule.end_time || '17:00';
+      
+      // Calculate time variance
+      const checkMinutes = parseInt(checkTimeStr.split(':')[0]) * 60 + parseInt(checkTimeStr.split(':')[1]);
+      const startMinutes = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
+      const endMinutes = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
+      
+      const timeVariance = checkMinutes - startMinutes;
+      // Reduce buffer time from 30 to 15 minutes after class ends
+      const isWithinSchedule = checkMinutes >= (startMinutes - 15) && checkMinutes <= (endMinutes + 15);
+      
+      // Debug each schedule
+      // Calculate confidence score
+      let confidenceScore = 0;
+      if (isWithinSchedule) {
+        if (Math.abs(timeVariance) <= 5) confidenceScore = 100; // Within 5 minutes
+        else if (Math.abs(timeVariance) <= 15) confidenceScore = 90; // Within 15 minutes
+        else confidenceScore = 70;
+      }
+
+      return {
+        schedule_id: schedule.id,
+        course_id: schedule.course_id,
+        course_name: schedule.course?.name || 'Unknown Course',
+        scheduled_start: startTime,
+        scheduled_end: endTime,
+        time_variance_minutes: timeVariance,
+        confidence_score: confidenceScore,
+        is_match: isWithinSchedule,
+        // Add online teaching information
+        location_type: schedule.location_type || 'onsite',
+        online_platform: schedule.online_platform,
+        online_meeting_url: schedule.online_meeting_url,
+        location_notes: schedule.location_notes
+      };
+    }).filter(s => s.is_match) || [];
+
+    return { data: detectedSchedules, error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error, 'Getting teaching schedule detection') };
+  }
+};
+
+/**
+ * Handle special case for time entry
+ */
+const handleSpecialCase = async (timeEntryId, specialCase, caseData = {}, reason = null) => {
+  try {
+    const { data, error } = await supabase
+      .rpc('handle_special_case', {
+        p_time_entry_id: timeEntryId,
+        p_special_case: specialCase,
+        p_case_data: caseData,
+        p_reason: reason
+      });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: handleSupabaseError(error, 'Handling special case') };
+  }
+};
+
+/**
+ * Emergency checkout
+ */
+const emergencyCheckOut = async (timeEntryId, reason) => {
+  try {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user) throw new Error('ไม่ได้เข้าสู่ระบบ');
+
+    // Update time entry with emergency checkout
+    const { data, error } = await supabase
+      .from('time_entries')
+      .update({
+        check_out_time: new Date().toISOString(),
+        is_emergency: true,
+        emergency_reason: reason,
+        emergency_timestamp: new Date().toISOString(),
+        special_case: 'emergency_stop',
+        emergency_checked_out: true
+      })
+      .eq('id', timeEntryId)
+      .eq('user_id', user.user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Handle special case
+    await handleSpecialCase(timeEntryId, 'emergency_stop', { reason }, reason);
+
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error, 'Emergency checkout') };
+  }
+};
+
+/**
+ * Get live teaching overview
+ */
+const getLiveTeachingOverview = async (company = 'login') => {
+  try {
+    const { data, error } = await supabase
+      .from('live_teaching_overview')
+      .select('*')
+      .eq('company', company)
+      .eq('is_currently_teaching', true)
+      .order('check_in_time', { ascending: false });
+
+    if (error) throw error;
+    return { data: data || [], error: null };
+  } catch (error) {
+    return { data: [], error: handleSupabaseError(error, 'Getting live teaching overview') };
+  }
+};
+
+/**
+ * Resume a paused teaching session
+ */
+const resumeTeachingSession = async (timeEntryId) => {
+  try {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .update({
+        session_paused: false,
+        last_status_change: new Date().toISOString(),
+        status_change_reason: 'Session resumed'
+      })
+      .eq('id', timeEntryId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, data, error: null };
+  } catch (error) {
+    return { success: false, data: null, error: handleSupabaseError(error, 'Resuming teaching session') };
+  }
+};
+
+/**
+ * Pause a teaching session
+ */
+const pauseTeachingSession = async (timeEntryId, reason = 'break') => {
+  try {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .update({
+        session_paused: true,
+        last_status_change: new Date().toISOString(),
+        status_change_reason: `Session paused: ${reason}`
+      })
+      .eq('id', timeEntryId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, data, error: null };
+  } catch (error) {
+    return { success: false, data: null, error: handleSupabaseError(error, 'Pausing teaching session') };
+  }
+};
+
+/**
+ * Update schedule live data
+ */
+const updateScheduleLiveData = async (scheduleId, liveData) => {
+  try {
+    const { data, error } = await supabase
+      .from('weekly_schedules')
+      .update({
+        live_data: liveData,
+        last_updated: new Date().toISOString()
+      })
+      .eq('id', scheduleId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, data, error: null };
+  } catch (error) {
+    return { success: false, data: null, error: handleSupabaseError(error, 'Updating schedule live data') };
   }
 };
 
@@ -1349,178 +1651,15 @@ export default {
   rejectLeaveRequest,
   updateLeaveRequest,
   deleteLeaveRequest,
-  getTeamAttendanceStatus
-};
-
-// ==========================================
-// ENHANCED TEACHING INTEGRATION FUNCTIONS
-// ==========================================
-
-/**
- * Get teaching schedule detection for user
- */
-export const getTeachingScheduleDetection = async (userId, checkInTime = new Date()) => {
-  try {
-    const { data, error } = await supabase
-      .rpc('smart_schedule_detection', {
-        p_instructor_id: userId,
-        p_check_in_time: checkInTime.toISOString()
-      });
-
-    if (error) {
-      console.error('Teaching detection error:', error);
-      return { data: null, error: error.message };
-    }
-
-    return { data: data || [], error: null };
-  } catch (error) {
-    return { data: null, error: handleSupabaseError(error, 'Getting teaching schedule detection') };
-  }
-};
-
-/**
- * Handle special case for time entry
- */
-export const handleSpecialCase = async (timeEntryId, specialCase, caseData = {}, reason = null) => {
-  try {
-    const { data, error } = await supabase
-      .rpc('handle_special_case', {
-        p_time_entry_id: timeEntryId,
-        p_special_case: specialCase,
-        p_case_data: caseData,
-        p_reason: reason
-      });
-
-    if (error) {
-      console.error('Special case handling error:', error);
-      return { success: false, error: error.message };
-    }
-
-    return { success: true, data };
-  } catch (error) {
-    return { success: false, error: handleSupabaseError(error, 'Handling special case') };
-  }
-};
-
-/**
- * Emergency checkout
- */
-export const emergencyCheckOut = async (timeEntryId, reason) => {
-  try {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user) throw new Error('ไม่ได้เข้าสู่ระบบ');
-
-    // Update time entry with emergency checkout
-    const { data, error } = await supabase
-      .from('time_entries')
-      .update({
-        check_out_time: new Date().toISOString(),
-        is_emergency: true,
-        emergency_reason: reason,
-        emergency_timestamp: new Date().toISOString(),
-        special_case: 'emergency_stop',
-        emergency_checked_out: true,
-        status: 'requires_approval'
-      })
-      .eq('id', timeEntryId)
-      .eq('user_id', user.user.id)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // Handle special case
-    await handleSpecialCase(timeEntryId, 'emergency_stop', { reason }, reason);
-
-    return { data, error: null };
-  } catch (error) {
-    return { data: null, error: handleSupabaseError(error, 'Emergency checkout') };
-  }
-};
-
-/**
- * Get live teaching overview
- */
-export const getLiveTeachingOverview = async (company = 'login') => {
-  try {
-    const { data, error } = await supabase
-      .from('live_teaching_overview')
-      .select('*')
-      .eq('company', company)
-      .eq('is_currently_teaching', true)
-      .order('check_in_time', { ascending: false });
-
-    if (error) throw error;
-    return { data: data || [], error: null };
-  } catch (error) {
-    return { data: [], error: handleSupabaseError(error, 'Getting live teaching overview') };
-  }
-};
-
-/**
- * Resume a paused teaching session
- */
-export const resumeTeachingSession = async (timeEntryId) => {
-  try {
-    const { data, error } = await supabase
-      .from('time_entries')
-      .update({
-        session_paused: false,
-        last_status_change: new Date().toISOString(),
-        status_change_reason: 'Session resumed'
-      })
-      .eq('id', timeEntryId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return { success: true, data, error: null };
-  } catch (error) {
-    return { success: false, data: null, error: handleSupabaseError(error, 'Resuming teaching session') };
-  }
-};
-
-/**
- * Pause a teaching session
- */
-export const pauseTeachingSession = async (timeEntryId, reason = 'break') => {
-  try {
-    const { data, error } = await supabase
-      .from('time_entries')
-      .update({
-        session_paused: true,
-        last_status_change: new Date().toISOString(),
-        status_change_reason: `Session paused: ${reason}`
-      })
-      .eq('id', timeEntryId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return { success: true, data, error: null };
-  } catch (error) {
-    return { success: false, data: null, error: handleSupabaseError(error, 'Pausing teaching session') };
-  }
-};
-
-/**
- * Update schedule live data
- */
-export const updateScheduleLiveData = async (scheduleId, liveData) => {
-  try {
-    const { data, error } = await supabase
-      .from('weekly_schedules')
-      .update({
-        live_data: liveData,
-        last_updated: new Date().toISOString()
-      })
-      .eq('id', scheduleId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return { success: true, data, error: null };
-  } catch (error) {
-    return { success: false, data: null, error: handleSupabaseError(error, 'Updating schedule live data') };
-  }
+  getTeamAttendanceStatus,
+  
+  // Teaching integration functions
+  getTeachingScheduleDetection,
+  resumeTeachingSession,
+  pauseTeachingSession,
+  updateScheduleLiveData,
+  
+  // Special case functions
+  handleSpecialCase,
+  emergencyCheckOut
 };

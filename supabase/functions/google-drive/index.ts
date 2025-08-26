@@ -4,10 +4,13 @@ import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.2/mod.ts"
 
 console.log("🚀 Google Drive COMPLETE FIX + SIMPLE UPLOAD - Starting...")
 
+// 🔒 SECURE CORS Headers - Support both development and production
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': '*', // Allow all origins for now, will be restricted later
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
+  'Access-Control-Allow-Credentials': 'true',
+  'Access-Control-Max-Age': '86400', // 24 hours
 }
 
 // Service Account Credentials
@@ -68,7 +71,7 @@ const getAccessToken = async () => {
     
     const payload = {
       iss: credentials.client_email,
-      scope: 'https://www.googleapis.com/auth/drive',
+      scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file',
       aud: 'https://oauth2.googleapis.com/token',
       iat: now,
       exp: now + 3600, // 1 hour
@@ -136,9 +139,11 @@ const callGoogleDriveAPI = async (endpoint: string, method = 'GET', body?: any, 
   if (options?.supportsAllDrives) {
     url.searchParams.set('supportsAllDrives', 'true')
     url.searchParams.set('supportsTeamDrives', 'true')
+    url.searchParams.set('includeItemsFromAllDrives', 'true')
   }
   
-  if (options?.driveId && (method === 'POST' || method === 'PUT')) {
+  // Include driveId for ALL operations when working with Shared Drives
+  if (options?.driveId) {
     url.searchParams.set('driveId', options.driveId)
   }
 
@@ -155,6 +160,9 @@ const callGoogleDriveAPI = async (endpoint: string, method = 'GET', body?: any, 
 
   if (!response.ok) {
     const errorText = await response.text()
+    console.error(`❌ Google Drive API Error: ${response.status} - ${errorText}`)
+    console.error(`❌ Request URL: ${url.toString()}`)
+    console.error(`❌ Request Method: ${method}`)
     throw new Error(`Google Drive API error: ${response.status} - ${errorText}`)
   }
 
@@ -176,16 +184,37 @@ serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  // 🔒 SECURITY: Validate request origin
+  const origin = req.headers.get('origin');
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'https://login-learning.vercel.app',
+    'https://login-learning.netlify.app',
+    'https://login-learning-jcndsoy98-techity-3442s-projects.vercel.app',
+    'https://login-learning-platform.vercel.app'
+  ];
+  
+  if (origin && !allowedOrigins.includes(origin)) {
+    return new Response(
+      JSON.stringify({ error: 'Origin not allowed' }),
+      { 
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+
   try {
     const url = new URL(req.url)
     
-    // Health check
+    // Health check (no auth required)
     if (url.pathname.includes('/health') || url.pathname === '/') {
       return new Response(
         JSON.stringify({ 
           status: 'healthy', 
           timestamp: new Date().toISOString(),
-          version: 'WORKING-FOLDER-ID-FIX-5.1.0'
+          version: 'SHARED-DRIVE-FIX-v7.0.0',
+          endpoints: ['/health', '/create-course-structure', '/create-topic-folder', '/delete-project-folder', '/simple-upload', '/delete-file', '/list', '/initiate-chunked-upload', '/upload-chunk', '/validate-service-account']
         }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -193,26 +222,183 @@ serve(async (req: Request) => {
       )
     }
 
-    // Create project structure - HARDCODE version (prevents duplicate folders)
+    // Service account validation endpoint
+    if (url.pathname.includes('/validate-service-account') && req.method === 'GET') {
+      try {
+        console.log('🔍 Validating service account configuration...')
+        
+        const credentials = getServiceAccountCredentials()
+        const sharedDriveId = Deno.env.get('GOOGLE_DRIVE_FOLDER_ID')
+        
+        // Test token generation
+        const accessToken = await getAccessToken()
+        
+        // Test basic Drive API access
+        const aboutResponse = await fetch('https://www.googleapis.com/drive/v3/about?fields=user,storageQuota', {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        })
+        
+        const aboutData = await aboutResponse.json()
+        
+        // Test Shared Drive access if configured
+        let sharedDriveTest = null
+        if (sharedDriveId) {
+          try {
+            const driveResponse = await fetch(`https://www.googleapis.com/drive/v3/drives/${sharedDriveId}?fields=id,name,capabilities`, {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`
+              }
+            })
+            
+            if (driveResponse.ok) {
+              sharedDriveTest = {
+                success: true,
+                data: await driveResponse.json()
+              }
+            } else {
+              sharedDriveTest = {
+                success: false,
+                error: `${driveResponse.status} - ${await driveResponse.text()}`
+              }
+            }
+          } catch (driveError) {
+            sharedDriveTest = {
+              success: false,
+              error: driveError.message
+            }
+          }
+        }
+        
+        return new Response(
+          JSON.stringify({
+            success: true,
+            serviceAccount: {
+              email: credentials.client_email,
+              projectId: credentials.project_id,
+              hasPrivateKey: !!credentials.private_key,
+              tokenGenerated: !!accessToken
+            },
+            driveApi: {
+              accessible: aboutResponse.ok,
+              user: aboutData.user,
+              quota: aboutData.storageQuota
+            },
+            sharedDrive: {
+              configured: !!sharedDriveId,
+              driveId: sharedDriveId,
+              test: sharedDriveTest
+            },
+            timestamp: new Date().toISOString()
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      } catch (error) {
+        console.error('❌ Service account validation error:', error)
+        
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: error.message,
+            timestamp: new Date().toISOString()
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+    }
+
+    // 🔒 SECURITY: Validate authentication for all other endpoints
+    const authHeader = req.headers.get('authorization');
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // 🔒 Validate JWT token format (basic check)
+    const token = authHeader.substring(7);
+    const tokenParts = token.split('.');
+    if (tokenParts.length !== 3) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication token' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Create project structure - MULTI-COMPANY version (prevents duplicate folders)
     if (url.pathname.includes('/create-course-structure') && req.method === 'POST') {
       console.log('📁 Creating structure with HARDCODED folders from Shared Drive')
 
-      // ✅ โฟลเดอร์ที่อยู่ใน Shared Drive จริงๆ (0AAMvBF62LaLyUk9PVA)
-      // Fixed: Use working โปรเจค folder ID for all uploads
-      const response = {
-        success: true,
-        courseFolderId: '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF', // Use working โปรเจค folder ID
-        folderIds: {
-          main: '1xjUv7ruPHwiLhZJ42IeyfcKBkYP8CX4S',      // [LOGIN]
-          courses: '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF',    // Use working โปรเจค folder ID
-          projects: '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF',   // Working โปรเจค folder ID
+      const requestBody = await req.json()
+      const companySlug = requestBody.companySlug || 'login'
+      
+      console.log('🏢 Company requested:', companySlug)
+
+      // ✅ Multi-company folder configurations
+      const COMPANY_FOLDERS = {
+        'login': {
+          name: 'LOGIN',
+          root: '1xjUv7ruPHwiLhZJ42IeyfcKBkYP8CX4S',
+          courses: '18BmNBBwDSUMLUdq4ODhxLWPD8w0Lh189',
+          projects: '1QZ8yXGm5K6tF9rJ3N4P2vE8sL7wC5qR9'
         },
-        courseFolderName: '[LOGIN]',
-        isExisting: true,
-        version: 'WORKING-FOLDER-ID-FIX-AUG-2025'
+        'meta': {
+          name: 'Meta',
+          root: '1IyP3gtT6K5JRTPOEW1gIVYMHv1mQXVMG',
+          courses: '1CI-73CLESxWCVPevYaDeSKGikLy2Tccg',
+          projects: '1qzwC1e7XdPFxd09UXTmU5LVgzqEJR4d7'
+        },
+        'med': {
+          name: 'Med',
+          root: '1rZ5BNCoGsGaA7ZCzf_bEgPIEgAANp-O4',
+          courses: '1yfN_Kw80H5xuF1IVZPZYuszyDZc7q0vZ',
+          projects: '1BvltHmzfvm_f5uDk_8f2Vn1oC_dfuINK'
+        },
+        'edtech': {
+          name: 'EdTech',
+          root: '163LK-tcU26Ea3JYmWrzqadkH0-8p3iiW',
+          courses: '1cItGoQdXOyTflUnzZBLiLUiC8BMZ8G0C',
+          projects: '1PbAKZBMtJmBxFDZ8rOeRuqfp-MUe6_q5'
+        },
+        'w2d': {
+          name: 'W2D',
+          root: '1yA0vhAH7TrgCSsPGy3HpM05Wlz07HD8A',
+          courses: '1f5KMjvF-J45vIxy4byI8eRPBXSHzZu1W',
+          projects: '11BJWLVdy1ZLyt9WtY_BvWz3BnKKWDyun'
+        }
       }
 
-      console.log('✅ Returning hardcoded Shared Drive folders:', response)
+      const companyConfig = COMPANY_FOLDERS[companySlug] || COMPANY_FOLDERS['login']
+      
+      const response = {
+        success: true,
+        courseFolderId: companyConfig.courses,
+        folderIds: {
+          main: companyConfig.root,
+          courses: companyConfig.courses,
+          projects: companyConfig.projects,
+        },
+        courseFolderName: companyConfig.name,
+        isExisting: true,
+        company: companySlug,
+        version: 'MULTI-COMPANY-SUPPORT-AUG-2025'
+      }
+
+      console.log(`✅ Returning ${companyConfig.name} company folders:`, response)
 
       return new Response(
         JSON.stringify(response),
@@ -221,6 +407,10 @@ serve(async (req: Request) => {
         }
       )
     }
+
+    // ❌ REMOVED: /create-content-folder endpoint
+    // This endpoint was creating folders with content titles instead of using existing course folders
+    // Content files should go directly to the main course folder, not separate content folders
 
     // Create topic folder - REAL Google Drive API ✅
     if (url.pathname.includes('/create-topic-folder') && req.method === 'POST') {
@@ -239,20 +429,64 @@ serve(async (req: Request) => {
 
       console.log('📁 Creating topic folder:', { parentFolderId, topicName, topicType })
 
-      const icon = topicType === 'project' ? '🔧' : topicType === 'course_content' ? '📚' : '📖'
+      const icon = topicType === 'project' ? '🔧' : 
+                   topicType === 'course_content' ? '📚' : 
+                   topicType === 'company' ? '🏢' :
+                   topicType === 'course_category' ? '📚' :
+                   topicType === 'course' ? '📖' : '📄'
       const folderName = `${icon} ${topicName}`
 
       const sharedDriveId = Deno.env.get('GOOGLE_DRIVE_FOLDER_ID')
       
-      // สร้างโฟลเดอร์ใน parent ที่ถูกต้อง
-      const result = await callGoogleDriveAPI('/files', 'POST', {
-        name: folderName,
-        mimeType: 'application/vnd.google-apps.folder',
-        parents: [parentFolderId],
-      }, { 
-        supportsAllDrives: true, 
-        driveId: sharedDriveId 
-      })
+      let result;
+      
+      try {
+        // Check if folder already exists to prevent duplicates
+        const existingFolders = await callGoogleDriveAPI(
+          `/files?q='${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false&supportsAllDrives=true`,
+          'GET'
+        )
+
+        if (existingFolders.files && existingFolders.files.length > 0) {
+          // Return existing folder ID
+          console.log('✅ Folder already exists:', existingFolders.files[0].id, existingFolders.files[0].name)
+          return new Response(
+            JSON.stringify({
+              success: true,
+              topicFolderId: existingFolders.files[0].id,
+              folderName: existingFolders.files[0].name,
+              isExisting: true
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          )
+        }
+
+        // Create new folder if it doesn't exist
+        result = await callGoogleDriveAPI('/files', 'POST', {
+          name: folderName,
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [parentFolderId],
+        }, { 
+          supportsAllDrives: true, 
+          driveId: sharedDriveId 
+        })
+        
+        console.log('✅ New folder created:', result.id, result.name)
+      } catch (duplicateCheckError) {
+        console.warn('Could not check for duplicates, creating folder anyway:', duplicateCheckError.message)
+        
+        // Fallback: create folder anyway
+        result = await callGoogleDriveAPI('/files', 'POST', {
+          name: folderName,
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [parentFolderId],
+        }, { 
+          supportsAllDrives: true, 
+          driveId: sharedDriveId 
+        })
+      }
 
       console.log('✅ Topic folder created:', result.id)
 
@@ -339,7 +573,235 @@ serve(async (req: Request) => {
       }
     }
 
-    // Simple file upload endpoint - NEW! 📤
+    // Chunked upload initialization endpoint - NEW! 🚀
+    if (url.pathname.includes('/initiate-chunked-upload') && req.method === 'POST') {
+      const body = await req.json()
+      const { fileName, fileSize, folderId, mimeType } = body
+
+      // Validate inputs
+      if (!fileName || typeof fileName !== 'string') {
+        return new Response(
+          JSON.stringify({ error: 'fileName is required and must be a string' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      if (!fileSize || typeof fileSize !== 'number' || fileSize <= 0) {
+        return new Response(
+          JSON.stringify({ error: 'fileSize is required and must be a positive number' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      if (!folderId || typeof folderId !== 'string') {
+        return new Response(
+          JSON.stringify({ error: 'folderId is required and must be a string' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // File size limits (500MB max)
+      const MAX_FILE_SIZE = 500 * 1024 * 1024;
+      if (fileSize > MAX_FILE_SIZE) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'File too large', 
+            maxSize: MAX_FILE_SIZE,
+            providedSize: fileSize 
+          }),
+          { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      console.log('🚀 Initiating chunked upload:', { fileName, fileSize, folderId })
+
+      try {
+        const accessToken = await getAccessToken()
+        
+        // Create resumable upload session
+        const initResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json; charset=UTF-8',
+            'X-Upload-Content-Type': mimeType || 'application/octet-stream',
+            'X-Upload-Content-Length': fileSize.toString()
+          },
+          body: JSON.stringify({
+            name: fileName,
+            parents: [folderId],
+            mimeType: mimeType || 'application/octet-stream'
+          })
+        })
+
+        if (!initResponse.ok) {
+          const errorText = await initResponse.text()
+          throw new Error(`Failed to initiate upload: ${initResponse.status} - ${errorText}`)
+        }
+
+        const uploadUrl = initResponse.headers.get('Location')
+        console.log('✅ Upload session created:', uploadUrl)
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            uploadUrl,
+            chunkSize: 256 * 1024, // 256KB chunks
+            fileName
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      } catch (error) {
+        console.error('❌ Chunked upload init error:', error)
+        
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Failed to initiate chunked upload: ${error.message}`
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+    }
+
+    // Upload chunk endpoint - NEW! 📦
+    if (url.pathname.includes('/upload-chunk') && req.method === 'PUT') {
+      const uploadUrl = url.searchParams.get('uploadUrl')
+      const start = parseInt(url.searchParams.get('start') || '0')
+      const end = parseInt(url.searchParams.get('end') || '0')
+      const totalSize = parseInt(url.searchParams.get('totalSize') || '0')
+
+      // Validate inputs
+      if (!uploadUrl || typeof uploadUrl !== 'string' || !uploadUrl.startsWith('https://')) {
+        return new Response(
+          JSON.stringify({ error: 'Valid uploadUrl is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      if (isNaN(start) || start < 0) {
+        return new Response(
+          JSON.stringify({ error: 'Valid start position is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      if (isNaN(end) || end <= start) {
+        return new Response(
+          JSON.stringify({ error: 'Valid end position is required (must be greater than start)' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      if (isNaN(totalSize) || totalSize <= 0) {
+        return new Response(
+          JSON.stringify({ error: 'Valid totalSize is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const chunkData = await req.arrayBuffer()
+      
+      // Validate chunk size
+      const expectedChunkSize = end - start;
+      if (chunkData.byteLength !== expectedChunkSize) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Chunk size mismatch', 
+            expected: expectedChunkSize,
+            actual: chunkData.byteLength 
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Validate chunk doesn't exceed total size
+      if (end > totalSize) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Chunk end position exceeds total file size',
+            end: end,
+            totalSize: totalSize
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      console.log('📦 Uploading chunk:', { start, end, totalSize, chunkSize: chunkData.byteLength })
+
+      try {
+        const accessToken = await getAccessToken()
+        
+        const chunkResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Range': `bytes ${start}-${end-1}/${totalSize}`,
+            'Content-Length': chunkData.byteLength.toString()
+          },
+          body: chunkData
+        })
+
+        // Check if upload is complete (308 = Resume Incomplete, 200/201 = Complete)
+        if (chunkResponse.status === 308) {
+          // More chunks needed
+          const range = chunkResponse.headers.get('Range') || ''
+          console.log('📦 Chunk uploaded, more needed. Range:', range)
+          
+          return new Response(
+            JSON.stringify({
+              success: true,
+              completed: false,
+              range,
+              nextStart: end
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          )
+        } else if (chunkResponse.status === 200 || chunkResponse.status === 201) {
+          // Upload complete
+          const result = await chunkResponse.json()
+          console.log('✅ Chunked upload completed:', result.id)
+          
+          return new Response(
+            JSON.stringify({
+              success: true,
+              completed: true,
+              fileId: result.id,
+              fileName: result.name,
+              webViewLink: result.webViewLink
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          )
+        } else {
+          const errorText = await chunkResponse.text()
+          throw new Error(`Chunk upload failed: ${chunkResponse.status} - ${errorText}`)
+        }
+      } catch (error) {
+        console.error('❌ Chunk upload error:', error)
+        
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Chunk upload failed: ${error.message}`
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+    }
+
+    // Simple file upload endpoint (for files < 100MB) - 📤
     if (url.pathname.includes('/simple-upload') && req.method === 'POST') {
       const formData = await req.formData()
       const file = formData.get('file') as File
@@ -361,6 +823,23 @@ serve(async (req: Request) => {
           JSON.stringify({ error: 'Folder ID is required' }),
           { 
             status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      // Check file size - redirect to chunked upload for large files
+      const MAX_SIMPLE_UPLOAD_SIZE = 100 * 1024 * 1024 // 100MB
+      if (file.size > MAX_SIMPLE_UPLOAD_SIZE) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'File too large for simple upload',
+            suggestion: 'Use chunked upload for files larger than 100MB',
+            fileSize: file.size,
+            maxSize: MAX_SIMPLE_UPLOAD_SIZE
+          }),
+          { 
+            status: 413,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           }
         )
@@ -495,41 +974,92 @@ serve(async (req: Request) => {
       }
     }
 
-    // List files - basic implementation
+    // List files - FIXED for Shared Drive support
     if (url.pathname.includes('/list') && req.method === 'GET') {
       const folderId = url.searchParams.get('folderId') || 'root'
       const pageSize = parseInt(url.searchParams.get('pageSize') || '50')
       const orderBy = url.searchParams.get('orderBy') || 'modifiedTime desc'
       const isSharedDrive = url.searchParams.get('isSharedDrive') === 'true'
+      
+      console.log('📋 List files request:', { folderId, pageSize, orderBy, isSharedDrive })
+
+      // Build query parameters for Shared Drive
+      let query = `'${folderId}' in parents and trashed=false`
+      let driveId = null
+      let corpora = 'user'
+
+      if (isSharedDrive) {
+        driveId = Deno.env.get('GOOGLE_DRIVE_FOLDER_ID')
+        if (!driveId) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Shared Drive ID not configured in environment variables' 
+            }),
+            { 
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          )
+        }
+        corpora = 'drive'
+        console.log('🚗 Using Shared Drive:', driveId)
+      }
 
       const params = new URLSearchParams({
-        q: `'${folderId}' in parents and trashed=false`,
+        q: query,
         pageSize: pageSize.toString(),
         orderBy,
-        fields: 'files(id,name,mimeType,size,createdTime,modifiedTime,webViewLink,parents,iconLink)',
+        fields: 'files(id,name,mimeType,size,createdTime,modifiedTime,webViewLink,parents,iconLink,thumbnailLink)',
+        corpora,
         supportsAllDrives: 'true',
         includeItemsFromAllDrives: 'true',
       })
 
-      if (isSharedDrive) {
-        params.set('corpora', 'drive')
-        params.set('driveId', Deno.env.get('GOOGLE_DRIVE_FOLDER_ID') || '')
-      } else {
-        params.set('corpora', 'user')
+      if (driveId) {
+        params.set('driveId', driveId)
       }
 
-      const result = await callGoogleDriveAPI(`/files?${params}`)
-      
-      return new Response(
-        JSON.stringify({
-          success: true,
-          files: result.files || [],
-          total: result.files?.length || 0
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+      console.log('🔍 Query parameters:', params.toString())
+
+      try {
+        const result = await callGoogleDriveAPI(`/files?${params}`, 'GET', undefined, {
+          supportsAllDrives: true,
+          driveId: driveId || undefined
+        })
+        
+        console.log('✅ Files retrieved:', result.files?.length || 0)
+        
+        return new Response(
+          JSON.stringify({
+            success: true,
+            files: result.files || [],
+            total: result.files?.length || 0,
+            driveId: driveId,
+            folderId: folderId,
+            isSharedDrive: isSharedDrive
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      } catch (error) {
+        console.error('❌ List files error:', error.message)
+        
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Failed to list files: ${error.message}`,
+            folderId,
+            isSharedDrive,
+            driveId
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
     }
 
     // Default 404 response
@@ -538,7 +1068,7 @@ serve(async (req: Request) => {
         error: 'Endpoint not found', 
         path: url.pathname, 
         method: req.method,
-        availableEndpoints: ['/health', '/create-course-structure', '/create-topic-folder', '/delete-project-folder', '/simple-upload', '/delete-file', '/list']
+        availableEndpoints: ['/health', '/create-course-structure', '/create-topic-folder', '/delete-project-folder', '/simple-upload', '/delete-file', '/list', '/initiate-chunked-upload', '/upload-chunk']
       }),
       { 
         status: 404,
@@ -567,8 +1097,9 @@ serve(async (req: Request) => {
 =====================================================================================
 ✅ โฟลเดอร์ที่ใช้ (ใน Shared Drive 0AAMvBF62LaLyUk9PVA):
 - [LOGIN]: 1xjUv7ruPHwiLhZJ42IeyfcKBkYP8CX4S
-- โปรเจค (Working): 148MPiUE7WLAvluF1o2VuPA2VlplzJMJF  
-- All uploads go to working โปรเจค folder
+- 📖 คอร์สเรียน (Courses): 18BmNBBwDSUMLUdq4ODhxLWPD8w0Lh189
+- 🎯 โปรเจค (Projects): 1vTWe8xU0fhqjcCQJQDzjM7PnHEU0oZya  
+- ✅ FIXED: Now uses correct folders for courses vs projects
 
 🔧 Features:
 - create-course-structure: Returns hardcoded correct folder IDs (no new folders created)
