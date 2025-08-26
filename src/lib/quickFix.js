@@ -12,11 +12,8 @@ export const diagnoseStudentLoadingIssues = async () => {
     recommendations: [],
   };
 
-  console.log("🔍 Diagnosing Student Loading Issues...");
-
   try {
     // Test 1: Supabase Connection
-    console.log("Testing Supabase connection...");
     const startTime = Date.now();
 
     try {
@@ -49,7 +46,6 @@ export const diagnoseStudentLoadingIssues = async () => {
     }
 
     // Test 2: Featured Courses Query
-    console.log("Testing featured courses query...");
     const coursesStartTime = Date.now();
 
     try {
@@ -91,7 +87,6 @@ export const diagnoseStudentLoadingIssues = async () => {
     }
 
     // Test 3: Featured Projects Query
-    console.log("Testing featured projects query...");
     const projectsStartTime = Date.now();
 
     try {
@@ -132,8 +127,6 @@ export const diagnoseStudentLoadingIssues = async () => {
     }
 
     // Test 4: RLS Policies
-    console.log("Testing RLS policies...");
-
     try {
       const {
         data: { user },
@@ -191,7 +184,6 @@ export const diagnoseStudentLoadingIssues = async () => {
     );
   }
 
-  console.log("🎯 Diagnosis Complete:", results);
   return results;
 };
 
@@ -199,8 +191,6 @@ export const diagnoseStudentLoadingIssues = async () => {
  * เรียกข้อมูลแบบเร่งด่วนด้วย fallback data
  */
 export const getEmergencyData = () => {
-  console.log("🚑 Loading emergency fallback data...");
-
   return {
     courses: [
       {

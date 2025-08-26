@@ -8,6 +8,7 @@ import { Input } from '../components/ui/input';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from "../hooks/use-toast.jsx"
 import { signupSchema } from '../lib/validationSchemas';
+import GoogleLoginButton from '../components/GoogleLoginButton';
 
 const SignupPage = () => {
   const [email, setEmail] = useState('');
@@ -17,7 +18,7 @@ const SignupPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
-  const { signUpWithPassword, isSupabaseConnected } = useAuth();
+  const { signUpWithPassword, signInWithGoogle, isSupabaseConnected, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -64,7 +65,6 @@ const SignupPage = () => {
     }
   };
 
-
   const pageVariants = {
     initial: { opacity: 0, y: 20 },
     in: { opacity: 1, y: 0 },
@@ -75,6 +75,38 @@ const SignupPage = () => {
     type: "tween",
     ease: "anticipate",
     duration: 0.5,
+  };
+
+  const handleGoogleSignup = async () => {
+    if (!isSupabaseConnected) {
+      toast({
+        title: "ไม่สามารถเชื่อมต่อได้",
+        description: "Supabase ยังไม่ได้เชื่อมต่อ กรุณาติดต่อผู้ดูแลระบบ",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setError("");
+      const { error } = await signInWithGoogle();
+      
+      if (error) {
+        setError(error.message);
+        toast({
+          title: "ไม่สามารถสมัครสมาชิกได้",
+          description: "เกิดข้อผิดพลาดขณะสมัครสมาชิกด้วย Google",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      setError("เกิดข้อผิดพลาดขณะสมัครสมาชิก");
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "กรุณาลองใหม่อีกครั้ง",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -230,12 +262,42 @@ const SignupPage = () => {
               {loading ? 'กำลังสร้างบัญชี...' : 'สร้างบัญชี'}
             </Button>
           </motion.div>
+
+          {/* Divider */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.8 }}
+            className="relative"
+          >
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-50 text-gray-500">หรือ</span>
+            </div>
+          </motion.div>
+
+          {/* Google Signup Button */}
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.9 }}
+          >
+            <GoogleLoginButton
+              onClick={handleGoogleSignup}
+              loading={authLoading}
+              disabled={!isSupabaseConnected}
+            >
+              สมัครสมาชิกด้วย Google
+            </GoogleLoginButton>
+          </motion.div>
         </form>
         {!isSupabaseConnected && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.9 }}
+            transition={{ delay: 1.0 }}
             className="mt-4 text-center text-yellow-400 text-sm p-3 bg-yellow-500/10 rounded-md"
           >
             ⚠️ Supabase ยังไม่ได้เชื่อมต่อ! กรุณาเชื่อมต่อ Supabase ในหน้าตั้งค่าเพื่อเปิดใช้งานระบบสมัครสมาชิก

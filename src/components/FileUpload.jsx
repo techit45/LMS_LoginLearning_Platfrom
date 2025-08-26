@@ -125,7 +125,6 @@ const FileUpload = ({
         });
       }
     } catch (error) {
-      console.error('Upload error:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถอัปโหลดไฟล์ได้",

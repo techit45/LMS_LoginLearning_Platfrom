@@ -15,12 +15,15 @@ import {
   Github,
   Calendar,
   Layers,
+  Building2,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { useToast } from "../hooks/use-toast.jsx"
 import { createProject } from "../lib/projectService";
 import { uploadProjectImage } from "../lib/projectImageService";
+import { getCompanyFolder } from "../lib/courseFolderService";
+import { supabase } from '../lib/supabaseClient';
 
 const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
   const { toast } = useToast();
@@ -46,6 +49,7 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
     github_url: "",
     thumbnail_url: "",
     is_featured: false,
+    company: "login", // Add company field
   });
 
   const [errors, setErrors] = useState({});
@@ -99,7 +103,11 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
     }
 
     if (!formData.category) {
-      newErrors.category = "กรุณาเลือกหมวดหมู่";
+      newErrors.category = "กรุณาเลือกระดับชั้น";
+    }
+    
+    if (!formData.company) {
+      newErrors.company = "กรุณาเลือกบริษัท";
     }
 
     // Validate URLs only if they are provided
@@ -170,17 +178,92 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
         setUploadingImage(false);
       }
 
-      console.log("Form data being sent to database:", finalFormData);
       const { data, error } = await createProject(finalFormData);
 
       if (error) {
         throw error;
       }
 
-      toast({
-        title: "สร้างโครงงานสำเร็จ! 🎉",
-        description: `โครงงาน "${formData.title}" ถูกสร้างเรียบร้อยแล้ว`,
-      });
+      console.log('✅ Project created successfully:', data.title);
+
+      // Create Google Drive folder for the project
+      let folderCreated = false;
+      let folderError = null;
+      
+      try {
+        console.log('🗂️ Creating Google Drive folder for project:', data.title);
+        
+        // Get company folder configuration - FIXED: Make it async
+        const companyConfig = await getCompanyFolder(finalFormData.company || 'login');
+        const projectsFolderId = companyConfig?.projects;
+        
+        if (projectsFolderId) {
+          // 🔒 SECURE: Get dynamic session token
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError || !session?.access_token) {
+            throw new Error('Authentication required for project folder creation');
+          }
+
+          // Create project folder using the same API as courses
+          const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+          
+          const response = await fetch(`${API_BASE}/create-topic-folder`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`, // 🔒 Dynamic token
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              parentFolderId: projectsFolderId,
+              topicName: data.title,
+              topicType: 'project'
+            }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Project folder created successfully:', result.folderName);
+            
+            // Update project with folder ID using imported supabase
+            await supabase
+              .from('projects')
+              .update({ google_drive_folder_id: result.topicFolderId })
+              .eq('id', data.id);
+            
+            folderCreated = true;
+          } else {
+            const errorText = await response.text();
+            throw new Error(`Failed to create project folder: ${errorText}`);
+          }
+        } else {
+          throw new Error(`No projects folder configured for company: ${finalFormData.company}`);
+        }
+      } catch (error) {
+        console.error('❌ Error creating project folder:', error.message);
+        folderError = error.message;
+      }
+
+      // Show appropriate success message based on folder creation status
+      if (folderCreated) {
+        console.log('✅ Project and folder created successfully');
+        toast({
+          title: "สร้างโครงงานและโฟลเดอร์สำเร็จ! 🎉",
+          description: `โครงงาน "${formData.title}" พร้อมโฟลเดอร์ Google Drive แล้ว`
+        });
+      } else if (folderError) {
+        console.warn('⚠️ Project created but folder creation failed:', folderError);
+        toast({
+          title: "โครงงานสร้างสำเร็จ แต่มีปัญหาโฟลเดอร์",
+          description: `โครงงาน "${formData.title}" ถูกสร้างแล้ว แต่ไม่สามารถสร้างโฟลเดอร์ Google Drive ได้: ${folderError}`,
+          variant: "warning"
+        });
+      } else {
+        console.log('✅ Project created successfully');
+        toast({
+          title: "สร้างโครงงานสำเร็จ! 🎉",
+          description: `โครงงาน "${formData.title}" ถูกสร้างเรียบร้อยแล้ว`
+        });
+      }
 
       // Reset form
       setFormData({
@@ -194,6 +277,7 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
         github_url: "",
         thumbnail_url: "",
         is_featured: false,
+        company: "login", // Reset company field
       });
       setProjectImage(null);
       setImagePreview(null);
@@ -202,7 +286,6 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
       onSuccess && onSuccess(data);
       onClose();
     } catch (error) {
-      console.error("Error creating project:", error);
       toast({
         title: "ไม่สามารถสร้างโครงงานได้",
         description: error.message,
@@ -260,14 +343,7 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const categories = [
-    "Web Development",
-    "Mobile App",
-    "Desktop App",
-    "IoT/Hardware",
-    "AI/Machine Learning",
-    "Data Science",
-    "Game Development",
-    "Other",
+    "มัธยม 1", "มัธยม 2", "มัธยม 3", "มัธยม 4", "มัธยม 5", "มัธยม 6", "Workshop"
   ];
 
   const difficultyOptions = [
@@ -440,14 +516,42 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
                 )}
               </div>
 
-              {/* Category and Difficulty */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Company, Category and Difficulty */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Company Selection */}
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+                  <label className="block text-gray-800 font-semibold mb-3 flex items-center">
+                    <div className="bg-blue-500 p-2 rounded-lg mr-3">
+                      <Building2 className="w-4 h-4 text-white" />
+                    </div>
+                    บริษัท *
+                  </label>
+                  <select
+                    name="company"
+                    value={formData.company || ""}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 h-12 shadow-sm"
+                  >
+                    <option value="login">Login</option>
+                    <option value="meta">Meta</option>
+                    <option value="med">Med</option>
+                    <option value="edtech">EdTech</option>
+                    <option value="w2d">W2D</option>
+                  </select>
+                  {errors.company && (
+                    <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
+                      <AlertCircle className="w-4 h-4 mr-2" />
+                      {errors.company}
+                    </p>
+                  )}
+                </div>
+
                 <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-6 rounded-xl border border-orange-200">
                   <label className="block text-gray-800 font-semibold mb-3 flex items-center">
                     <div className="bg-orange-500 p-2 rounded-lg mr-3">
                       <Tag className="w-4 h-4 text-white" />
                     </div>
-                    หมวดหมู่ *
+                    ระดับชั้น *
                   </label>
                   <select
                     name="category"
@@ -455,7 +559,7 @@ const CreateProjectForm = ({ isOpen, onClose, onSuccess }) => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 h-12 shadow-sm"
                   >
-                    <option value="">เลือกหมวดหมู่</option>
+                    <option value="">เลือกระดับชั้น</option>
                     {categories.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}

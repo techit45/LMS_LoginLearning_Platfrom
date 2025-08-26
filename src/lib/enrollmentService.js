@@ -11,34 +11,25 @@ import NotificationIntegrations from './notificationIntegrations';
  */
 export const enrollInCourse = async (courseId) => {
   try {
-    console.log('enrollmentService: Starting enrollment for courseId:', courseId);
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      console.error('enrollmentService: User authentication error:', userError);
       throw new Error('User not authenticated');
     }
 
-    console.log('enrollmentService: User authenticated:', user.id);
-
     // Ensure user profile exists before enrollment
-    console.log('enrollmentService: Ensuring user profile exists...');
     const { data: userProfile, error: profileError, created } = await ensureUserProfile(user);
 
     if (profileError) {
-      console.error('enrollmentService: Error ensuring user profile:', profileError);
       throw new Error('ไม่สามารถตรวจสอบหรือสร้างโปรไฟล์ผู้ใช้ได้ กรุณาลองใหม่');
     }
 
     if (created) {
-      console.log('enrollmentService: New user profile created for enrollment');
-    } else {
-      console.log('enrollmentService: User profile confirmed:', userProfile.user_id);
-    }
+      } else {
+      }
 
     // Check if already enrolled
-    console.log('enrollmentService: Checking for existing enrollment...');
     const { data: existingEnrollment, error: checkError } = await supabase
       .from('enrollments')
       .select('*')
@@ -46,15 +37,11 @@ export const enrollInCourse = async (courseId) => {
       .eq('course_id', courseId)
       .maybeSingle();
 
-    console.log('enrollmentService: Existing enrollment check:', { existingEnrollment, checkError });
-
     if (checkError) {
-      console.error('enrollmentService: Error checking existing enrollment:', checkError);
       throw checkError;
     }
 
     if (existingEnrollment) {
-      console.log('enrollmentService: User already enrolled');
       return { 
         data: null, 
         error: { message: 'คุณได้ลงทะเบียนคอร์สนี้แล้ว' }
@@ -62,15 +49,12 @@ export const enrollInCourse = async (courseId) => {
     }
 
     // Create enrollment
-    console.log('enrollmentService: Creating new enrollment...');
     const enrollmentData = {
       user_id: user.id,
       course_id: courseId,
       is_active: true,
       progress_percentage: 0
     };
-    console.log('enrollmentService: Enrollment data:', enrollmentData);
-
     const { data, error } = await supabase
       .from('enrollments')
       .insert([enrollmentData])
@@ -83,15 +67,10 @@ export const enrollInCourse = async (courseId) => {
       `)
       .single();
 
-    console.log('enrollmentService: Enrollment creation result:', { data, error });
-
     if (error) {
-      console.error('enrollmentService: Enrollment creation failed:', error);
       throw error;
     }
 
-    console.log('enrollmentService: Enrollment created successfully:', data);
-    
     // Send enrollment notification
     try {
       if (data && data.courses) {
@@ -100,16 +79,13 @@ export const enrollInCourse = async (courseId) => {
           title: data.courses.title,
           instructor_id: data.courses.user_profiles?.id || null
         });
-        console.log('enrollmentService: Enrollment notification sent');
-      }
+        }
     } catch (notificationError) {
-      console.error('enrollmentService: Error sending enrollment notification:', notificationError);
       // Don't fail the enrollment if notification fails
     }
     
     return { data, error: null };
   } catch (error) {
-    console.error('enrollmentService: Error enrolling in course:', error);
     return { data: null, error };
   }
 };
@@ -151,7 +127,6 @@ export const getUserEnrollments = async (userId = null) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching user enrollments:', error);
     return { data: null, error };
   }
 };
@@ -161,15 +136,12 @@ export const getUserEnrollments = async (userId = null) => {
  */
 export const isUserEnrolled = async (courseId) => {
   try {
-    console.log('enrollmentService: Checking enrollment for courseId:', courseId);
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      console.log('enrollmentService: No user found or error:', userError);
       return { isEnrolled: false, error: null };
     }
 
-    console.log('enrollmentService: Checking for user:', user.id);
     const { data, error } = await supabase
       .from('enrollments')
       .select('id, is_active, enrolled_at, progress_percentage, completed_at')
@@ -177,10 +149,7 @@ export const isUserEnrolled = async (courseId) => {
       .eq('course_id', courseId)
       .maybeSingle();
 
-    console.log('enrollmentService: Database query result:', { data, error });
-
     if (error) {
-      console.error('enrollmentService: Database error:', error);
       throw error;
     }
 
@@ -193,10 +162,8 @@ export const isUserEnrolled = async (courseId) => {
       error: null 
     };
     
-    console.log('enrollmentService: Final result:', result);
     return result;
   } catch (error) {
-    console.error('enrollmentService: Error checking enrollment:', error);
     return { isEnrolled: false, error };
   }
 };
@@ -241,16 +208,13 @@ export const updateEnrollmentProgress = async (courseId, progressPercentage) => 
           id: courseId,
           title: data.courses.title
         });
-        console.log('Course completion notification sent');
-      } catch (notificationError) {
-        console.error('Error sending course completion notification:', notificationError);
+        } catch (notificationError) {
         // Don't fail the progress update if notification fails
       }
     }
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating enrollment progress:', error);
     return { data: null, error };
   }
 };
@@ -283,7 +247,6 @@ export const updateEnrollmentStatus = async (courseId, isActive) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating enrollment status:', error);
     return { data: null, error };
   }
 };
@@ -326,7 +289,6 @@ export const getEnrollmentDetails = async (courseId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching enrollment details:', error);
     return { data: null, error };
   }
 };
@@ -356,7 +318,6 @@ export const getAllEnrollments = async () => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching all enrollments:', error);
     return { data: null, error };
   }
 };
@@ -379,7 +340,6 @@ export const getEnrollmentsByCourse = async (courseId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching course enrollments:', error);
     return { data: null, error };
   }
 };
@@ -404,7 +364,6 @@ export const updateUserEnrollment = async (enrollmentId, updateData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating user enrollment:', error);
     return { data: null, error };
   }
 };
@@ -469,7 +428,6 @@ export const getEnrollmentStats = async () => {
       error: null
     };
   } catch (error) {
-    console.error('Error fetching enrollment stats:', error);
     return { data: null, error };
   }
 };

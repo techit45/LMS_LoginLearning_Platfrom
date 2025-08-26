@@ -40,7 +40,6 @@ const companies = [
   { id: 'meta', name: 'Meta', color: '#7c3aed' }, // ม่วง
   { id: 'med', name: 'Med', color: '#10b981' },
   { id: 'edtech', name: 'EdTech', color: '#8b5cf6' },
-  { id: 'innotech', name: 'Innotech', color: '#f97316' },
   { id: 'w2d', name: 'W2D', color: '#ef4444' }
 ]
 
@@ -52,13 +51,6 @@ const DraggableCourse = ({ course, instructor, onEdit, onDelete }) => {
   const [{ isDragging }, drag, dragPreview] = useDrag({
     type: ItemTypes.COURSE,
     item: () => {
-      console.log('🔄 DraggableCourse: Creating drag item:', {
-        courseName: course?.name,
-        courseId: course?.id,
-        instructor: instructor?.full_name,
-        type: ItemTypes.COURSE
-      })
-      
       return { 
         course, 
         instructor,
@@ -70,7 +62,8 @@ const DraggableCourse = ({ course, instructor, onEdit, onDelete }) => {
       console.log('🏁 DraggableCourse: Drag ended:', {
         courseName: course?.name,
         didDrop: monitor.didDrop(),
-        dropResult
+        dropResult,
+        item: item
       })
     },
     collect: (monitor) => ({
@@ -210,11 +203,9 @@ const CourseModal = ({ isOpen, onClose, course, onSave }) => {
         duration_hours: parseInt(formData.get('duration')) || 1
       }
       
-      console.log('🔄 CourseModal: Calling onSave with data:', courseData)
       await onSave(courseData)
       onClose()
     } catch (error) {
-      console.error('❌ CourseModal: Error saving course:', error)
       // Don't close modal if there's an error
     } finally {
       setLoading(false)
@@ -405,12 +396,6 @@ const DraggableInstructor = ({ instructor, onEdit, onRemove }) => {
   const [{ isDragging }, drag, dragPreview] = useDrag({
     type: ItemTypes.INSTRUCTOR,
     item: () => {
-      console.log('🚀 DraggableInstructor: Drag started!', {
-        instructorName: instructor?.full_name,
-        instructorId: instructor?.user_id,
-        type: ItemTypes.INSTRUCTOR
-      })
-      
       return { 
         instructor,
         type: ItemTypes.INSTRUCTOR
@@ -430,8 +415,7 @@ const DraggableInstructor = ({ instructor, onEdit, onRemove }) => {
       }
       
       if (collecting.isDragging) {
-        console.log('🎭 DraggableInstructor: Currently dragging:', instructor?.full_name)
-      }
+        }
       
       return collecting
     }
@@ -524,6 +508,7 @@ const CourseManager = ({ company = 'login' }) => {
 
   // Load courses and instructors
   useEffect(() => {
+    console.log('🚀 CourseManager useEffect triggered, calling loadData...');
     loadData()
   }, [company])
 
@@ -541,22 +526,48 @@ const CourseManager = ({ company = 'login' }) => {
       // The issue is company mismatch: prop='login' vs course.company='Login Learning'
       let filteredCourses = coursesData || []
       
-      // TODO: Later add proper company filtering when we have company_id column
-      // if (company) {
-      //   const companyConfig = companies.find(c => c.id === company)
-      //   const companyName = companyConfig?.name
-      //   
-      //   filteredCourses = coursesData.filter(course => {
-      //     return course.company === companyName
-      //   })
-      // }
+      // TEMPORARY: Disable company filtering to debug UI issue
+      console.log('🔧 DEBUGGING: Showing ALL courses regardless of company filter');
+      // TODO: Re-enable company filtering once UI issue is resolved
+      /*
+      if (company && company !== 'all') {
+        filteredCourses = coursesData.filter(course => {
+          const courseCompany = course.company?.toLowerCase() || '';
+          const filterCompany = company.toLowerCase();
+          
+          // More flexible matching: if company contains filter or vice versa
+          const matches = courseCompany === filterCompany || 
+                         courseCompany.includes(filterCompany) || 
+                         filterCompany.includes(courseCompany);
+          
+          console.log('🔍 Course filtering:', {
+            courseName: course.name,
+            courseCompany: course.company,
+            filterCompany: company,
+            matches
+          });
+          
+          return matches;
+        })
+      }
+      */
         
       console.log('📊 CourseManager loadData:', {
         totalCourses: coursesData?.length || 0,
         filteredCourses: filteredCourses?.length || 0,
         filterCompany: company,
         companyName: companies.find(c => c.id === company)?.name,
-        allCourses: coursesData?.map(c => ({ name: c.name, company: c.company }))
+        allCourses: coursesData?.map(c => ({ name: c.name, company: c.company, company_id: c.company_id }))
+      })
+      
+      // CRITICAL DEBUG: Log the final courses that will be set
+      console.log('🎯 CRITICAL: Final courses being set in UI:', {
+        coursesLength: filteredCourses?.length || 0,
+        courses: filteredCourses?.map(c => ({ 
+          name: c.name, 
+          company: c.company, 
+          id: c.id 
+        })) || []
       })
 
       // Load instructors
@@ -569,11 +580,19 @@ const CourseManager = ({ company = 'login' }) => {
 
       if (instructorsError) throw instructorsError
 
+      console.log('🚀 About to setCourses with data:', {
+        filteredCoursesType: typeof filteredCourses,
+        filteredCoursesLength: filteredCourses?.length || 0,
+        isArray: Array.isArray(filteredCourses),
+        firstCourse: filteredCourses?.[0]
+      });
+      
       setCourses(filteredCourses || [])
+      
+      console.log('✅ setCourses completed, should trigger UI update');
       setInstructors(instructorsData || [])
       
     } catch (error) {
-      console.error('Error loading data:', error)
       toast({
         title: "เกิดข้อผิดพลาด",
         description: error.message || "ไม่สามารถโหลดข้อมูลได้",
@@ -584,12 +603,24 @@ const CourseManager = ({ company = 'login' }) => {
     }
   }
 
+  // Debug: Check courses state before filtering
+  console.log('🔍 Courses state before search filter:', {
+    coursesLength: courses?.length || 0,
+    courses: courses?.map(c => ({ name: c.name, company: c.company })) || [],
+    searchTerm
+  });
+
   // Filter courses based on search
   const filteredCourses = courses.filter(course =>
     course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (course.company && course.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (course.location && course.location.toLowerCase().includes(searchTerm.toLowerCase()))
   )
+  
+  console.log('🎯 Final filteredCourses for UI:', {
+    filteredLength: filteredCourses?.length || 0,
+    filtered: filteredCourses?.map(c => ({ name: c.name, company: c.company })) || []
+  });
 
   // Filter instructors based on search
   const filteredInstructors = instructors.filter(instructor =>
@@ -600,46 +631,34 @@ const CourseManager = ({ company = 'login' }) => {
   // Handle course save
   const handleSaveCourse = async (courseData) => {
     try {
-      console.log('💾 CourseManager: Starting save operation:', courseData)
-      
       if (editingCourse) {
         // Update existing course using service
-        console.log('✏️ Updating course:', editingCourse.id)
         const { data, error } = await updateCourse(editingCourse.id, courseData)
         
         if (error) {
-          console.error('❌ Update course error:', error)
           throw new Error(error)
         }
 
-        console.log('✅ Course updated successfully:', data)
         toast({
           title: "แก้ไขคอร์สสำเร็จ",
           description: `แก้ไข ${courseData.name} แล้ว`
         })
       } else {
         // Create new course using service
-        console.log('➕ Creating new course')
         const { data, error } = await createCourse(courseData)
         
         if (error) {
-          console.error('❌ Create course error:', error)
           throw new Error(error)
         }
 
-        console.log('✅ Course created successfully:', data)
         toast({
           title: "เพิ่มคอร์สสำเร็จ",
           description: `เพิ่ม ${courseData.name} แล้ว`
         })
       }
 
-      console.log('🔄 Reloading course data...')
       await loadData()
-      console.log('✅ Course data reloaded')
-      
-    } catch (error) {
-      console.error('💥 CourseManager: Save error:', error)
+      } catch (error) {
       toast({
         title: "เกิดข้อผิดพลาด",
         description: error.message || "ไม่สามารถบันทึกคอร์สได้",
@@ -665,7 +684,6 @@ const CourseManager = ({ company = 'login' }) => {
 
       await loadData()
     } catch (error) {
-      console.error('Error deleting course:', error)
       toast({
         title: "เกิดข้อผิดพลาด",
         description: error.message || "ไม่สามารถลบคอร์สได้",
@@ -689,7 +707,6 @@ const CourseManager = ({ company = 'login' }) => {
   // Handle instructor management
   const handleEditInstructor = (instructor) => {
     // Could open instructor edit modal
-    console.log('Edit instructor:', instructor)
     toast({
       title: "แก้ไขผู้สอน",
       description: `แก้ไข ${instructor.full_name || instructor.email}`
@@ -715,7 +732,6 @@ const CourseManager = ({ company = 'login' }) => {
 
       await loadData()
     } catch (error) {
-      console.error('Error removing instructor:', error)
       toast({
         title: "เกิดข้อผิดพลาด",
         description: error.message || "ไม่สามารถลบผู้สอนได้",
@@ -791,14 +807,6 @@ const CourseManager = ({ company = 'login' }) => {
                   {filteredCourses.map((course) => {
                     // Find default instructor for this course (could be enhanced)
                     const defaultInstructor = instructors[0] // Simplified - could be course-specific
-                    
-                    console.log('🎨 Rendering course for drag:', {
-                      id: course.id,
-                      name: course.name,
-                      company: course.company,
-                      instructor: defaultInstructor?.full_name,
-                      dragType: ItemTypes.COURSE
-                    })
                     
                     return (
                       <div key={course.id} className="flex-shrink-0" style={{ minWidth: '280px' }}>

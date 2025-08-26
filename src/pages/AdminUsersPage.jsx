@@ -22,12 +22,10 @@ const AdminUsersPage = () => {
     const loadUsers = async () => {
       try {
         setLoading(true);
-        
-        
+
         const { data: userList, error } = await getAllUsersForAdmin();
         
         if (error) {
-          console.error('Database error:', error);
           // Don't show error toast for missing table relationships
           if (error.code !== 'PGRST200') {
             toast({
@@ -40,7 +38,6 @@ const AdminUsersPage = () => {
         
         setUsers(userList || []);
       } catch (error) {
-        console.error('Error loading users:', error);
         // Only show toast for real errors, not database relationship issues
         if (!error.message?.includes('relationship')) {
           toast({
@@ -80,7 +77,6 @@ const AdminUsersPage = () => {
         description: `เปลี่ยนบทบาทผู้ใช้เป็น ${newRole} แล้ว`,
       });
     } catch (error) {
-      console.error('Error updating user role:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: `ไม่สามารถอัพเดทบทบาทได้: ${error.message}`,

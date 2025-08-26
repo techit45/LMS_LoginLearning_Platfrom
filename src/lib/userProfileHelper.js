@@ -16,8 +16,6 @@ export const ensureUserProfile = async (user = null) => {
       currentUser = authUser;
     }
 
-    console.log('ensureUserProfile: Checking profile for user:', currentUser.id);
-
     // ตรวจสอบว่ามี user profile อยู่แล้วหรือไม่
     const { data: existingProfile, error: checkError } = await supabase
       .from('user_profiles')
@@ -26,27 +24,34 @@ export const ensureUserProfile = async (user = null) => {
       .maybeSingle();
 
     if (checkError) {
-      console.error('ensureUserProfile: Error checking profile:', checkError);
       throw checkError;
     }
 
     if (existingProfile) {
-      console.log('ensureUserProfile: Profile exists:', existingProfile);
       return { data: existingProfile, error: null, created: false };
     }
 
     // สร้าง user profile ใหม่
-    console.log('ensureUserProfile: Creating new profile for user:', currentUser.id);
+    // ตรวจสอบว่าเป็น Google OAuth user หรือไม่
+    const isGoogleOAuth = currentUser.app_metadata?.provider === 'google';
     
     const profileData = {
       user_id: currentUser.id,
       full_name: currentUser.user_metadata?.full_name || 
                  currentUser.user_metadata?.name || 
+                 currentUser.user_metadata?.display_name ||
                  currentUser.email?.split('@')[0] || 
                  'ผู้ใช้ใหม่',
       email: currentUser.email,
       role: 'student',
-      is_active: true
+      is_active: true,
+      // เพิ่มข้อมูลจาก Google OAuth หากมี
+      ...(isGoogleOAuth && currentUser.user_metadata?.picture && {
+        profile_picture_url: currentUser.user_metadata.picture
+      }),
+      ...(isGoogleOAuth && currentUser.user_metadata?.locale && {
+        locale: currentUser.user_metadata.locale
+      })
     };
 
     const { data: newProfile, error: createError } = await supabase
@@ -56,15 +61,12 @@ export const ensureUserProfile = async (user = null) => {
       .single();
 
     if (createError) {
-      console.error('ensureUserProfile: Error creating profile:', createError);
       throw createError;
     }
 
-    console.log('ensureUserProfile: Profile created successfully:', newProfile);
     return { data: newProfile, error: null, created: true };
 
   } catch (error) {
-    console.error('ensureUserProfile: Error:', error);
     return { data: null, error, created: false };
   }
 };
@@ -83,13 +85,11 @@ export const getOrCreateUserProfile = async () => {
 
     // ถ้าเพิ่งสร้างโปรไฟล์ใหม่ ให้แจ้งผู้ใช้
     if (created) {
-      console.log('getOrCreateUserProfile: New profile created, user should complete profile');
-    }
+      }
 
     return { data: profile, error: null, isNewProfile: created };
 
   } catch (error) {
-    console.error('getOrCreateUserProfile: Error:', error);
     return { data: null, error, isNewProfile: false };
   }
 };

@@ -33,7 +33,6 @@ export const getCompanyLocations = async (company = null, activeOnly = true) => 
     if (error) throw error;
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error loading company locations:', error);
     return { data: [], error: error.message };
   }
 };
@@ -52,7 +51,6 @@ export const getCompanyLocation = async (locationId) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error loading company location:', error);
     return { data: null, error: error.message };
   }
 };
@@ -77,7 +75,6 @@ export const createCompanyLocation = async (locationData) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error creating company location:', error);
     return { data: null, error: error.message };
   }
 };
@@ -104,7 +101,6 @@ export const updateCompanyLocation = async (locationId, updates) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating company location:', error);
     return { data: null, error: error.message };
   }
 };
@@ -122,7 +118,6 @@ export const deleteCompanyLocation = async (locationId) => {
     if (error) throw error;
     return { error: null };
   } catch (error) {
-    console.error('Error deleting company location:', error);
     return { error: error.message };
   }
 };
@@ -204,7 +199,6 @@ export const registerUserLocation = async (locationId, userGpsData) => {
     };
 
   } catch (error) {
-    console.error('Error registering user location:', error);
     return {
       success: false,
       error: error.message
@@ -250,7 +244,6 @@ export const getUserRegisteredLocations = async (userId = null, startDate = null
     if (error) throw error;
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error loading user registered locations:', error);
     return { data: [], error: error.message };
   }
 };
@@ -290,7 +283,6 @@ export const getLocationRegistrationsForReview = async (company = null, verified
     if (error) throw error;
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error loading location registrations for review:', error);
     return { data: [], error: error.message };
   }
 };
@@ -318,7 +310,6 @@ export const verifyLocationRegistration = async (registrationId, verified = true
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error verifying location registration:', error);
     return { data: null, error: error.message };
   }
 };
@@ -445,7 +436,6 @@ export const verifyUserInAllowedLocation = async (userLocation, company = 'login
     };
 
   } catch (error) {
-    console.error('Error verifying user location:', error);
     return {
       isValid: false,
       error: error.message
@@ -483,7 +473,6 @@ export const getTodayRegisteredLocations = async (userId = null) => {
     const locations = data?.map(item => item.location).filter(Boolean) || [];
     return { data: locations, error: null };
   } catch (error) {
-    console.error('Error loading today registered locations:', error);
     return { data: [], error: error.message };
   }
 };

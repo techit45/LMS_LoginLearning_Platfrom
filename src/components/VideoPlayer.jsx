@@ -13,6 +13,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { supabase } from '../lib/supabaseClient';
 
 // Helper function to detect video type
 const getVideoType = (url) => {
@@ -79,7 +80,14 @@ const VideoPlayer = ({
   const isYouTube = videoInfo.type === 'youtube';
   const isDirect = videoInfo.type === 'direct';
   
-  // Simple video player without progress tracking
+  // Video progress tracking
+  const [progressData, setProgressData] = useState({
+    watchedSeconds: 0,
+    totalSeconds: 0,
+    percentageWatched: 0,
+    isCompleted: false,
+    lastPosition: 0
+  });
   
   // Simple player state
   const [isPlaying, setIsPlaying] = useState(false);
@@ -91,6 +99,101 @@ const VideoPlayer = ({
   const [isLoading, setIsLoading] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [playbackRate, setPlaybackRate] = useState(1);
+
+  // Progress tracking functions
+  const saveVideoProgress = async (currentTime, duration, isCompleted = false) => {
+    if (!contentId) return;
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const watchedSeconds = Math.floor(currentTime);
+      const totalSeconds = Math.floor(duration);
+      const percentageWatched = totalSeconds > 0 ? Math.round((watchedSeconds / totalSeconds) * 100) : 0;
+
+      const progressUpdate = {
+        user_id: user.id,
+        content_id: contentId,
+        watched_seconds: watchedSeconds,
+        total_seconds: totalSeconds,
+        percentage_watched: percentageWatched,
+        last_position: currentTime,
+        is_completed: isCompleted || percentageWatched >= 90,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('video_progress')
+        .upsert(progressUpdate, {
+          onConflict: 'user_id,content_id'
+        });
+
+      if (error) throw error;
+
+      setProgressData(progressUpdate);
+
+      // Call onComplete callback if video is completed
+      if ((isCompleted || percentageWatched >= 90) && onComplete) {
+        onComplete({
+          contentId,
+          watchedSeconds,
+          totalSeconds,
+          percentageWatched
+        });
+      }
+    } catch (error) {
+      console.error('Failed to save video progress:', error);
+    }
+  };
+
+  // Load existing progress
+  const loadVideoProgress = async () => {
+    if (!contentId) return;
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('video_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('content_id', contentId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      if (data) {
+        setProgressData(data);
+        // Resume from last position if user wants
+        if (data.last_position > 0 && videoRef.current && isDirect) {
+          videoRef.current.currentTime = data.last_position;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load video progress:', error);
+    }
+  };
+
+  // Auto-save progress periodically
+  useEffect(() => {
+    if (!isDirect || !videoRef.current) return;
+
+    const interval = setInterval(() => {
+      const video = videoRef.current;
+      if (video && !video.paused && video.duration > 0) {
+        saveVideoProgress(video.currentTime, video.duration);
+      }
+    }, 10000); // Save every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [contentId, isDirect]);
+
+  // Load progress on component mount
+  useEffect(() => {
+    loadVideoProgress();
+  }, [contentId]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -185,7 +288,6 @@ const VideoPlayer = ({
       }
     };
   }, [isPlaying, isDirect]);
-
 
   const togglePlay = () => {
     if (!isDirect) return; // Only work for direct videos
@@ -306,7 +408,6 @@ const VideoPlayer = ({
             allowFullScreen
             sandbox="allow-scripts allow-same-origin"
             onLoad={() => {
-              console.log('🎬 Iframe loaded');
               setIsLoading(false);
             }}
           />

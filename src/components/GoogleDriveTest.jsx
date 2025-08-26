@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, Folder, File, Trash2, Edit, Search, Share, Download } from 'lucide-react';
 import { Button } from './ui/button';
+import { supabase } from '../lib/supabaseClient';
 
 function GoogleDriveTest() {
   const [files, setFiles] = useState([]);
@@ -15,16 +16,22 @@ function GoogleDriveTest() {
   const loadFiles = async (folderId = currentFolder) => {
     setLoading(true);
     try {
+      // 🔒 SECURE: Get dynamic auth token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        console.error('Authentication required for Google Drive test');
+        return;
+      }
+
       const response = await fetch(`https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive/list?folderId=${folderId}`, {
         headers: {
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+          'Authorization': `Bearer ${session.access_token}`, // 🔒 Dynamic token
         },
       });
       const data = await response.json();
       setFiles(data.files || []);
     } catch (error) {
-      console.error('Error loading files:', error);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -48,7 +55,6 @@ function GoogleDriveTest() {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ File uploaded:', result);
         loadFiles(); // Refresh file list
         setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
         
@@ -61,11 +67,9 @@ function GoogleDriveTest() {
           });
         }, 2000);
       } else {
-        console.error('Upload failed');
-      }
+        }
     } catch (error) {
-      console.error('Error uploading file:', error);
-    }
+      }
   };
 
   // 🗂️ Create folder
@@ -87,12 +91,10 @@ function GoogleDriveTest() {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ Folder created:', result);
         loadFiles(); // Refresh file list
       }
     } catch (error) {
-      console.error('Error creating folder:', error);
-    }
+      }
   };
 
   // 🗑️ Delete file
@@ -105,12 +107,10 @@ function GoogleDriveTest() {
       });
 
       if (response.ok) {
-        console.log('✅ File deleted');
         loadFiles(); // Refresh file list
       }
     } catch (error) {
-      console.error('Error deleting file:', error);
-    }
+      }
   };
 
   // ✏️ Rename file
@@ -131,12 +131,10 @@ function GoogleDriveTest() {
       });
 
       if (response.ok) {
-        console.log('✅ File renamed');
         loadFiles(); // Refresh file list
       }
     } catch (error) {
-      console.error('Error renaming file:', error);
-    }
+      }
   };
 
   // 🔍 Search files
@@ -150,8 +148,7 @@ function GoogleDriveTest() {
       const data = await response.json();
       setFiles(data || []);
     } catch (error) {
-      console.error('Error searching files:', error);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };

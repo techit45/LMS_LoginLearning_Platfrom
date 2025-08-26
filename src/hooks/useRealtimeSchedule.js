@@ -31,8 +31,8 @@ export const useRealtimeSchedule = (currentWeek, company) => {
   const subscriptionRef = useRef(null);
   const optimisticUpdatesRef = useRef(new Map());
 
-  // Time slots definition - LIMITED TO 7 SLOTS (0-6) due to database constraint
-  // TODO: Update database constraint to allow full 13 slots (0-12) for 08:00-21:00
+  // Time slots definition - Full 13 slots (0-12) for 08:00-21:00 
+  // Database constraints have been updated to support this range
   const TIME_SLOTS = [
     { index: 0, label: '08:00-09:00', start: '08:00', end: '09:00' },
     { index: 1, label: '09:00-10:00', start: '09:00', end: '10:00' },
@@ -63,8 +63,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
       setLoading(true)
       setError(null)
 
-      console.log('📅 Fetching schedules for:', { company, weekStartDate })
-      
       const { data, error: fetchError } = await supabase
         .from('teaching_schedules')
         .select('*')
@@ -77,8 +75,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
         throw fetchError
       }
 
-      console.log('✅ Schedules loaded:', data?.length, 'items')
-      
       // Convert array to object format expected by the UI
       const schedulesObject = {}
       if (data) {
@@ -107,7 +103,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
       
       setSchedules(schedulesObject)
     } catch (err) {
-      console.error('❌ Error fetching schedules:', err)
       setError(`Failed to load schedules: ${err.message}`)
       
       toast({
@@ -122,10 +117,10 @@ export const useRealtimeSchedule = (currentWeek, company) => {
 
   // Add or update schedule with optimistic updates
   const addOrUpdateSchedule = useCallback(async (scheduleData) => {
-    // Validate time slot index (database constraint: 0-6, but frontend expects 0-12)
-    // TODO: Fix database constraint to allow 0-12
-    if (scheduleData.time_slot_index < 0 || scheduleData.time_slot_index > 6) {
-      throw new Error(`Invalid time slot ${scheduleData.time_slot_index}. Database currently supports slots 0-6 only. Please use earlier time slots.`)
+    // Validate time slot index (full range 0-12 now supported)
+    // Database constraint updated to allow 0-12
+    if (scheduleData.time_slot_index < 0 || scheduleData.time_slot_index > 12) {
+      throw new Error(`Invalid time slot ${scheduleData.time_slot_index}. Valid range is 0-12.`)
     }
     
     // Validate day of week
@@ -154,13 +149,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
     const actualId = scheduleData.id || existingSchedule?.id
     const tempId = isUpdate ? actualId : generateTempId()
     
-    console.log('📝 Operation decision:', {
-      isUpdate,
-      actualId,
-      hasValidProvidedId,
-      hasValidExistingId
-    })
-
     // Prepare optimistic data
     const optimisticSchedule = {
       ...scheduleData,
@@ -207,13 +195,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
       }))
 
       // Direct database insert/update (temporary until Edge Function is deployed)
-      console.log('💾 Direct database upsert:', {
-        scheduleData,
-        isUpdate,
-        actualId,
-        existingSchedule: existingSchedule ? { id: existingSchedule.id, course: existingSchedule.course?.title } : null
-      })
-
       let result
       if (isUpdate) {
         // Use the actual ID (either from scheduleData or existing schedule)
@@ -222,8 +203,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
         if (!updateId) {
           throw new Error('No valid ID found for update operation')
         }
-        
-        console.log('🔄 Updating schedule with ID:', updateId)
         
         const { data, error } = await supabase
           .from('teaching_schedules')
@@ -235,8 +214,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
         if (error) throw error
         result = data
       } else {
-        console.log('📝 Inserting new schedule')
-        
         const { data, error } = await supabase
           .from('teaching_schedules')
           .insert(scheduleData)
@@ -280,8 +257,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
       }
 
       // Success - the realtime subscription will handle the actual update
-      console.log('✅ Schedule upsert successful:', normalizedResult)
-      
       toast({
         title: isUpdate ? "แก้ไขตารางสำเร็จ" : "เพิ่มตารางสำเร็จ",
         description: `${normalizedResult.course_title || 'ตาราง'} ${isUpdate ? 'ถูกแก้ไข' : 'ถูกเพิ่ม'}แล้ว`
@@ -290,8 +265,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
       return normalizedResult
 
     } catch (error) {
-      console.error('❌ Error in addOrUpdateSchedule:', error)
-
       // Rollback optimistic update from object format
       const key = `${scheduleData.day_of_week}-${scheduleData.time_slot_index}`
       if (isUpdate) {
@@ -349,7 +322,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
     // Find schedule in object format
     const scheduleToDelete = Object.values(schedules).find(s => s.id === scheduleId)
     if (!scheduleToDelete) {
-      console.log('⚠️ No schedule to delete with id:', scheduleId)
       return
     }
 
@@ -362,8 +334,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
     })
 
     try {
-      console.log('🗑️ Deleting schedule:', scheduleId)
-      
       const { error } = await supabase
         .from('teaching_schedules')
         .delete()
@@ -373,8 +343,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
         throw error
       }
 
-      console.log('✅ Schedule deleted successfully')
-      
       toast({
         title: "ลบตารางสำเร็จ",
         description: `ลบ ${scheduleToDelete.course_title || scheduleToDelete.course?.title || 'ตาราง'} แล้ว`
@@ -383,8 +351,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
       return scheduleToDelete
       
     } catch (error) {
-      console.error('❌ Error deleting schedule:', error)
-      
       // Rollback optimistic deletion in object format
       const key = `${scheduleToDelete.day_of_week || scheduleToDelete.dayIndex}-${scheduleToDelete.time_slot_index || scheduleToDelete.timeIndex}`
       setSchedules(prev => ({
@@ -432,7 +398,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
     if (schedule && schedule.id) {
       return await deleteSchedule(schedule.id)
     } else {
-      console.log('⚠️ No schedule found to remove at:', { dayIndex, timeIndex })
       return null
     }
   }, [schedules, deleteSchedule])
@@ -470,8 +435,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
       subscriptionRef.current.unsubscribe()
     }
 
-    console.log('🔔 Setting up realtime subscription for:', { company, weekStartDate })
-
     // Create new subscription
     const subscription = supabase
       .channel(`teaching-schedules-${company}-${weekStartDate}`)
@@ -484,8 +447,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
           filter: `company=eq.${company}`
         },
         (payload) => {
-          console.log('📡 Realtime change:', payload)
-
           const { eventType, new: newRecord, old: oldRecord } = payload
 
           // Only process changes for current week
@@ -582,7 +543,6 @@ export const useRealtimeSchedule = (currentWeek, company) => {
         }
       )
       .subscribe((status) => {
-        console.log('📡 Realtime subscription status:', status)
         setIsConnected(status === 'SUBSCRIBED')
         
         if (status === 'SUBSCRIPTION_ERROR') {

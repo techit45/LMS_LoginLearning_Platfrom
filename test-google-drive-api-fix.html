@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Drive API 403 Error Fix Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        .json-output {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Google Drive API 403 Error Fix Test</h1>
+        <p><strong>Issue:</strong> 403 Forbidden error when listing files in Shared Drive folder <code>0AAMvBF62LaLyUk9PVA</code></p>
+        <p><strong>Solution:</strong> Fixed Shared Drive context, service account permissions, and API parameters</p>
+        
+        <div class="status info">
+            <strong>Test Environment:</strong> 
+            <span id="environment">Loading...</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="test-section">
+            <h3>🔍 Step 1: Service Account Validation</h3>
+            <p>Test service account credentials and Shared Drive access</p>
+            <button onclick="validateServiceAccount()">Validate Service Account</button>
+            <div id="validation-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Step 2: Test List Files Endpoint</h3>
+            <p>Test the fixed /list endpoint with Shared Drive context</p>
+            <button onclick="testListFiles()">Test List Files (Shared Drive)</button>
+            <button onclick="testListSpecificFolder()">Test Specific Folder (0AAMvBF62LaLyUk9PVA)</button>
+            <div id="list-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🏥 Step 3: Health Check</h3>
+            <p>Verify Edge Function is running with latest fixes</p>
+            <button onclick="testHealthCheck()">Health Check</button>
+            <div id="health-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Results Summary</h3>
+            <div id="summary-result">
+                <div class="info">Click the test buttons above to run diagnostics</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const SUPABASE_URL = 'https://vuitwzisazvikrhtfthh.supabase.co';
+        const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/google-drive`;
+        const SHARED_DRIVE_ID = '0AAMvBF62LaLyUk9PVA';
+        
+        // Mock authentication token for testing
+        const AUTH_TOKEN = 'test-token-please-replace-with-real-token';
+        
+        let testResults = {
+            serviceAccount: null,
+            listFiles: null,
+            healthCheck: null
+        };
+
+        // Update environment info
+        document.getElementById('environment').textContent = 
+            `Supabase: ${SUPABASE_URL} | Shared Drive: ${SHARED_DRIVE_ID}`;
+
+        function showResult(containerId, result, isSuccess = true) {
+            const container = document.getElementById(containerId);
+            const statusClass = isSuccess ? 'success' : 'error';
+            
+            container.innerHTML = `
+                <div class="status ${statusClass}">
+                    <strong>${isSuccess ? '✅ Success' : '❌ Error'}:</strong> ${result.message || 'Test completed'}
+                </div>
+                <div class="json-output">${JSON.stringify(result, null, 2)}</div>
+            `;
+            
+            updateSummary();
+        }
+
+        function showError(containerId, error) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `
+                <div class="status error">
+                    <strong>❌ Error:</strong> ${error.message || error}
+                </div>
+                <div class="json-output">${error.stack || JSON.stringify(error, null, 2)}</div>
+            `;
+            
+            updateSummary();
+        }
+
+        async function validateServiceAccount() {
+            try {
+                console.log('🔍 Validating service account...');
+                
+                const response = await fetch(`${EDGE_FUNCTION_URL}/validate-service-account`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    }
+                });
+
+                const result = await response.json();
+                testResults.serviceAccount = result;
+                
+                if (response.ok && result.success) {
+                    showResult('validation-result', result, true);
+                } else {
+                    showResult('validation-result', result, false);
+                }
+            } catch (error) {
+                console.error('❌ Service account validation error:', error);
+                testResults.serviceAccount = { error: error.message };
+                showError('validation-result', error);
+            }
+        }
+
+        async function testListFiles() {
+            try {
+                console.log('📋 Testing list files endpoint...');
+                
+                const url = `${EDGE_FUNCTION_URL}/list?folderId=root&pageSize=10&isSharedDrive=true`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    }
+                });
+
+                const result = await response.json();
+                testResults.listFiles = result;
+                
+                if (response.ok && result.success) {
+                    result.message = `Successfully retrieved ${result.files?.length || 0} files from Shared Drive`;
+                    showResult('list-result', result, true);
+                } else {
+                    result.message = `Failed to list files: ${result.error}`;
+                    showResult('list-result', result, false);
+                }
+            } catch (error) {
+                console.error('❌ List files error:', error);
+                testResults.listFiles = { error: error.message };
+                showError('list-result', error);
+            }
+        }
+
+        async function testListSpecificFolder() {
+            try {
+                console.log('📂 Testing specific folder...');
+                
+                const url = `${EDGE_FUNCTION_URL}/list?folderId=${SHARED_DRIVE_ID}&pageSize=10&isSharedDrive=true`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    result.message = `Successfully accessed folder ${SHARED_DRIVE_ID} with ${result.files?.length || 0} items`;
+                    showResult('list-result', result, true);
+                } else {
+                    result.message = `Failed to access folder ${SHARED_DRIVE_ID}: ${result.error}`;
+                    showResult('list-result', result, false);
+                }
+            } catch (error) {
+                console.error('❌ Specific folder test error:', error);
+                showError('list-result', error);
+            }
+        }
+
+        async function testHealthCheck() {
+            try {
+                console.log('🏥 Testing health check...');
+                
+                const response = await fetch(`${EDGE_FUNCTION_URL}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+                testResults.healthCheck = result;
+                
+                if (response.ok && result.status === 'healthy') {
+                    result.message = `Edge Function is healthy (v${result.version})`;
+                    showResult('health-result', result, true);
+                } else {
+                    result.message = `Health check failed`;
+                    showResult('health-result', result, false);
+                }
+            } catch (error) {
+                console.error('❌ Health check error:', error);
+                testResults.healthCheck = { error: error.message };
+                showError('health-result', error);
+            }
+        }
+
+        function updateSummary() {
+            const container = document.getElementById('summary-result');
+            const results = testResults;
+            
+            let summary = '';
+            let allPassed = true;
+            
+            // Service Account
+            if (results.serviceAccount) {
+                const passed = results.serviceAccount.success && results.serviceAccount.sharedDrive?.test?.success;
+                summary += `<div class="status ${passed ? 'success' : 'error'}">
+                    Service Account: ${passed ? '✅ PASS' : '❌ FAIL'} - ${passed ? 'Shared Drive accessible' : 'Access issues detected'}
+                </div>`;
+                allPassed = allPassed && passed;
+            }
+            
+            // List Files
+            if (results.listFiles) {
+                const passed = results.listFiles.success;
+                summary += `<div class="status ${passed ? 'success' : 'error'}">
+                    List Files: ${passed ? '✅ PASS' : '❌ FAIL'} - ${passed ? `Retrieved ${results.listFiles.files?.length || 0} files` : '403 error still present'}
+                </div>`;
+                allPassed = allPassed && passed;
+            }
+            
+            // Health Check
+            if (results.healthCheck) {
+                const passed = results.healthCheck.status === 'healthy';
+                summary += `<div class="status ${passed ? 'success' : 'error'}">
+                    Health Check: ${passed ? '✅ PASS' : '❌ FAIL'} - ${passed ? 'Edge Function updated' : 'Deployment issues'}
+                </div>`;
+                allPassed = allPassed && passed;
+            }
+            
+            if (summary) {
+                summary += `<div class="status ${allPassed ? 'success' : 'warning'}">
+                    <strong>Overall Status: ${allPassed ? '✅ ALL TESTS PASSED - 403 Error Fixed!' : '⚠️ Some tests failed - Check results above'}</strong>
+                </div>`;
+            }
+            
+            container.innerHTML = summary || '<div class="info">Run tests above to see summary</div>';
+        }
+
+        // Initial health check on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                testHealthCheck();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

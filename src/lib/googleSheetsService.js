@@ -60,9 +60,7 @@ class GoogleSheetsService {
       this.drive = google.drive({ version: 'v3', auth: this.auth });
 
       this.isInitialized = true;
-      console.log('✅ Google Sheets Service initialized successfully');
-    } catch (error) {
-      console.error('❌ Failed to initialize Google Sheets Service:', error);
+      } catch (error) {
       throw new Error('Google Sheets Service initialization failed');
     }
   }
@@ -153,14 +151,11 @@ class GoogleSheetsService {
         .single();
 
       if (error) {
-        console.error('Database insert error:', error);
         // Continue - sheet was created successfully
       }
 
       // Setup real-time webhook
       await this.setupWebhook(spreadsheetId);
-
-      console.log(`✅ Created schedule spreadsheet: ${sheetTitle}`);
 
       return {
         spreadsheetId,
@@ -173,7 +168,6 @@ class GoogleSheetsService {
       };
 
     } catch (error) {
-      console.error('❌ Error creating spreadsheet:', error);
       throw new GoogleSheetsError('Failed to create schedule spreadsheet', error);
     }
   }
@@ -285,8 +279,7 @@ class GoogleSheetsService {
       });
     });
 
-    console.log('✅ Sheet template setup completed');
-  }
+    }
 
   /**
    * Generate time slots for schedule (8:00 - 21:00)
@@ -353,7 +346,6 @@ class GoogleSheetsService {
         scheduleData
       });
 
-      console.log(`✅ Updated cell ${cellReference}: ${scheduleData.courseName}`);
       return response.data;
 
     } catch (error) {
@@ -406,7 +398,6 @@ class GoogleSheetsService {
         action: 'cleared'
       });
 
-      console.log(`✅ Cleared cell ${cellReference}`);
       return response.data;
 
     } catch (error) {
@@ -467,7 +458,6 @@ class GoogleSheetsService {
         }))
       });
 
-      console.log(`✅ Batch updated ${scheduleUpdates.length} schedule cells`);
       return response.data;
 
     } catch (error) {
@@ -512,7 +502,6 @@ class GoogleSheetsService {
         })
         .eq('sheet_id', spreadsheetId);
 
-      console.log(`✅ Webhook setup for sheet ${spreadsheetId}: ${channelId}`);
       return response.data;
 
     } catch (error) {
@@ -541,7 +530,6 @@ class GoogleSheetsService {
         .single();
 
       if (!sheetInfo) {
-        console.warn(`⚠️ Unknown sheet in webhook: ${resourceId}`);
         return;
       }
 
@@ -564,10 +552,7 @@ class GoogleSheetsService {
           }
         });
 
-      console.log(`✅ Processed webhook for sheet ${resourceId}`);
-
-    } catch (error) {
-      console.error('❌ Error processing webhook:', error);
+      } catch (error) {
       throw error;
     }
   }
@@ -592,7 +577,6 @@ class GoogleSheetsService {
       return response.data.values || [];
 
     } catch (error) {
-      console.error('❌ Error fetching sheet data:', error);
       throw new GoogleSheetsError('Failed to fetch sheet data', error);
     }
   }
@@ -722,7 +706,6 @@ class GoogleSheetsService {
         sync_duration_ms: Date.now() % 1000 // Simple duration tracking
       });
     } catch (error) {
-      console.warn('⚠️ Failed to log sync operation:', error);
       // Don't throw - logging failure shouldn't break the main operation
     }
   }
@@ -756,7 +739,6 @@ class APIRateLimiter {
     
     if (limit.requests >= limit.max) {
       const waitTime = limit.resetTime - Date.now();
-      console.log(`⏳ Rate limit reached for ${api}, waiting ${waitTime}ms`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
   }

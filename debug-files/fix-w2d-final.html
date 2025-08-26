@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix W2D Course Final</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success { 
+            background-color: #d4edda; 
+            border: 1px solid #c3e6cb; 
+            color: #155724; 
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .error { 
+            background-color: #f8d7da; 
+            border: 1px solid #f5c6cb; 
+            color: #721c24; 
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .info { 
+            background-color: #d1ecf1; 
+            border: 1px solid #bee5eb; 
+            color: #0c5460; 
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        pre { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 5px; 
+            overflow: auto; 
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Final Fix for W2D Course</h1>
+        
+        <div class="info">
+            <h3>📋 Solution Summary:</h3>
+            <p><strong>Problem:</strong> W2D course folder was in wrong location</p>
+            <p><strong>Solution:</strong> Created new folder in correct location</p>
+            <ul>
+                <li><strong>Old Folder ID:</strong> 10LlUseuxWU-MXw0kbiB8raw39NLftDG5 (wrong location)</li>
+                <li><strong>New Folder ID:</strong> 1lO8c8NEjC0EdwabTop2QcU_lBc5QhmCR (correct location)</li>
+                <li><strong>Location:</strong> W2D → 📖 คอร์สเรียน → 📖 คอร์สเรียน W2D</li>
+            </ul>
+        </div>
+        
+        <button onclick="fixW2DCourse()">🔧 Update Course Database</button>
+        <button onclick="checkStatus()">🔍 Check Current Status</button>
+        <button onclick="testFolder()">🧪 Test Folder Access</button>
+        
+        <div id="status"></div>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://vuitwzisazvikrhtfthh.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        const OLD_FOLDER_ID = '10LlUseuxWU-MXw0kbiB8raw39NLftDG5';
+        const NEW_FOLDER_ID = '1lO8c8NEjC0EdwabTop2QcU_lBc5QhmCR';
+        
+        function showResult(message, type = 'success') {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+        
+        function showStatus(message) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="info">${message}</div>`;
+        }
+        
+        async function checkStatus() {
+            showStatus('🔍 Checking current status...');
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('courses')
+                    .select('id, title, company, google_drive_folder_id, updated_at')
+                    .eq('title', 'คอร์สเรียน W2D')
+                    .eq('company', 'w2d')
+                    .single();
+                
+                if (error) throw error;
+                
+                const isCorrectFolder = data.google_drive_folder_id === NEW_FOLDER_ID;
+                
+                showResult(`
+                    <h3>📊 Current Course Status:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                    
+                    <h3>✅ Expected vs Current:</h3>
+                    <ul>
+                        <li><strong>Expected Folder ID:</strong> ${NEW_FOLDER_ID}</li>
+                        <li><strong>Current Folder ID:</strong> ${data.google_drive_folder_id}</li>
+                        <li><strong>Status:</strong> ${isCorrectFolder ? '✅ CORRECT' : '❌ NEEDS UPDATE'}</li>
+                    </ul>
+                    
+                    ${isCorrectFolder ? '<p><strong>🎉 The course is already using the correct folder!</strong></p>' : ''}
+                `);
+                
+            } catch (error) {
+                showResult(`❌ Error checking status: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testFolder() {
+            showStatus('🧪 Testing folder access...');
+            
+            try {
+                // Test new folder
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/google-drive/list?folderId=${NEW_FOLDER_ID}`, {
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Folder access failed');
+                
+                const result = await response.json();
+                
+                showResult(`
+                    <h3>🧪 Folder Access Test:</h3>
+                    <ul>
+                        <li><strong>Folder ID:</strong> ${NEW_FOLDER_ID}</li>
+                        <li><strong>Access:</strong> ✅ SUCCESS</li>
+                        <li><strong>Files in folder:</strong> ${result.total}</li>
+                        <li><strong>Folder URL:</strong> <a href="https://drive.google.com/drive/folders/${NEW_FOLDER_ID}" target="_blank">View in Google Drive</a></li>
+                    </ul>
+                    
+                    <h3>📁 Folder Contents:</h3>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `);
+                
+            } catch (error) {
+                showResult(`❌ Folder test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function fixW2DCourse() {
+            showStatus('🔧 Updating course database...');
+            
+            try {
+                // Check authentication first
+                const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+                
+                if (authError || !user) {
+                    throw new Error('Please login as admin first');
+                }
+                
+                // Check user role
+                const { data: profile } = await supabaseClient
+                    .from('user_profiles')
+                    .select('role')
+                    .eq('user_id', user.id)
+                    .single();
+                
+                if (!profile || profile.role !== 'admin') {
+                    throw new Error('Admin access required');
+                }
+                
+                // Update the course
+                const { data, error } = await supabaseClient
+                    .from('courses')
+                    .update({ 
+                        google_drive_folder_id: NEW_FOLDER_ID,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('title', 'คอร์สเรียน W2D')
+                    .eq('company', 'w2d')
+                    .select();
+                
+                if (error) throw error;
+                
+                if (data && data.length > 0) {
+                    showResult(`
+                        <h3>✅ Course Updated Successfully!</h3>
+                        <ul>
+                            <li><strong>Course:</strong> ${data[0].title}</li>
+                            <li><strong>Old Folder ID:</strong> ${OLD_FOLDER_ID}</li>
+                            <li><strong>New Folder ID:</strong> ${NEW_FOLDER_ID}</li>
+                            <li><strong>Updated:</strong> ${data[0].updated_at}</li>
+                        </ul>
+                        
+                        <h3>🧪 Next Steps:</h3>
+                        <ol>
+                            <li>Go to the W2D course content editor</li>
+                            <li>Try uploading a file</li>
+                            <li>The upload should now work without errors!</li>
+                        </ol>
+                        
+                        <p><strong>Folder URL:</strong> <a href="https://drive.google.com/drive/folders/${NEW_FOLDER_ID}" target="_blank">View in Google Drive</a></p>
+                    `);
+                } else {
+                    showResult('⚠️ No courses were updated. Please check if the course exists.', 'error');
+                }
+                
+            } catch (error) {
+                showResult(`❌ Update failed: ${error.message}`, 'error');
+                
+                if (error.message.includes('permission denied')) {
+                    showResult(`
+                        <h3>🔐 Permission Issue</h3>
+                        <p>If you're getting permission errors, you can also update manually using SQL:</p>
+                        <pre>UPDATE courses 
+SET google_drive_folder_id = '${NEW_FOLDER_ID}',
+    updated_at = NOW()
+WHERE title = 'คอร์สเรียน W2D' 
+  AND company = 'w2d';</pre>
+                    `, 'error');
+                }
+            }
+        }
+        
+        // Auto-check status on load
+        window.onload = () => {
+            checkStatus();
+        };
+    </script>
+</body>
+</html>

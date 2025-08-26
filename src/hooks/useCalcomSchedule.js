@@ -40,12 +40,10 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
   const initializeSystem = useCallback(async () => {
     // Prevent re-initialization
     if (isInitialized) {
-      console.log('⏩ Cal.com system already initialized, skipping...');
       return { success: true };
     }
     
     try {
-      console.log('🚀 Initializing Cal.com scheduling system...');
       setLoading(true);
       
       const result = await calcomSchedulingService.initialize();
@@ -59,8 +57,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
       
       if (result.success) {
         setIsInitialized(true);
-        console.log('✅ Cal.com scheduling system initialized');
-        
         toast({
           title: "ระบบ Cal.com พร้อมแล้ว",
           description: "เชื่อมต่อ Cal.com API สำเร็จ",
@@ -72,7 +68,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
       
       return result;
     } catch (error) {
-      console.error('💥 Cal.com system initialization failed:', error);
       setError(error.message);
       
       setCalcomStatus({
@@ -104,15 +99,12 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
       
       if (result.success) {
         setCourses(result.data);
-        console.log(`📚 Loaded ${result.data.length} Cal.com courses`);
-      } else {
-        console.error('❌ Failed to load courses:', result.error);
+        } else {
         setCourses([]);
       }
       
       return result;
     } catch (error) {
-      console.error('💥 Exception loading courses:', error);
       setCourses([]);
       return { success: false, error: error.message };
     }
@@ -127,15 +119,12 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
       
       if (result.success) {
         setInstructors(result.data);
-        console.log(`👨‍🏫 Loaded ${result.data.length} instructors`);
-      } else {
-        console.error('❌ Failed to load instructors:', result.error);
+        } else {
         setInstructors([]);
       }
       
       return result;
     } catch (error) {
-      console.error('💥 Exception loading instructors:', error);
       setInstructors([]);
       return { success: false, error: error.message };
     }
@@ -151,15 +140,12 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
     setError(null);
     
     try {
-      console.log('📅 Loading Cal.com schedules for week:', weekStartDate);
-      
       const result = await calcomSchedulingService.getWeekSchedules(weekStartDate, company);
       
       if (result.success) {
         setSchedules(result.data);
         console.log(`✅ Loaded ${Object.keys(result.data).length} schedules`);
       } else {
-        console.error('❌ Failed to load schedules:', result.error);
         setError(result.error);
         
         toast({
@@ -171,7 +157,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
       
       return result;
     } catch (err) {
-      console.error('💥 Exception loading schedules:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -213,8 +198,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
     }));
 
     try {
-      console.log('💾 Adding Cal.com schedule:', { dayIndex, timeIndex, scheduleData });
-      
       const result = await calcomSchedulingService.addSchedule(
         dayIndex, 
         timeIndex, 
@@ -223,8 +206,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
       );
 
       if (result.success) {
-        console.log('✅ Cal.com schedule added successfully');
-        
         // Replace optimistic with real data
         setSchedules(prev => {
           const newSchedules = { ...prev };
@@ -258,8 +239,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
           return newSchedules;
         });
         
-        console.error('❌ Failed to add Cal.com schedule:', result.error);
-        
         toast({
           title: "เพิ่มตารางไม่สำเร็จ",
           description: result.error,
@@ -269,8 +248,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
         return result;
       }
     } catch (err) {
-      console.error('💥 Exception adding schedule:', err);
-      
       // Revert optimistic update
       setSchedules(prev => {
         const newSchedules = { ...prev };
@@ -298,7 +275,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
     const originalSchedule = schedules[scheduleKey];
 
     if (!originalSchedule) {
-      console.log('⚠️ No schedule to remove at:', { dayIndex, timeIndex });
       return { success: true };
     }
 
@@ -310,13 +286,9 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
     });
 
     try {
-      console.log('🗑️ Removing Cal.com schedule:', { dayIndex, timeIndex });
-      
       const result = await calcomSchedulingService.removeSchedule(dayIndex, timeIndex, weekStartDate);
 
       if (result.success) {
-        console.log('✅ Cal.com schedule removed successfully');
-        
         toast({
           title: "ลบตารางสำเร็จ",
           description: `ลบ ${originalSchedule.course?.name || 'รายการ'} แล้ว (Cal.com)`,
@@ -331,8 +303,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
           [scheduleKey]: originalSchedule
         }));
         
-        console.error('❌ Failed to remove Cal.com schedule:', result.error);
-        
         toast({
           title: "ลบตารางไม่สำเร็จ",
           description: result.error,
@@ -342,8 +312,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
         return result;
       }
     } catch (err) {
-      console.error('💥 Exception removing schedule:', err);
-      
       // Revert optimistic update
       setSchedules(prev => ({
         ...prev,
@@ -365,13 +333,9 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
    */
   const createCourse = useCallback(async (courseData) => {
     try {
-      console.log('🆕 Creating new Cal.com course:', courseData.name);
-      
       const result = await calcomSchedulingService.createCourse(courseData);
       
       if (result.success) {
-        console.log('✅ Course created successfully');
-        
         // Reload courses
         await loadCourses();
         
@@ -383,8 +347,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
         
         return result;
       } else {
-        console.error('❌ Failed to create course:', result.error);
-        
         toast({
           title: "สร้างคอร์สไม่สำเร็จ",
           description: result.error,
@@ -394,8 +356,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
         return result;
       }
     } catch (error) {
-      console.error('💥 Exception creating course:', error);
-      
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถสร้างคอร์สได้",
@@ -411,13 +371,9 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
    */
   const createInstructor = useCallback(async (instructorData) => {
     try {
-      console.log('🆕 Creating new instructor:', instructorData.name);
-      
       const result = await calcomSchedulingService.createInstructor(instructorData);
       
       if (result.success) {
-        console.log('✅ Instructor created successfully');
-        
         // Reload instructors
         await loadInstructors();
         
@@ -429,8 +385,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
         
         return result;
       } else {
-        console.error('❌ Failed to create instructor:', result.error);
-        
         toast({
           title: "เพิ่มผู้สอนไม่สำเร็จ",
           description: result.error,
@@ -440,8 +394,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
         return result;
       }
     } catch (error) {
-      console.error('💥 Exception creating instructor:', error);
-      
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถเพิ่มผู้สอนได้",
@@ -457,13 +409,9 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
    */
   const updateScheduleDuration = useCallback(async (scheduleId, newDurationMinutes) => {
     try {
-      console.log('🔄 Updating schedule duration:', { scheduleId, newDurationMinutes });
-      
       const result = await calcomSchedulingService.updateScheduleDuration(scheduleId, newDurationMinutes);
       
       if (result.success) {
-        console.log('✅ Schedule duration updated successfully');
-        
         // Reload schedules to reflect changes
         await loadSchedules();
         
@@ -475,8 +423,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
         
         return result;
       } else {
-        console.error('❌ Failed to update schedule duration:', result.error);
-        
         toast({
           title: "ปรับขนาดไม่สำเร็จ",
           description: result.error,
@@ -486,8 +432,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
         return result;
       }
     } catch (error) {
-      console.error('💥 Exception updating schedule duration:', error);
-      
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถปรับขนาดตารางได้",
@@ -504,13 +448,9 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
   const syncWithCalcom = useCallback(async () => {
     try {
       setCalcomStatus(prev => ({ ...prev, syncInProgress: true }));
-      console.log('🔄 Manual sync with Cal.com requested');
-      
       const result = await calcomSchedulingService.syncFromCalcom(weekStartDate);
       
       if (result.success) {
-        console.log('✅ Sync completed successfully');
-        
         // Reload data
         await Promise.all([
           loadSchedules(),
@@ -531,8 +471,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
         
         return result;
       } else {
-        console.error('❌ Sync failed:', result.error);
-        
         toast({
           title: "ซิงค์ไม่สำเร็จ",
           description: result.error,
@@ -542,8 +480,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
         return result;
       }
     } catch (error) {
-      console.error('💥 Sync exception:', error);
-      
       toast({
         title: "เกิดข้อผิดพลาดในการซิงค์",
         description: error.message,
@@ -567,7 +503,6 @@ export const useCalcomSchedule = (currentWeek, company = null) => {
       }
       return result;
     } catch (error) {
-      console.error('Error loading sync logs:', error);
       return { success: false, error: error.message };
     }
   }, []);

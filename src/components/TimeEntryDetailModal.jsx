@@ -23,20 +23,14 @@ import {
 } from 'lucide-react';
 
 const TimeEntryDetailModal = ({ entry, isOpen, onClose }) => {
-  console.log('TimeEntryDetailModal render:', { entry, isOpen, hasEntry: !!entry });
-  
   if (!isOpen) {
-    console.log('Modal closed - isOpen:', isOpen);
     return null;
   }
   
   if (!entry) {
-    console.log('No entry data - entry:', entry);
     return null;
   }
   
-  console.log('Modal should show now!');
-
   const formatTime = (timeString) => {
     if (!timeString) return '-';
     return new Date(timeString).toLocaleTimeString('th-TH', {

@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { getEmergencyData } from './quickFix';
 import { deleteProjectFolder, createProjectStructure, getCompanySlug, transferFolderContents, folderHasContents } from './googleDriveClientService';
+import { getCompanyFolder } from './courseFolderService'; // Add courseFolderService
 import NotificationIntegrations from './notificationIntegrations';
 
 // Simple in-memory cache
@@ -27,12 +28,8 @@ const setCachedData = (key, data) => {
  */
 export const getAllProjects = async () => {
   try {
-    console.log('Fetching all projects...');
-    
     // Check if user is authenticated
     const { data: { user } } = await supabase.auth.getUser();
-    console.log('Current user:', user ? user.email : 'Anonymous');
-    
     // Add timeout for emergency fallback (increased for student queries)
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('getAllProjects timeout')), 8000); // Increased to 8 seconds
@@ -68,19 +65,15 @@ export const getAllProjects = async () => {
     const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
     if (error) {
-      console.error('Error fetching projects:', error);
       // Return emergency data instead of error
       const emergencyData = getEmergencyData();
-      console.log('🚑 Database error - Using emergency projects data in getAllProjects');
       return { data: emergencyData.projects, error: null };
     }
 
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error fetching projects:', error);
     // Return emergency data on any error
     const emergencyData = getEmergencyData();
-    console.log('🚑 Database error - Using emergency projects data after error in getAllProjects');
     return { data: emergencyData.projects, error: null };
   }
 };
@@ -101,7 +94,6 @@ export const getProjectById = async (projectId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching project:', error);
     return { data: null, error };
   }
 };
@@ -121,7 +113,6 @@ export const getProjectForEdit = async (projectId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching project for edit:', error);
     return { data: null, error };
   }
 };
@@ -142,7 +133,6 @@ export const getProjectsByCategory = async (category) => {
 
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error fetching projects by category:', error);
     return { data: null, error };
   }
 };
@@ -157,14 +147,11 @@ export const getFeaturedProjects = async () => {
   if (cached) {
     // Only log cache usage occasionally to reduce console spam
     if (Math.random() < 0.1) { // 10% chance to log
-      console.log('📦 Using cached featured projects');
-    }
+      }
     return { data: cached, error: null };
   }
 
   try {
-    console.log('Fetching featured projects from database...');
-    
     // Optimized database query with retry mechanism
     let queryAttempt = 0;
     let lastError = null;
@@ -172,8 +159,6 @@ export const getFeaturedProjects = async () => {
     
     while (queryAttempt < 3 && !data) { // ลองสูงสุด 3 ครั้ง
       queryAttempt++;
-      console.log(`🔄 Query attempt ${queryAttempt}/3`);
-      
       try {
         const queryPromise = supabase
           .from('projects')
@@ -204,8 +189,6 @@ export const getFeaturedProjects = async () => {
 
         if (error) {
           lastError = error;
-          console.warn(`⚠️ Attempt ${queryAttempt} failed:`, error.message);
-          
           // ถ้าเป็น timeout หรือ network error ให้ลองใหม่
           if (error.message.includes('timeout') || error.message.includes('network') || queryAttempt < 3) {
             await new Promise(resolve => setTimeout(resolve, 1000 * queryAttempt)); // รอ 1s, 2s, 3s
@@ -217,15 +200,12 @@ export const getFeaturedProjects = async () => {
         // สำเร็จ - เก็บ data
         if (queryData) {
           data = queryData;
-          console.log(`✅ Query succeeded on attempt ${queryAttempt}`);
           lastError = null;
           break;
         }
 
       } catch (attemptError) {
         lastError = attemptError;
-        console.warn(`⚠️ Attempt ${queryAttempt} failed:`, attemptError.message);
-        
         // ถ้าเป็นความผิดพลาดสุดท้าย หรือไม่ใช่ network error ให้หยุด
         if (queryAttempt >= 3 || (!attemptError.message.includes('timeout') && !attemptError.message.includes('network'))) {
           break;
@@ -238,12 +218,10 @@ export const getFeaturedProjects = async () => {
 
     // ถ้ายังมี error หลังลอง 3 ครั้ง
     if (lastError && !data) {
-      console.error('All query attempts failed:', lastError);
       throw lastError;
     }
 
     if (data && data.length > 0) {
-      console.log('Successfully fetched featured projects:', data.length);
       const projectsWithStats = data.map(project => ({
         ...project,
         created_by: 'นักเรียน',
@@ -257,16 +235,12 @@ export const getFeaturedProjects = async () => {
       return { data: projectsWithStats, error: null };
     }
   } catch (error) {
-    console.error('🚨 Error fetching featured projects:', error.message);
-    console.log('📝 Stack trace:', error.stack);
-  }
+    }
   
   // Always return mock data as fallback
   // ลด log spam โดย log เฉพาะบางครั้ง
   if (Math.random() < 0.3) { // 30% ของเวลา
-    console.log('🎭 Returning mock featured projects as fallback');
-    console.log('💡 This ensures the homepage always shows content even when database is unavailable');
-  }
+    }
   const mockProjects = [
     {
       id: 'mock-proj-1',
@@ -321,7 +295,6 @@ export const getFeaturedProjects = async () => {
   return { data: mockProjects, error: null };
 };
 
-
 // ==========================================
 // ADMIN PROJECT MANAGEMENT
 // ==========================================
@@ -369,6 +342,9 @@ export const createProject = async (projectData) => {
 
     if (error) throw error;
 
+    // Note: Google Drive folder creation is now handled by ProjectForm.jsx
+    // to avoid duplication and maintain consistency with course creation flow
+
     // Send new project notification to system administrators
     try {
       // Get all admin users
@@ -386,16 +362,13 @@ export const createProject = async (projectData) => {
           `/admin/projects`,
           adminUserIds
         );
-        console.log('New project notification sent to admins');
-      }
+        }
     } catch (notificationError) {
-      console.error('Error sending new project notification:', notificationError);
       // Don't fail the project creation if notification fails
     }
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error creating project:', error);
     return { data: null, error };
   }
 };
@@ -416,7 +389,6 @@ export const updateProject = async (projectId, projectData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating project:', error);
     return { data: null, error };
   }
 };
@@ -435,7 +407,6 @@ export const deleteProject = async (projectId) => {
 
     return { error: null };
   } catch (error) {
-    console.error('Error deleting project:', error);
     return { error };
   }
 };
@@ -445,8 +416,6 @@ export const deleteProject = async (projectId) => {
  */
 export const permanentlyDeleteProject = async (projectId) => {
   try {
-    console.log(`🗑️ Starting permanent deletion of project: ${projectId}`);
-    
     // Step 1: Get project details first (including Google Drive folder ID)
     const { data: projectData, error: fetchError } = await supabase
       .from('projects')
@@ -455,28 +424,21 @@ export const permanentlyDeleteProject = async (projectId) => {
       .single();
     
     if (fetchError) {
-      console.error('Error fetching project for deletion:', fetchError);
       throw fetchError;
     }
-    
-    console.log(`📋 Project details: ${projectData.title}, Google Drive ID: ${projectData.google_drive_folder_id}`);
     
     // Step 2: Delete Google Drive folder if it exists
     if (projectData.google_drive_folder_id) {
       try {
-        console.log(`🗑️ Deleting Google Drive folder: ${projectData.google_drive_folder_id}`);
         await deleteProjectFolder(projectData.google_drive_folder_id, projectData.title);
-        console.log(`✅ Google Drive folder deleted successfully`);
-      } catch (driveError) {
+        } catch (driveError) {
         console.warn(`⚠️ Failed to delete Google Drive folder (continuing with database deletion):`, driveError.message);
         // Continue with database deletion even if Google Drive deletion fails
       }
     } else {
-      console.log(`ℹ️ No Google Drive folder to delete`);
-    }
+      }
     
     // Step 3: Delete related data (comments, likes, views) to maintain referential integrity
-    console.log(`🗑️ Deleting related data for project: ${projectId}`);
     const deletePromises = [
       // Delete project comments
       supabase
@@ -502,7 +464,6 @@ export const permanentlyDeleteProject = async (projectId) => {
     console.log(`📊 Related data deletion results:`, deleteResults.map(r => r.status));
 
     // Step 4: Finally, delete the project itself from database
-    console.log(`🗑️ Deleting project from database: ${projectId}`);
     const { error } = await supabase
       .from('projects')
       .delete()
@@ -513,7 +474,6 @@ export const permanentlyDeleteProject = async (projectId) => {
     console.log(`✅ Project permanently deleted: ${projectData.title} (${projectId})`);
     return { error: null };
   } catch (error) {
-    console.error('❌ Error permanently deleting project:', error);
     return { error };
   }
 };
@@ -532,7 +492,6 @@ export const toggleProjectApproval = async (projectId, isApproved) => {
 
     return { error: null };
   } catch (error) {
-    console.error('Error toggling project approval:', error);
     return { error };
   }
 };
@@ -551,7 +510,6 @@ export const toggleProjectFeatured = async (projectId, isFeatured) => {
 
     return { error: null };
   } catch (error) {
-    console.error('Error toggling project featured status:', error);
     return { error };
   }
 };
@@ -570,7 +528,6 @@ export const getAllProjectsAdmin = async () => {
 
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error fetching admin projects:', error);
     return { data: null, error };
   }
 };
@@ -590,7 +547,6 @@ export const getProjectsByCompanyAdmin = async (companyId) => {
 
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error fetching admin company projects:', error);
     return { data: null, error };
   }
 };
@@ -640,7 +596,6 @@ export const getProjectStats = async () => {
       error: null
     };
   } catch (error) {
-    console.error('Error fetching project stats:', error);
     return { data: null, error };
   }
 };
@@ -651,8 +606,6 @@ export const getProjectStats = async () => {
  */
 export const transferItemToCompany = async (projectId, targetCompany, options = {}) => {
   try {
-    console.log(`🔄 Starting project transfer: ${projectId} -> ${targetCompany}`);
-    
     const { 
       fromCompany, 
       itemTitle, 
@@ -675,8 +628,6 @@ export const transferItemToCompany = async (projectId, targetCompany, options = 
       throw new Error('Project not found');
     }
 
-    console.log(`📋 Current project data:`, currentProject);
-
     // Step 2: Validate target company
     const validCompanies = ['login', 'meta', 'med', 'edtech', 'innotech', 'w2d'];
     if (!validCompanies.includes(targetCompany)) {
@@ -689,12 +640,8 @@ export const transferItemToCompany = async (projectId, targetCompany, options = 
     
     if (transferDriveFolder && currentProject.google_drive_folder_id) {
       try {
-        console.log(`🗂️ Starting Google Drive transfer for company: ${targetCompany}`);
-        
         // Step 3a: Check if source folder has contents
         const hasContents = await folderHasContents(currentProject.google_drive_folder_id);
-        console.log(`📋 Source folder has contents: ${hasContents}`);
-        
         // Step 3b: Create new project structure in target company
         const driveStructure = await createProjectStructure({
           ...currentProject,
@@ -703,12 +650,8 @@ export const transferItemToCompany = async (projectId, targetCompany, options = 
 
         if (driveStructure.success && driveStructure.projectFolderId) {
           newDriveFolderId = driveStructure.projectFolderId;
-          console.log(`✅ New Google Drive folder created: ${newDriveFolderId}`);
-          
           // Step 3c: Transfer files from old folder to new folder
           if (hasContents) {
-            console.log(`🔄 Transferring files from ${currentProject.google_drive_folder_id} to ${newDriveFolderId}`);
-            
             const transferResult = await transferFolderContents(
               currentProject.google_drive_folder_id,
               newDriveFolderId,
@@ -718,27 +661,20 @@ export const transferItemToCompany = async (projectId, targetCompany, options = 
             
             if (transferResult.success) {
               filesTransferred = true;
-              console.log(`✅ Files transferred successfully`);
-            } else {
-              console.warn(`⚠️ File transfer completed with warnings`);
-            }
+              } else {
+              }
           } else {
-            console.log(`ℹ️ Source folder is empty, no files to transfer`);
             // Still delete the empty source folder
             try {
               await deleteProjectFolder(currentProject.google_drive_folder_id, currentProject.title);
-              console.log(`✅ Empty source folder deleted`);
-            } catch (deleteError) {
-              console.warn(`⚠️ Could not delete empty source folder:`, deleteError.message);
-            }
+              } catch (deleteError) {
+              }
           }
         }
         
       } catch (driveError) {
-        console.error(`⚠️ Google Drive transfer failed:`, driveError);
         // Continue with database transfer even if Drive transfer fails
-        console.log(`📝 Continuing with database transfer only`);
-      }
+        }
     }
 
     // Step 4: Update project in database
@@ -747,8 +683,6 @@ export const transferItemToCompany = async (projectId, targetCompany, options = 
       ...(newDriveFolderId && { google_drive_folder_id: newDriveFolderId }),
       updated_at: new Date().toISOString()
     };
-
-    console.log(`💾 Updating project in database:`, updateData);
 
     const { data: updatedProject, error: updateError } = await supabase
       .from('projects')
@@ -760,8 +694,6 @@ export const transferItemToCompany = async (projectId, targetCompany, options = 
     if (updateError) {
       throw new Error(`Failed to update project: ${updateError.message}`);
     }
-
-    console.log(`✅ Project transfer completed:`, updatedProject);
 
     // Clear cache to ensure fresh data
     cache.clear();
@@ -783,7 +715,6 @@ export const transferItemToCompany = async (projectId, targetCompany, options = 
     };
 
   } catch (error) {
-    console.error('❌ Error transferring project:', error);
     return { 
       data: null, 
       error: {

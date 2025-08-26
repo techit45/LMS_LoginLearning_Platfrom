@@ -9,8 +9,6 @@ import { supabase } from './supabaseClient';
  */
 export const getMyProgress = async (userId, timeFilter = 'week') => {
   try {
-    console.log('📊 Getting progress for student:', userId);
-
     // Get user enrollments with course details
     const { data: enrollments, error: enrollmentError } = await supabase
       .from('enrollments')
@@ -37,7 +35,6 @@ export const getMyProgress = async (userId, timeFilter = 'week') => {
         .eq('enrollment_id', enrollment.id);
 
       if (progressError) {
-        console.warn('Error fetching progress for enrollment:', enrollment.id, progressError);
         return null;
       }
 
@@ -101,11 +98,9 @@ export const getMyProgress = async (userId, timeFilter = 'week') => {
       chartData
     };
 
-    console.log('✅ Student progress data:', result);
     return result;
 
   } catch (error) {
-    console.error('❌ Error fetching student progress:', error);
     throw error;
   }
 };
@@ -115,8 +110,6 @@ export const getMyProgress = async (userId, timeFilter = 'week') => {
  */
 export const getCourseProgress = async (instructorId, timeFilter = 'week') => {
   try {
-    console.log('👨‍🏫 Getting course progress for instructor:', instructorId);
-
     // Mock data for now since we don't have instructor_id column in courses
     const mockCourses = [
       {
@@ -143,7 +136,6 @@ export const getCourseProgress = async (instructorId, timeFilter = 'week') => {
     return result;
 
   } catch (error) {
-    console.error('❌ Error fetching instructor progress:', error);
     throw error;
   }
 };
@@ -153,8 +145,6 @@ export const getCourseProgress = async (instructorId, timeFilter = 'week') => {
  */
 export const getProgressData = async (timeFilter = 'week') => {
   try {
-    console.log('👨‍💼 Getting all progress data for admin');
-
     // Get all enrollments
     const { data: enrollments, error: enrollmentError } = await supabase
       .from('enrollments')
@@ -186,11 +176,9 @@ export const getProgressData = async (timeFilter = 'week') => {
       enrollmentData: enrollments || []
     };
 
-    console.log('✅ Admin progress data:', result);
     return result;
 
   } catch (error) {
-    console.error('❌ Error fetching admin progress:', error);
     throw error;
   }
 };

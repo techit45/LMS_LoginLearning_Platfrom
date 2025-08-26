@@ -1,9 +1,19 @@
 // Google Drive API Client for Frontend
+import { supabase } from './supabaseClient';
+
 class GoogleDriveClient {
   constructor() {
     // Use Supabase Edge Function for Google Drive API
     this.baseURL = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
-    this.authHeader = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+  }
+
+  // 🔒 SECURE: Get dynamic auth header
+  async getAuthHeader() {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.access_token) {
+      throw new Error('Authentication required for Google Drive operations');
+    }
+    return `Bearer ${session.access_token}`;
   }
 
   // 📁 List files
@@ -13,9 +23,11 @@ class GoogleDriveClient {
       ...options
     });
 
+    const authHeader = await this.getAuthHeader(); // 🔒 Dynamic auth
+
     const response = await fetch(`${this.baseURL}/list?${params}`, {
       headers: {
-        'Authorization': this.authHeader,
+        'Authorization': authHeader,
       },
     });
     if (!response.ok) {
@@ -30,10 +42,12 @@ class GoogleDriveClient {
     formData.append('file', file);
     formData.append('folderId', folderId);
 
+    const authHeader = await this.getAuthHeader(); // 🔒 Dynamic auth
+
     const response = await fetch(`${this.baseURL}/simple-upload`, {
       method: 'POST',
       headers: {
-        'Authorization': this.authHeader,
+        'Authorization': authHeader,
       },
       body: formData
     });
@@ -46,11 +60,13 @@ class GoogleDriveClient {
 
   // 🗂️ Create folder
   async createFolder(folderName, parentId = 'root') {
+    const authHeader = await this.getAuthHeader(); // 🔒 Dynamic auth
+    
     const response = await fetch(`${this.baseURL}/create-folder`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': this.authHeader,
+        'Authorization': authHeader,
       },
       body: JSON.stringify({
         folderName,

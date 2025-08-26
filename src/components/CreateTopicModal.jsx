@@ -30,7 +30,6 @@ const CreateTopicModal = ({
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-
   useEffect(() => {
     if (isOpen) {
       // Reset form when modal opens
@@ -40,7 +39,6 @@ const CreateTopicModal = ({
       });
     }
   }, [isOpen]);
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -79,7 +77,6 @@ const CreateTopicModal = ({
       onClose();
       
     } catch (error) {
-      console.error('Error creating topic:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: error.message || "ไม่สามารถสร้างหัวข้อได้",
@@ -142,7 +139,6 @@ const CreateTopicModal = ({
           <div className="flex-1 overflow-y-auto">
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
 
-
             {/* Title */}
             <div>
               <label className="block text-lg font-semibold text-gray-800 mb-3">
@@ -200,8 +196,7 @@ const CreateTopicModal = ({
                 targetType="topic"
                 targetId={null} // Will be set after topic creation
                 onFilesUploaded={(files) => {
-                  console.log('Files uploaded:', files);
-                }}
+                  }}
                 maxFiles={5}
                 disabled={loading}
               />

@@ -94,7 +94,6 @@ const TeachingScheduleWidget = () => {
         setSchedules(combinedData || []);
       }
     } catch (err) {
-      console.error('Error loading schedules:', err);
       setError('ไม่สามารถโหลดตารางสอนได้');
     } finally {
       setLoading(false);

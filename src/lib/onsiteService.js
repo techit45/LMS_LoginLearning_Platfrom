@@ -38,7 +38,6 @@ export const getOnsiteCourses = async () => {
 
     return { data: coursesWithStats, error: null };
   } catch (error) {
-    console.error('Error fetching onsite courses:', error);
     return { data: null, error };
   }
 };
@@ -70,7 +69,6 @@ export const getOnsiteCourseById = async (courseId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching onsite course:', error);
     return { data: null, error };
   }
 };
@@ -98,7 +96,6 @@ export const getProjectTemplates = async (courseId, projectType = null) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching project templates:', error);
     return { data: null, error };
   }
 };
@@ -142,7 +139,6 @@ export const getAvailableSchedules = async (courseId) => {
 
     return { data: schedulesWithAvailability, error: null };
   } catch (error) {
-    console.error('Error fetching available schedules:', error);
     return { data: null, error };
   }
 };
@@ -152,8 +148,6 @@ export const getAvailableSchedules = async (courseId) => {
  */
 export const submitOnsiteRegistration = async (registrationData) => {
   try {
-    console.log('Submitting onsite registration:', registrationData);
-
     // Calculate total amount based on schedule
     const { data: schedule, error: scheduleError } = await supabase
       .from('onsite_course_schedules')
@@ -193,10 +187,8 @@ export const submitOnsiteRegistration = async (registrationData) => {
 
     if (error) throw error;
 
-    console.log('Registration submitted successfully:', data);
     return { data, error: null };
   } catch (error) {
-    console.error('Error submitting onsite registration:', error);
     return { data: null, error };
   }
 };
@@ -231,7 +223,6 @@ export const checkRegistrationStatus = async (email, scheduleId = null) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error checking registration status:', error);
     return { data: null, error };
   }
 };
@@ -276,7 +267,6 @@ export const getOnsiteRegistrations = async (filters = {}) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching onsite registrations:', error);
     return { data: null, error };
   }
 };
@@ -307,7 +297,6 @@ export const updateRegistrationStatus = async (registrationId, updateData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating registration status:', error);
     return { data: null, error };
   }
 };
@@ -336,7 +325,6 @@ export const createCourseSchedule = async (scheduleData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error creating course schedule:', error);
     return { data: null, error };
   }
 };
@@ -362,7 +350,6 @@ export const createProjectTemplate = async (templateData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error creating project template:', error);
     return { data: null, error };
   }
 };
@@ -386,7 +373,6 @@ export const updateProjectTemplate = async (templateId, templateData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating project template:', error);
     return { data: null, error };
   }
 };
@@ -419,7 +405,6 @@ export const assignProject = async (assignmentData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error assigning project:', error);
     return { data: null, error };
   }
 };
@@ -442,7 +427,6 @@ export const getOnsiteRegistrationStats = async () => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching onsite registration stats:', error);
     return { data: null, error };
   }
 };
@@ -461,7 +445,6 @@ export const getOnsiteProjectStats = async () => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching onsite project stats:', error);
     return { data: null, error };
   }
 };
@@ -484,7 +467,6 @@ export const getAttendanceRecords = async (scheduleId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching attendance records:', error);
     return { data: null, error };
   }
 };
@@ -515,7 +497,6 @@ export const recordAttendance = async (attendanceData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error recording attendance:', error);
     return { data: null, error };
   }
 };

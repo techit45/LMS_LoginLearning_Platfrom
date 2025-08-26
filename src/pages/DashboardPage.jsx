@@ -21,25 +21,33 @@ import {
   Settings,
   ArrowRight,
   Clock,
+  CalendarDays,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useToast } from "../hooks/use-toast.jsx"
 import { useNavigate } from "react-router-dom";
 import TimeClockWidget from "../components/TimeClockWidget";
 import TeachingScheduleWidget from "../components/TeachingScheduleWidget";
-import WorkSummaryReport from "../components/WorkSummaryReport";
-import PersonalPayrollView from "../components/PersonalPayrollView";
+import WorkTimeReport from "../components/PayrollReport";
+import LeaveRequestForm from "../components/LeaveRequestForm";
 
 const DashboardPage = () => {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [showLeaveForm, setShowLeaveForm] = useState(false);
 
   const handleFeatureClick = (featureName, path) => {
     // Special handling for notifications - open notification center
     if (featureName === "การแจ้งเตือน") {
       setIsNotificationOpen(true);
+      return;
+    }
+    
+    // Special handling for leave request
+    if (featureName === "ขอลา") {
+      setShowLeaveForm(true);
       return;
     }
     
@@ -68,7 +76,6 @@ const DashboardPage = () => {
       });
     }
   };
-
 
   const pageVariants = {
     initial: { opacity: 0, y: 20 },
@@ -118,6 +125,13 @@ const DashboardPage = () => {
       path: "/system-diagnostic",
       action: "system-diagnostic",
     },
+    {
+      name: "ขอลา",
+      icon: CalendarDays,
+      color: "yellow",
+      description: "ยื่นคำขอลา ลาป่วย ลากิจ หรือลาพักร้อน",
+      action: "leave-request",
+    },
   ];
 
   const dashboardItems = [
@@ -162,6 +176,13 @@ const DashboardPage = () => {
       color: "yellow",
       description: "ดูการแจ้งเตือนล่าสุดและข่าวสารจากเรา",
       path: null,
+    },
+    {
+      name: "จัดการชั่วโมง",
+      icon: Clock,
+      color: "indigo",
+      description: "จัดการและระบุรายละเอียดชั่วโมงการทำงาน",
+      path: "/work-hours",
     },
   ];
 
@@ -245,28 +266,6 @@ const DashboardPage = () => {
           </motion.div>
         )}
 
-        {/* Work Summary Section - เฉพาะสำหรับอาจารย์และแอดมิน */}
-        {(user?.user_metadata?.role === 'instructor' || isAdmin) && (
-          <motion.div
-            initial={{ y: 30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mb-12"
-          >
-            <div className="flex items-center mb-6">
-              <BarChart2 className="w-6 h-6 text-purple-500 mr-3" />
-              <h2 className="text-2xl font-bold text-green-900">
-                สรุปผลการทำงานรายเดือน
-              </h2>
-            </div>
-            
-            {/* Work Summary Report */}
-            <WorkSummaryReport 
-              userId={user?.id}
-              showExport={true}
-            />
-          </motion.div>
-        )}
 
         {/* Personal Payroll Section - เฉพาะสำหรับอาจารย์และแอดมิน */}
         {(user?.user_metadata?.role === 'instructor' || isAdmin) && (
@@ -276,7 +275,7 @@ const DashboardPage = () => {
             transition={{ duration: 0.5, delay: 0.25 }}
             className="mb-12"
           >
-            <PersonalPayrollView />
+            <WorkTimeReport selectedUserId={user?.id} />
           </motion.div>
         )}
 
@@ -330,7 +329,6 @@ const DashboardPage = () => {
             </div>
           </motion.div>
         )}
-
 
         {/* Main Dashboard Items */}
         <motion.div
@@ -398,6 +396,22 @@ const DashboardPage = () => {
         isOpen={isNotificationOpen} 
         onClose={() => setIsNotificationOpen(false)} 
       />
+
+      {/* Leave Request Modal */}
+      {showLeaveForm && (
+        <LeaveRequestForm
+          showModal={true}
+          onSubmit={(data) => {
+            setShowLeaveForm(false);
+            toast({
+              title: "✅ ส่งคำขอลาสำเร็จ!",
+              description: "รอการอนุมัติจากผู้จัดการ",
+              duration: 5000,
+            });
+          }}
+          onCancel={() => setShowLeaveForm(false)}
+        />
+      )}
     </motion.div>
   );
 };

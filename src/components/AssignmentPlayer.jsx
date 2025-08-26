@@ -93,7 +93,6 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete }) => {
               const attachedFiles = JSON.parse(latest.attached_files);
               setUploadedFiles(attachedFiles || []);
             } catch (e) {
-              console.error("Error parsing attached files:", e);
               setUploadedFiles([]);
             }
           } else {
@@ -109,7 +108,6 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete }) => {
         }
       }
     } catch (error) {
-      console.error("Error loading assignment data:", error);
       toast({
         title: "ไม่สามารถโหลดข้อมูลงานได้",
         description: error.message,
@@ -155,7 +153,6 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete }) => {
 
       return data;
     } catch (error) {
-      console.error("Error uploading file:", error);
       toast({
         title: "ไม่สามารถอัปโหลดไฟล์ได้",
         description: error.message,
@@ -199,7 +196,6 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete }) => {
       // Reload submissions
       loadAssignmentData();
     } catch (error) {
-      console.error("Error saving draft:", error);
       toast({
         title: "ไม่สามารถบันทึกแบบร่างได้",
         description: error.message,
@@ -260,7 +256,6 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete }) => {
       setMode("view");
       loadAssignmentData();
     } catch (error) {
-      console.error("Error submitting assignment:", error);
       toast({
         title: "ไม่สามารถส่งงานได้",
         description: error.message,
@@ -436,7 +431,6 @@ const AssignmentPlayer = ({ contentId, assignment, onComplete }) => {
                         );
                         setUploadedFiles(attachedFiles || []);
                       } catch (e) {
-                        console.error("Error parsing attached files:", e);
                         setUploadedFiles([]);
                       }
                     } else {

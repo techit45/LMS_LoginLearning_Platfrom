@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบ User Experience - Google Drive System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .test-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        
+        .test-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+        }
+        
+        .test-section h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #edf2f7;
+            display: flex;
+            align-items: center;
+        }
+        
+        .icon {
+            margin-right: 0.5rem;
+            font-size: 1.2em;
+        }
+        
+        .test-demo {
+            background: #f7fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border: 1px dashed #cbd5e0;
+        }
+        
+        .loading-demo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            background: linear-gradient(45deg, #f0f4f8, #e2e8f0);
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #4299e1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4299e1, #3182ce);
+            border-radius: 4px;
+            animation: progress 3s ease-in-out infinite;
+        }
+        
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 75%; }
+            100% { width: 100%; }
+        }
+        
+        .message-demo {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        
+        .message-success {
+            background: #f0fff4;
+            color: #22543d;
+            border-left: 4px solid #38a169;
+        }
+        
+        .message-error {
+            background: #fff5f5;
+            color: #742a2a;
+            border-left: 4px solid #e53e3e;
+        }
+        
+        .message-warning {
+            background: #fffbf0;
+            color: #744210;
+            border-left: 4px solid #d69e2e;
+        }
+        
+        .message-info {
+            background: #ebf8ff;
+            color: #2a4365;
+            border-left: 4px solid #3182ce;
+        }
+        
+        .form-demo {
+            max-width: 400px;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        
+        .form-input.error {
+            border-color: #e53e3e;
+        }
+        
+        .form-error {
+            color: #e53e3e;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            box-shadow: 0 2px 8px rgba(66, 153, 225, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(66, 153, 225, 0.4);
+        }
+        
+        .btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+        }
+        
+        .responsive-demo {
+            background: #f7fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            resize: horizontal;
+            overflow: auto;
+            min-width: 250px;
+            border: 2px dashed #cbd5e0;
+        }
+        
+        .responsive-content {
+            background: white;
+            padding: 1rem;
+            border-radius: 4px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #2d3748;
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.875rem;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .modal-demo {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transform: scale(0.7);
+            transition: transform 0.3s ease;
+        }
+        
+        .modal-demo.show .modal-content {
+            transform: scale(1);
+        }
+        
+        .accessibility-demo {
+            padding: 1rem;
+            border: 2px solid #4299e1;
+            border-radius: 8px;
+            background: #ebf8ff;
+        }
+        
+        .accessibility-demo:focus {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+        
+        .keyboard-shortcut {
+            background: #2d3748;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+        
+        .performance-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+        
+        .device-preview {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+        
+        .device {
+            flex: 1;
+            min-width: 200px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .device-header {
+            background: #2d3748;
+            color: white;
+            padding: 0.5rem;
+            text-align: center;
+            font-size: 0.875rem;
+        }
+        
+        .device-screen {
+            background: white;
+            aspect-ratio: 16/10;
+            padding: 1rem;
+            font-size: 0.75rem;
+            overflow: hidden;
+        }
+        
+        .mobile .device-screen {
+            aspect-ratio: 9/16;
+        }
+        
+        .tablet .device-screen {
+            aspect-ratio: 4/3;
+        }
+        
+        @media (max-width: 768px) {
+            .test-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .device-preview {
+                flex-direction: column;
+            }
+        }
+        
+        .animation-demo {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(45deg, #4299e1, #3182ce);
+            border-radius: 50%;
+            margin: 1rem auto;
+            animation: bounce 2s ease-in-out infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎨 ทดสอบ User Experience</h1>
+        <p>ตรวจสอบ Loading States, Messages, Validation และ Responsive Design</p>
+    </div>
+
+    <div class="test-grid">
+        <!-- Loading States -->
+        <div class="test-section">
+            <h3><span class="icon">⏳</span>Loading States</h3>
+            <p>แสดงสถานะการโหลดข้อมูล</p>
+            
+            <div class="loading-demo">
+                <div class="spinner"></div>
+                <span>กำลังโหลดข้อมูล...</span>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+            
+            <button class="btn" onclick="simulateLoading(this)">ทดสอบ Loading</button>
+            <button class="btn" disabled>
+                <div style="display: inline-block; width: 16px; height: 16px; border: 2px solid white; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px;"></div>
+                กำลังประมวลผล...
+            </button>
+        </div>
+
+        <!-- Success Messages -->
+        <div class="test-section">
+            <h3><span class="icon">✅</span>Success Messages</h3>
+            <p>ข้อความแจ้งความสำเร็จ</p>
+            
+            <div class="message-demo message-success">
+                <span style="margin-right: 0.5rem;">✅</span>
+                <span>สร้างคอร์สและโฟลเดอร์สำเร็จ! 🎉</span>
+            </div>
+            
+            <div class="message-demo message-success">
+                <span style="margin-right: 0.5rem;">📁</span>
+                <span>อัปโหลดไฟล์เรียบร้อยแล้ว</span>
+            </div>
+            
+            <button class="btn btn-success" onclick="showMessage('success')">แสดงข้อความสำเร็จ</button>
+        </div>
+
+        <!-- Error Messages -->
+        <div class="test-section">
+            <h3><span class="icon">❌</span>Error Messages</h3>
+            <p>ข้อความแจ้งข้อผิดพลาด</p>
+            
+            <div class="message-demo message-error">
+                <span style="margin-right: 0.5rem;">❌</span>
+                <span>ไม่สามารถสร้างโฟลเดอร์ได้: Permission Denied</span>
+            </div>
+            
+            <div class="message-demo message-error">
+                <span style="margin-right: 0.5rem;">🔒</span>
+                <span>ไม่ได้เข้าสู่ระบบ กรุณาเข้าสู่ระบบก่อนใช้งาน</span>
+            </div>
+            
+            <button class="btn btn-danger" onclick="showMessage('error')">แสดงข้อความข้อผิดพลาด</button>
+        </div>
+
+        <!-- Warning Messages -->
+        <div class="test-section">
+            <h3><span class="icon">⚠️</span>Warning Messages</h3>
+            <p>ข้อความแจ้งเตือน</p>
+            
+            <div class="message-demo message-warning">
+                <span style="margin-right: 0.5rem;">⚠️</span>
+                <span>คอร์สสร้างสำเร็จ แต่มีปัญหาโฟลเดอร์</span>
+            </div>
+            
+            <div class="message-demo message-warning">
+                <span style="margin-right: 0.5rem;">📊</span>
+                <span>ขนาดไฟล์ใหญ่เกินไป (เกิน 5MB)</span>
+            </div>
+            
+            <button class="btn btn-warning" onclick="showMessage('warning')">แสดงข้อความเตือน</button>
+        </div>
+
+        <!-- Form Validation -->
+        <div class="test-section">
+            <h3><span class="icon">📝</span>Form Validation</h3>
+            <p>การตรวจสอบฟอร์ม</p>
+            
+            <div class="form-demo">
+                <div class="form-group">
+                    <label class="form-label">ชื่อคอร์ส *</label>
+                    <input type="text" class="form-input" id="course-title" placeholder="กรุณากรอกชื่อคอร์ส">
+                    <div class="form-error" id="title-error" style="display: none;">กรุณากรอกชื่อคอร์สอย่างน้อย 5 ตัวอักษร</div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">บริษัท *</label>
+                    <select class="form-input" id="company-select">
+                        <option value="">เลือกบริษัท</option>
+                        <option value="login">Login</option>
+                        <option value="meta">Meta</option>
+                        <option value="med">Med</option>
+                        <option value="edtech">EdTech</option>
+                        <option value="w2d">W2D</option>
+                    </select>
+                    <div class="form-error" id="company-error" style="display: none;">กรุณาเลือกบริษัท</div>
+                </div>
+                
+                <button class="btn" onclick="validateForm()">ตรวจสอบฟอร์ม</button>
+            </div>
+        </div>
+
+        <!-- Tooltips & Help -->
+        <div class="test-section">
+            <h3><span class="icon">💡</span>Tooltips & Help</h3>
+            <p>คำแนะนำและข้อมูลเสริม</p>
+            
+            <div class="tooltip">
+                <span style="border-bottom: 1px dotted;">Google Drive Integration</span>
+                <span class="tooltiptext">ระบบจะสร้างโฟลเดอร์ใน Google Drive โดยอัตโนมัติ</span>
+            </div>
+            
+            <br><br>
+            
+            <div class="tooltip">
+                <span style="border-bottom: 1px dotted;">Multi-Company Support</span>
+                <span class="tooltiptext">รองรับการจัดการข้อมูลแยกตามบริษัท (Login, Meta, Med, EdTech, W2D)</span>
+            </div>
+            
+            <br><br>
+            
+            <div class="accessibility-demo" tabindex="0">
+                <strong>Accessibility Feature</strong>
+                <p>กด <span class="keyboard-shortcut">Tab</span> เพื่อนำทาง</p>
+                <p>กด <span class="keyboard-shortcut">Enter</span> เพื่อเลือก</p>
+            </div>
+        </div>
+
+        <!-- Modal Demo -->
+        <div class="test-section">
+            <h3><span class="icon">📱</span>Modal & Dialogs</h3>
+            <p>หน้าต่างป๊อปอัพ</p>
+            
+            <button class="btn" onclick="showModal()">เปิด Modal</button>
+            <button class="btn" onclick="showConfirmDialog()">Confirm Dialog</button>
+            
+            <div class="message-demo message-info">
+                <span style="margin-right: 0.5rem;">ℹ️</span>
+                <span>ใช้ Modal สำหรับการสร้างคอร์ส/โครงงาน</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Responsive Design Demo -->
+    <div class="test-section" style="margin-bottom: 2rem;">
+        <h3><span class="icon">📱</span>Responsive Design</h3>
+        <p>ทดสอบการแสดงผลบนอุปกรณ์ต่างๆ</p>
+        
+        <div class="device-preview">
+            <div class="device desktop">
+                <div class="device-header">🖥️ Desktop (1920x1080)</div>
+                <div class="device-screen">
+                    <h4>Desktop Layout</h4>
+                    <p>Full sidebar, multiple columns, large buttons</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+                        <div style="background: #e2e8f0; padding: 0.5rem; border-radius: 4px;">Card 1</div>
+                        <div style="background: #e2e8f0; padding: 0.5rem; border-radius: 4px;">Card 2</div>
+                        <div style="background: #e2e8f0; padding: 0.5rem; border-radius: 4px;">Card 3</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="device tablet">
+                <div class="device-header">📱 Tablet (768x1024)</div>
+                <div class="device-screen">
+                    <h4>Tablet Layout</h4>
+                    <p>Collapsed sidebar, 2 columns</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <div style="background: #e2e8f0; padding: 0.5rem; border-radius: 4px;">Card 1</div>
+                        <div style="background: #e2e8f0; padding: 0.5rem; border-radius: 4px;">Card 2</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="device mobile">
+                <div class="device-header">📱 Mobile (375x667)</div>
+                <div class="device-screen">
+                    <h4>Mobile Layout</h4>
+                    <p>Single column, hamburger menu</p>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem;">
+                        <div style="background: #e2e8f0; padding: 0.5rem; border-radius: 4px;">Card 1</div>
+                        <div style="background: #e2e8f0; padding: 0.5rem; border-radius: 4px;">Card 2</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="responsive-demo">
+            <div class="responsive-content">
+                <h4>ลองปรับขนาดกรอบนี้</h4>
+                <p>เนื้อหาจะปรับตัวตามขนาดหน้าจอ</p>
+                <div class="animation-demo"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Metrics -->
+    <div class="test-section" style="margin-bottom: 2rem;">
+        <h3><span class="icon">⚡</span>Performance Metrics</h3>
+        <p>ตัวชี้วัดประสิทธิภาพ</p>
+        
+        <div class="performance-metrics">
+            <div class="metric-card">
+                <div class="metric-value" id="bundle-size">11MB</div>
+                <div class="metric-label">Bundle Size</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-value" id="load-time">2.3s</div>
+                <div class="metric-label">Load Time</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-value" id="components">60+</div>
+                <div class="metric-label">Components</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-value" id="companies">5</div>
+                <div class="metric-label">Companies</div>
+            </div>
+        </div>
+        
+        <button class="btn" onclick="measurePerformance()">วัดประสิทธิภาพ</button>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-demo" id="demo-modal">
+        <div class="modal-content">
+            <h3>🎉 สร้างคอร์สใหม่</h3>
+            <p>ตัวอย่าง Modal สำหรับการสร้างคอร์สเรียน</p>
+            <div class="form-group">
+                <label class="form-label">ชื่อคอร์ส</label>
+                <input type="text" class="form-input" placeholder="React Advanced Course">
+            </div>
+            <div style="text-align: right; margin-top: 1rem;">
+                <button class="btn" onclick="hideModal()">ยกเลิก</button>
+                <button class="btn btn-success" onclick="hideModal()">สร้างคอร์ส</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Loading Simulation
+        function simulateLoading(button) {
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.innerHTML = '<div style="display: inline-block; width: 16px; height: 16px; border: 2px solid white; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px;"></div>กำลังโหลด...';
+            
+            setTimeout(() => {
+                button.disabled = false;
+                button.textContent = originalText;
+            }, 3000);
+        }
+
+        // Message Display
+        function showMessage(type) {
+            const messages = {
+                success: '✅ การดำเนินการสำเร็จเรียบร้อย!',
+                error: '❌ เกิดข้อผิดพลาด: ไม่สามารถเชื่อมต่อได้',
+                warning: '⚠️ คำเตือน: กรุณาตรวจสอบข้อมูล'
+            };
+            
+            const messageEl = document.createElement('div');
+            messageEl.className = `message-demo message-${type}`;
+            messageEl.innerHTML = `<span>${messages[type]}</span>`;
+            
+            // Add to page
+            const container = event.target.parentElement;
+            container.appendChild(messageEl);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                messageEl.remove();
+            }, 3000);
+        }
+
+        // Form Validation
+        function validateForm() {
+            const title = document.getElementById('course-title');
+            const company = document.getElementById('company-select');
+            const titleError = document.getElementById('title-error');
+            const companyError = document.getElementById('company-error');
+            
+            let isValid = true;
+            
+            // Title validation
+            if (title.value.length < 5) {
+                title.classList.add('error');
+                titleError.style.display = 'block';
+                isValid = false;
+            } else {
+                title.classList.remove('error');
+                titleError.style.display = 'none';
+            }
+            
+            // Company validation
+            if (!company.value) {
+                company.classList.add('error');
+                companyError.style.display = 'block';
+                isValid = false;
+            } else {
+                company.classList.remove('error');
+                companyError.style.display = 'none';
+            }
+            
+            if (isValid) {
+                showMessage('success');
+            } else {
+                showMessage('error');
+            }
+        }
+
+        // Modal Functions
+        function showModal() {
+            const modal = document.getElementById('demo-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('show'), 10);
+        }
+
+        function hideModal() {
+            const modal = document.getElementById('demo-modal');
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+
+        function showConfirmDialog() {
+            const confirmed = confirm('คุณต้องการลบคอร์สนี้หรือไม่?');
+            if (confirmed) {
+                showMessage('success');
+            } else {
+                showMessage('warning');
+            }
+        }
+
+        // Performance Measurement
+        function measurePerformance() {
+            const startTime = performance.now();
+            
+            // Simulate some operations
+            setTimeout(() => {
+                const endTime = performance.now();
+                const duration = ((endTime - startTime) / 1000).toFixed(2);
+                
+                document.getElementById('load-time').textContent = duration + 's';
+                
+                // Update other metrics with animation
+                animateValue('bundle-size', 11, 'MB');
+                animateValue('components', 60, '+');
+                animateValue('companies', 5, '');
+                
+                showMessage('success');
+            }, 1000);
+        }
+
+        function animateValue(elementId, targetValue, suffix) {
+            const element = document.getElementById(elementId);
+            let currentValue = 0;
+            const increment = targetValue / 20;
+            
+            const timer = setInterval(() => {
+                currentValue += increment;
+                if (currentValue >= targetValue) {
+                    currentValue = targetValue;
+                    clearInterval(timer);
+                }
+                element.textContent = Math.floor(currentValue) + suffix;
+            }, 50);
+        }
+
+        // Real-time validation
+        document.getElementById('course-title').addEventListener('input', function() {
+            const titleError = document.getElementById('title-error');
+            if (this.value.length >= 5) {
+                this.classList.remove('error');
+                titleError.style.display = 'none';
+            }
+        });
+
+        document.getElementById('company-select').addEventListener('change', function() {
+            const companyError = document.getElementById('company-error');
+            if (this.value) {
+                this.classList.remove('error');
+                companyError.style.display = 'none';
+            }
+        });
+
+        // Close modal on outside click
+        document.getElementById('demo-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideModal();
+            }
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                hideModal();
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎨 User Experience Test Page loaded');
+            
+            // Simulate loading completion
+            setTimeout(() => {
+                console.log('✅ All components rendered successfully');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

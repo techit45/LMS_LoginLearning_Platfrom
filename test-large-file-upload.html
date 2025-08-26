@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Large File Upload Test - Chunked Upload System</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+        .test-section {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .test-title {
+            color: #60a5fa;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .file-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed #475569;
+            border-radius: 8px;
+            background: #0f172a;
+            color: #e2e8f0;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        .file-input:hover {
+            border-color: #60a5fa;
+        }
+        .upload-btn {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin: 10px 5px;
+        }
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        .upload-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .log {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin: 10px 0;
+        }
+        .file-info {
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 5px 0;
+        }
+        .status.success { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .status.error { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .status.warning { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .status.info { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .endpoint-list {
+            list-style: none;
+            padding: 0;
+        }
+        .endpoint-list li {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 5px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 Large File Upload Test</h1>
+        <p>ทดสอบระบบ Chunked Upload สำหรับไฟล์ขนาดใหญ่ (>100MB)</p>
+        <div class="status info">
+            <strong>Supabase Edge Function:</strong> google-drive (v6.0.0)
+        </div>
+    </div>
+
+    <!-- Health Check Section -->
+    <div class="test-section">
+        <div class="test-title">🔍 Health Check</div>
+        <button class="upload-btn" onclick="testHealthCheck()">Test Health Check</button>
+        <div id="health-log" class="log"></div>
+    </div>
+
+    <!-- Available Endpoints -->
+    <div class="test-section">
+        <div class="test-title">📋 Available Endpoints</div>
+        <ul class="endpoint-list">
+            <li>POST /initiate-chunked-upload - เริ่มต้น chunked upload</li>
+            <li>PUT /upload-chunk - อัปโหลด chunk แต่ละส่วน</li>
+            <li>POST /simple-upload - อัปโหลดไฟล์ขนาดเล็ก (&lt;100MB)</li>
+            <li>GET /health - ตรวจสอบสถานะระบบ</li>
+        </ul>
+    </div>
+
+    <!-- File Upload Test -->
+    <div class="test-section">
+        <div class="test-title">📤 File Upload Test</div>
+        <input type="file" id="fileInput" class="file-input" accept="*/*">
+        <div id="file-info" class="file-info" style="display: none;"></div>
+        
+        <div>
+            <button class="upload-btn" onclick="testSimpleUpload()" id="simpleUploadBtn">
+                Simple Upload (&lt;100MB)
+            </button>
+            <button class="upload-btn" onclick="testChunkedUpload()" id="chunkedUploadBtn">
+                Chunked Upload (Any Size)
+            </button>
+        </div>
+
+        <div class="progress-bar" id="progressBar" style="display: none;">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div id="progress-text" style="text-align: center; margin: 10px 0; display: none;"></div>
+
+        <div id="upload-log" class="log"></div>
+    </div>
+
+    <!-- Test Results -->
+    <div class="test-section">
+        <div class="test-title">📊 Test Results</div>
+        <div id="results" class="log"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+        
+        // Mock authentication token (replace with real token in production)
+        const AUTH_TOKEN = 'mock-token-for-testing';
+
+        // Logging functions
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString('th-TH');
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            element.innerHTML += `[${timestamp}] ${prefix} ${message}\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function clearLog(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        // Test health check
+        async function testHealthCheck() {
+            clearLog('health-log');
+            log('health-log', 'Testing health check endpoint...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('health-log', `✅ Health check passed!`, 'success');
+                    log('health-log', `Status: ${data.status}`, 'success');
+                    log('health-log', `Version: ${data.version}`, 'success');
+                    log('health-log', `Endpoints: ${data.endpoints?.join(', ')}`, 'success');
+                    log('health-log', `Timestamp: ${data.timestamp}`, 'success');
+                } else {
+                    log('health-log', `❌ Health check failed: ${response.status}`, 'error');
+                    log('health-log', `Error: ${data.error || data.message}`, 'error');
+                }
+            } catch (error) {
+                log('health-log', `❌ Health check error: ${error.message}`, 'error');
+                log('health-log', 'This might be a CORS issue. The endpoint may still be working correctly.', 'warning');
+            }
+        }
+
+        // Handle file selection
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const fileInfoDiv = document.getElementById('file-info');
+            
+            if (file) {
+                const fileSize = (file.size / 1024 / 1024).toFixed(2);
+                const isLarge = file.size > 100 * 1024 * 1024;
+                
+                fileInfoDiv.innerHTML = `
+                    <strong>ไฟล์ที่เลือก:</strong> ${file.name}<br>
+                    <strong>ขนาด:</strong> ${fileSize} MB<br>
+                    <strong>ประเภท:</strong> ${file.type || 'ไม่ระบุ'}<br>
+                    <strong>การอัปโหลดแนะนำ:</strong> ${isLarge ? 'Chunked Upload' : 'Simple Upload'}
+                `;
+                fileInfoDiv.style.display = 'block';
+                
+                // Enable/disable buttons based on file size
+                document.getElementById('simpleUploadBtn').disabled = isLarge;
+                document.getElementById('chunkedUploadBtn').disabled = false;
+            } else {
+                fileInfoDiv.style.display = 'none';
+                document.getElementById('simpleUploadBtn').disabled = true;
+                document.getElementById('chunkedUploadBtn').disabled = true;
+            }
+        });
+
+        // Show progress
+        function showProgress(progress, text) {
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progress-text');
+            
+            progressBar.style.display = 'block';
+            progressText.style.display = 'block';
+            
+            progressFill.style.width = `${progress}%`;
+            progressText.textContent = text || `${progress}%`;
+        }
+
+        function hideProgress() {
+            document.getElementById('progressBar').style.display = 'none';
+            document.getElementById('progress-text').style.display = 'none';
+        }
+
+        // Test simple upload
+        async function testSimpleUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('กรุณาเลือกไฟล์ก่อน');
+                return;
+            }
+
+            clearLog('upload-log');
+            log('upload-log', `Starting simple upload: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`);
+            
+            showProgress(0, 'เริ่มต้นการอัปโหลด...');
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('folderId', '18BmNBBwDSUMLUdq4ODhxLWPD8w0Lh189'); // LOGIN courses folder
+
+                showProgress(25, 'กำลังอัปโหลดไฟล์...');
+
+                const response = await fetch(`${API_BASE}/simple-upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: formData
+                });
+
+                showProgress(75, 'กำลังประมวลผล...');
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showProgress(100, 'อัปโหลดสำเร็จ!');
+                    log('upload-log', `Upload successful: ${JSON.stringify(result, null, 2)}`, 'success');
+                    log('results', `Simple Upload Success: ${file.name}`, 'success');
+                } else {
+                    hideProgress();
+                    log('upload-log', `Upload failed: ${JSON.stringify(result, null, 2)}`, 'error');
+                    log('results', `Simple Upload Failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                hideProgress();
+                log('upload-log', `Upload error: ${error.message}`, 'error');
+                log('results', `Simple Upload Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test chunked upload
+        async function testChunkedUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('กรุณาเลือกไฟล์ก่อน');
+                return;
+            }
+
+            clearLog('upload-log');
+            log('upload-log', `Starting chunked upload: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`);
+            
+            showProgress(0, 'เริ่มต้น chunked upload...');
+
+            try {
+                // Step 1: Initiate chunked upload
+                log('upload-log', 'Step 1: Initiating chunked upload session...');
+                
+                const initResponse = await fetch(`${API_BASE}/initiate-chunked-upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        fileName: file.name,
+                        fileSize: file.size,
+                        folderId: '18BmNBBwDSUMLUdq4ODhxLWPD8w0Lh189', // LOGIN courses folder
+                        mimeType: file.type || 'application/octet-stream'
+                    })
+                });
+
+                if (!initResponse.ok) {
+                    const error = await initResponse.json();
+                    throw new Error(`Failed to initiate upload: ${error.error}`);
+                }
+
+                const { uploadUrl, chunkSize } = await initResponse.json();
+                log('upload-log', `Upload session created. Chunk size: ${chunkSize} bytes`, 'success');
+
+                showProgress(10, 'เริ่มอัปโหลด chunks...');
+
+                // Step 2: Upload chunks
+                const CHUNK_SIZE = 256 * 1024; // 256KB
+                const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+                let uploadedBytes = 0;
+
+                log('upload-log', `Total chunks to upload: ${totalChunks}`);
+
+                for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+                    const start = chunkIndex * CHUNK_SIZE;
+                    const end = Math.min(start + CHUNK_SIZE, file.size);
+                    const chunk = file.slice(start, end);
+
+                    log('upload-log', `Uploading chunk ${chunkIndex + 1}/${totalChunks} (${start}-${end-1})`);
+
+                    const chunkResponse = await fetch(`${API_BASE}/upload-chunk?uploadUrl=${encodeURIComponent(uploadUrl)}&start=${start}&end=${end}&totalSize=${file.size}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${AUTH_TOKEN}`
+                        },
+                        body: chunk
+                    });
+
+                    if (!chunkResponse.ok) {
+                        const error = await chunkResponse.text();
+                        throw new Error(`Chunk ${chunkIndex + 1} upload failed: ${error}`);
+                    }
+
+                    const chunkResult = await chunkResponse.json();
+                    uploadedBytes = end;
+
+                    // Update progress
+                    const progress = Math.round((uploadedBytes / file.size) * 90) + 10; // 10-100%
+                    showProgress(progress, `อัปโหลด chunk ${chunkIndex + 1}/${totalChunks}`);
+
+                    // Check if upload is complete
+                    if (chunkResult.completed) {
+                        showProgress(100, 'อัปโหลดสำเร็จ!');
+                        log('upload-log', `Chunked upload completed successfully!`, 'success');
+                        log('upload-log', `File ID: ${chunkResult.fileId}`, 'success');
+                        log('upload-log', `View URL: ${chunkResult.webViewLink}`, 'success');
+                        log('results', `Chunked Upload Success: ${file.name} (${totalChunks} chunks)`, 'success');
+                        return;
+                    }
+                }
+
+                log('upload-log', 'All chunks uploaded but no completion signal received', 'warning');
+                log('results', `Chunked Upload Warning: ${file.name} - No completion signal`, 'warning');
+
+            } catch (error) {
+                hideProgress();
+                log('upload-log', `Chunked upload error: ${error.message}`, 'error');
+                log('results', `Chunked Upload Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize
+        document.getElementById('simpleUploadBtn').disabled = true;
+        document.getElementById('chunkedUploadBtn').disabled = true;
+        
+        // Auto-run health check on load
+        testHealthCheck();
+    </script>
+</body>
+</html>

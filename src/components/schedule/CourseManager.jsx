@@ -33,7 +33,6 @@ const CourseManager = ({ isOpen, onClose, onCourseCreated }) => {
   const [selectedColorMode, setSelectedColorMode] = useState('company');
   const [selectedColor, setSelectedColor] = useState('#1e3a8a');
 
-
   useEffect(() => {
     if (isOpen) {
       fetchCourses();
@@ -43,14 +42,17 @@ const CourseManager = ({ isOpen, onClose, onCourseCreated }) => {
   const fetchCourses = async () => {
     setLoading(true);
     try {
+      console.log('🔄 Fetching courses...');
       const { data, error } = await getCourses();
+      console.log('📊 Courses response:', { data, error });
       if (error) {
-        console.error('Error fetching courses:', error);
+        console.error('❌ Error fetching courses:', error);
       } else {
-        setCourses(data);
+        console.log('✅ Setting courses:', data?.length || 0, 'items');
+        setCourses(data || []);
       }
     } catch (error) {
-      console.error('Error fetching courses:', error);
+      console.error('❌ Exception in fetchCourses:', error);
     }
     setLoading(false);
   };
@@ -75,9 +77,10 @@ const CourseManager = ({ isOpen, onClose, onCourseCreated }) => {
       }
 
       if (result.error) {
-        console.error('Error saving course:', result.error);
-        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+        console.error('❌ Course creation/update error:', result.error);
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + result.error);
       } else {
+        console.log('✅ Course created/updated successfully:', result.data);
         await fetchCourses();
         resetForm();
         if (onCourseCreated) {
@@ -85,7 +88,6 @@ const CourseManager = ({ isOpen, onClose, onCourseCreated }) => {
         }
       }
     } catch (error) {
-      console.error('Error saving course:', error);
       alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     }
     setLoading(false);
@@ -118,13 +120,11 @@ const CourseManager = ({ isOpen, onClose, onCourseCreated }) => {
     try {
       const { error } = await deleteCourse(courseId);
       if (error) {
-        console.error('Error deleting course:', error);
         alert('เกิดข้อผิดพลาดในการลบข้อมูล');
       } else {
         await fetchCourses();
       }
     } catch (error) {
-      console.error('Error deleting course:', error);
       alert('เกิดข้อผิดพลาดในการลบข้อมูล');
     }
     setLoading(false);

@@ -44,8 +44,6 @@ export const trackProjectView = async (projectId) => {
 
       if (error && error.code === '42P01') {
         // Table doesn't exist - update project directly
-        console.warn('project_views table does not exist. Please run: sql_scripts/create-project-interactions-table.sql');
-        
         try {
           // Get current view count and increment it
           const { data: project } = await supabase
@@ -59,8 +57,7 @@ export const trackProjectView = async (projectId) => {
             .update({ view_count: (project?.view_count || 0) + 1 })
             .eq('id', projectId);
         } catch (updateError) {
-          console.warn('Could not update view count:', updateError.message);
-        }
+          }
         
         return { data: true, error: null };
       }
@@ -75,8 +72,6 @@ export const trackProjectView = async (projectId) => {
       // Successfully inserted new view record
       return { data: true, error: null };
     } catch (dbError) {
-      console.warn('Project view tracking unavailable:', dbError.message);
-      
       // Fallback: try to update project view count directly
       try {
         // Get current view count and increment it  
@@ -90,15 +85,12 @@ export const trackProjectView = async (projectId) => {
           .from('projects')
           .update({ view_count: (project?.view_count || 0) + 1 })
           .eq('id', projectId);
-        console.log('Updated view count directly on projects table');
-      } catch (updateError) {
-        console.warn('Could not update view count:', updateError.message);
-      }
+        } catch (updateError) {
+        }
       
       return { data: true, error: null };
     }
   } catch (error) {
-    console.error('Error tracking project view:', error);
     return { data: false, error };
   }
 };
@@ -126,7 +118,6 @@ export const toggleProjectLike = async (projectId) => {
 
       if (checkError && checkError.code === '42P01') {
         // Table doesn't exist - return mock data
-        console.warn('project_likes table does not exist. Please run: sql_scripts/create-project-interactions-table.sql');
         return { data: { liked: true, mock: true }, error: null };
       }
 
@@ -157,11 +148,9 @@ export const toggleProjectLike = async (projectId) => {
       }
     } catch (dbError) {
       // Database error - return mock response
-      console.warn('Project likes functionality unavailable:', dbError.message);
       return { data: { liked: true, mock: true }, error: null };
     }
   } catch (error) {
-    console.error('Error toggling project like:', error);
     return { data: null, error };
   }
 };
@@ -183,7 +172,6 @@ export const getUserProjectLikes = async (projectIds) => {
 
       if (error && error.code === '42P01') {
         // Table doesn't exist - return empty data
-        console.warn('project_likes table does not exist. Please run: sql_scripts/create-project-interactions-table.sql');
         return { data: [], error: null };
       }
 
@@ -191,11 +179,9 @@ export const getUserProjectLikes = async (projectIds) => {
 
       return { data: data || [], error: null };
     } catch (dbError) {
-      console.warn('Project likes functionality unavailable:', dbError.message);
       return { data: [], error: null };
     }
   } catch (error) {
-    console.error('Error fetching user project likes:', error);
     return { data: [], error };
   }
 };
@@ -213,7 +199,6 @@ export const getProjectLikeCount = async (projectId) => {
 
       if (error && error.code === '42P01') {
         // Table doesn't exist - return 0
-        console.warn('project_likes table does not exist. Please run: sql_scripts/create-project-interactions-table.sql');
         return { data: 0, error: null };
       }
 
@@ -221,11 +206,9 @@ export const getProjectLikeCount = async (projectId) => {
 
       return { data: count || 0, error: null };
     } catch (dbError) {
-      console.warn('Project likes functionality unavailable:', dbError.message);
       return { data: 0, error: null };
     }
   } catch (error) {
-    console.error('Error fetching project like count:', error);
     return { data: 0, error };
   }
 };
@@ -256,7 +239,6 @@ export const getProjectComments = async (projectId) => {
 
       if (error && error.code === '42P01') {
         // Table doesn't exist - return empty data
-        console.warn('project_comments table does not exist. Please run: sql_scripts/create-project-interactions-table.sql');
         return { data: [], error: null };
       }
 
@@ -279,8 +261,7 @@ export const getProjectComments = async (projectId) => {
             return acc;
           }, {});
         } catch (profileError) {
-          console.warn('Could not fetch user profiles:', profileError.message);
-        }
+          }
       }
 
       // Add user profile data to comments
@@ -301,11 +282,9 @@ export const getProjectComments = async (projectId) => {
 
       return { data: commentsWithReplies, error: null };
     } catch (dbError) {
-      console.warn('Project comments functionality unavailable:', dbError.message);
       return { data: [], error: null };
     }
   } catch (error) {
-    console.error('Error fetching project comments:', error);
     return { data: [], error };
   }
 };
@@ -344,7 +323,6 @@ export const addProjectComment = async (projectId, content, parentId = null) => 
 
       if (error && error.code === '42P01') {
         // Table doesn't exist - return mock data
-        console.warn('project_comments table does not exist. Please run: sql_scripts/create-project-interactions-table.sql');
         return { 
           data: { 
             id: 'mock-' + Date.now(),
@@ -374,8 +352,7 @@ export const addProjectComment = async (projectId, content, parentId = null) => 
         
         if (profile) userProfile = profile;
       } catch (profileError) {
-        console.warn('Could not fetch user profile:', profileError.message);
-      }
+        }
 
       return { 
         data: {
@@ -385,7 +362,6 @@ export const addProjectComment = async (projectId, content, parentId = null) => 
         error: null 
       };
     } catch (dbError) {
-      console.warn('Project comments functionality unavailable:', dbError.message);
       return { 
         data: { 
           id: 'mock-' + Date.now(),
@@ -402,7 +378,6 @@ export const addProjectComment = async (projectId, content, parentId = null) => 
       };
     }
   } catch (error) {
-    console.error('Error adding project comment:', error);
     return { data: null, error };
   }
 };
@@ -446,7 +421,6 @@ export const updateProjectComment = async (commentId, content) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating project comment:', error);
     return { data: null, error };
   }
 };
@@ -469,7 +443,6 @@ export const deleteProjectComment = async (commentId) => {
 
     return { data: true, error: null };
   } catch (error) {
-    console.error('Error deleting project comment:', error);
     return { data: false, error };
   }
 };
@@ -487,7 +460,6 @@ export const getProjectCommentCount = async (projectId) => {
 
       if (error && error.code === '42P01') {
         // Table doesn't exist - return 0
-        console.warn('project_comments table does not exist. Please run: sql_scripts/create-project-interactions-table.sql');
         return { data: 0, error: null };
       }
 
@@ -495,11 +467,9 @@ export const getProjectCommentCount = async (projectId) => {
 
       return { data: count || 0, error: null };
     } catch (dbError) {
-      console.warn('Project comments functionality unavailable:', dbError.message);
       return { data: 0, error: null };
     }
   } catch (error) {
-    console.error('Error fetching project comment count:', error);
     return { data: 0, error };
   }
 };

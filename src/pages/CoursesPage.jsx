@@ -85,45 +85,36 @@ const CoursesPage = () => {
   };
 
   const loadCourses = async () => {
-    console.log('🔄 Starting course loading...');
     setLoading(true);
     
     try {
-      console.log('📡 Calling getAllCourses...');
       const { data, error } = await getAllCourses();
       
       if (error) {
-        console.error('❌ Database error:', error);
         // Use emergency data instead of showing error
         const emergencyData = getEmergencyData();
         const filteredCourses = filterCoursesByCompany(emergencyData.courses);
         setCourses(filteredCourses);
-        console.log('🚑 Using emergency courses data');
         toast({
           title: "โหลดข้อมูลสำรอง",
           description: "ใช้ข้อมูลสำรองเนื่องจากเซิร์ฟเวอร์ช้า",
           variant: "default"
         });
       } else {
-        console.log('✅ Courses received:', data?.length || 0);
         const filteredCourses = filterCoursesByCompany(data || []);
-        console.log('🔍 Filtered courses:', filteredCourses.length);
         setCourses(filteredCourses);
       }
     } catch (error) {
-      console.error('❌ Catch error:', error);
       // Use emergency data on any error
       const emergencyData = getEmergencyData();
       const filteredCourses = filterCoursesByCompany(emergencyData.courses);
       setCourses(filteredCourses);
-      console.log('🚑 Using emergency courses data after error');
       toast({
         title: "โหลดข้อมูลสำรอง",
         description: "ใช้ข้อมูลสำรองเนื่องจากไม่สามารถเชื่อมต่อได้",
         variant: "default"
       });
     } finally {
-      console.log('🏁 Setting loading to false');
       setLoading(false);
     }
   };

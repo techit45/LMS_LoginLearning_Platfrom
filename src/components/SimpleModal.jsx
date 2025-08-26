@@ -11,11 +11,8 @@ const SimpleModal = ({ isOpen, onClose, entry }) => {
   });
   
   if (!isOpen) {
-    console.log('❌ SimpleModal not showing - isOpen is false');
     return null;
   }
-  
-  console.log('✅ SimpleModal SHOULD SHOW NOW!');
   
   const modalContent = (
     <div 

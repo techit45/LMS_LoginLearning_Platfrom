@@ -69,7 +69,6 @@ const ProjectDetailPage = () => {
         trackProjectView(data.id);
       }
     } catch (error) {
-      console.error('Error fetching project:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถโหลดข้อมูลโครงงานได้",
@@ -112,8 +111,7 @@ const ProjectDetailPage = () => {
         setCommentCount(commentCountResult.data);
       }
     } catch (error) {
-      console.error('Error fetching project interactions:', error);
-    }
+      }
   };
 
   const handleEditProject = () => {
@@ -161,7 +159,6 @@ const ProjectDetailPage = () => {
         description: data.liked ? "ขอบคุณที่ให้การสนับสนุน" : "ยกเลิกการไลค์โครงงานแล้ว"
       });
     } catch (error) {
-      console.error('Error toggling like:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถไลค์โครงงานได้ในขณะนี้",
@@ -203,7 +200,6 @@ const ProjectDetailPage = () => {
         description: "ความคิดเห็นของคุณถูกเพิ่มแล้ว"
       });
     } catch (error) {
-      console.error('Error adding comment:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถเพิ่มความคิดเห็นได้ในขณะนี้",

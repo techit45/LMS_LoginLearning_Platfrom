@@ -7,11 +7,6 @@ import { supabase } from "./supabaseClient";
  */
 export const uploadProjectImage = async (imageFile) => {
   try {
-    console.log("Starting project image upload:", {
-      fileName: imageFile.name,
-      fileSize: imageFile.size,
-    });
-
     // Check if user is authenticated
     const {
       data: { user },
@@ -46,8 +41,6 @@ export const uploadProjectImage = async (imageFile) => {
       .substring(2)}.${fileExt}`;
     const filePath = `project-images/${fileName}`;
 
-    console.log("Uploading image to path:", filePath);
-
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("course-files")
@@ -57,11 +50,8 @@ export const uploadProjectImage = async (imageFile) => {
       });
 
     if (uploadError) {
-      console.error("Storage upload error:", uploadError);
       throw new Error(`ไม่สามารถอัปโหลดรูปภาพได้: ${uploadError.message}`);
     }
-
-    console.log("Image upload successful:", uploadData);
 
     // Get public URL
     const { data: urlData } = supabase.storage
@@ -72,8 +62,6 @@ export const uploadProjectImage = async (imageFile) => {
       throw new Error("ไม่สามารถสร้าง URL สำหรับรูปภาพได้");
     }
 
-    console.log("Public URL generated:", urlData.publicUrl);
-
     return {
       data: {
         filePath: filePath,
@@ -83,7 +71,6 @@ export const uploadProjectImage = async (imageFile) => {
       error: null,
     };
   } catch (error) {
-    console.error("Error uploading project image:", error);
     return { data: null, error };
   }
 };
@@ -100,15 +87,10 @@ export const deleteProjectImage = async (filePath) => {
       .remove([filePath]);
 
     if (error) {
-      console.warn(
-        "Warning: Could not delete project image from storage:",
-        error
-      );
-    }
+      }
 
     return { error: null };
   } catch (error) {
-    console.error("Error deleting project image:", error);
     return { error };
   }
 };

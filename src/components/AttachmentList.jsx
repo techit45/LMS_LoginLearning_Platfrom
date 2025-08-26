@@ -47,7 +47,6 @@ const AttachmentList = ({
       if (error) throw error;
       setAttachments(data || []);
     } catch (error) {
-      console.error('Error loading attachments:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถโหลดไฟล์แนบได้",

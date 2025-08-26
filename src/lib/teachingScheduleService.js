@@ -2,8 +2,6 @@ import { supabase } from './supabaseClient.js';
 
 // Error handling utility
 const handleSupabaseError = (error, context = '') => {
-  console.error(`${context} error:`, error);
-  
   // Common Supabase errors with Thai messages
   const errorMessages = {
     '23505': 'ข้อมูลซ้ำกับที่มีอยู่แล้ว',
@@ -153,6 +151,7 @@ export const getInstructorById = async (instructorId) => {
  */
 export const getCourses = async () => {
   try {
+    console.log('🔍 getCourses: Starting query to teaching_courses table');
     // ใช้ teaching_courses เพื่อให้ตรงกับ FK constraint ของ weekly_schedules
     const { data, error } = await supabase
       .from('teaching_courses')
@@ -167,6 +166,12 @@ export const getCourses = async () => {
         updated_at
       `)
       .order('name');
+
+    console.log('📊 getCourses: Raw database response:', { 
+      dataLength: data?.length, 
+      error: error?.message,
+      firstItem: data?.[0]
+    });
 
     if (error) throw error;
     
@@ -188,9 +193,10 @@ export const getCourses = async () => {
       company_color: course.company_color
     }));
     
+    console.log('✅ getCourses: Transformed data ready:', transformedData.length, 'courses');
     return { data: transformedData, error: null };
   } catch (error) {
-    console.error('Error fetching courses:', error);
+    console.error('❌ getCourses: Error occurred:', error.message);
     return { data: [], error: error.message };
   }
 };
@@ -236,7 +242,6 @@ export const createCourse = async (courseData) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error creating teaching course:', error);
     return { data: null, error: error.message };
   }
 };
@@ -280,7 +285,6 @@ export const updateCourse = async (courseId, updates) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating teaching course:', error);
     return { data: null, error: error.message };
   }
 };
@@ -290,14 +294,9 @@ export const updateCourse = async (courseId, updates) => {
  */
 export const deleteCourse = async (courseId) => {
   try {
-    console.log('🗑️ Attempting to delete course with ID:', courseId);
-    
     // Check current user first
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    console.log('👤 Current user for deletion:', user?.email, 'ID:', user?.id);
-    
     if (userError) {
-      console.error('❌ User error:', userError);
       throw new Error('ต้องเข้าสู่ระบบก่อนใช้งาน');
     }
     
@@ -306,19 +305,15 @@ export const deleteCourse = async (courseId) => {
     }
 
     // First, delete all related schedules from weekly_schedules
-    console.log('🧹 Cleaning up related weekly schedules for course:', courseId);
     const { error: weeklyScheduleDeleteError } = await supabase
       .from('weekly_schedules')
       .delete()
       .eq('course_id', courseId);
 
     if (weeklyScheduleDeleteError) {
-      console.error('❌ Error deleting related weekly schedules:', weeklyScheduleDeleteError);
       throw weeklyScheduleDeleteError;
     }
     
-    console.log('✅ Related weekly schedules deleted successfully');
-
     // Now delete the course from teaching_courses
     const { error } = await supabase
       .from('teaching_courses')
@@ -326,14 +321,11 @@ export const deleteCourse = async (courseId) => {
       .eq('id', courseId);
 
     if (error) {
-      console.error('❌ Database delete error:', error);
       throw error;
     }
     
-    console.log('✅ Course deleted successfully from database');
     return { error: null };
   } catch (error) {
-    console.error('💥 Error deleting teaching course:', error);
     return { error: error.message };
   }
 };
@@ -364,7 +356,6 @@ export const getTeachingSchedules = async (weekStartDate = null) => {
     if (error) throw error;
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error fetching teaching schedules:', error);
     return { data: [], error: error.message };
   }
 };
@@ -411,7 +402,6 @@ export const createTeachingSchedule = async (scheduleData) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error creating teaching schedule:', error);
     return { data: null, error: error.message };
   }
 };
@@ -443,7 +433,6 @@ export const updateTeachingSchedule = async (scheduleId, updates) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating teaching schedule:', error);
     return { data: null, error: error.message };
   }
 };
@@ -461,7 +450,6 @@ export const deleteTeachingSchedule = async (scheduleId) => {
     if (error) throw error;
     return { error: null };
   } catch (error) {
-    console.error('Error deleting teaching schedule:', error);
     return { error: error.message };
   }
 };
@@ -497,7 +485,6 @@ export const checkTeachingScheduleConflicts = async (scheduleData, excludeId = n
       conflicts: conflicts || []
     };
   } catch (error) {
-    console.error('Error checking teaching schedule conflicts:', error);
     return { hasConflicts: false, conflicts: [], error: error.message };
   }
 };
@@ -552,7 +539,6 @@ export const getWeeklySchedules = async (year, weekNumber, scheduleType = 'weeke
 
     return { data: schedulesWithInstructors, error: null };
   } catch (error) {
-    console.error('Error fetching weekly schedules:', error);
     return { data: [], error: error.message };
   }
 };
@@ -577,30 +563,11 @@ export const createSchedule = async (scheduleData) => {
       .maybeSingle();
 
     if (checkError) {
-      console.warn(`⚠️ Error checking existing schedule:`, checkError);
       // Don't throw error, continue with create new
     }
 
-    console.log('🔍 Existing schedule check:', {
-      found: !!existing,
-      existingId: existing?.id,
-      timeSlot: scheduleData.time_slot,
-      dayOfWeek: scheduleData.day_of_week
-    });
-
     // Check for conflicts before creating/updating (exclude existing if updating)
     const conflictCheck = await checkScheduleConflicts(scheduleData, existing?.id);
-    
-    console.log('🔍 Schedule conflict check:', {
-      hasConflicts: conflictCheck.hasConflicts,
-      existingId: existing?.id,
-      scheduleData: {
-        time_slot: scheduleData.time_slot,
-        instructor_id: scheduleData.instructor_id,
-        day_of_week: scheduleData.day_of_week
-      },
-      conflicts: conflictCheck.conflicts
-    });
     
     if (conflictCheck.hasConflicts) {
       const conflictMessages = conflictCheck.conflicts.map(c => 
@@ -611,8 +578,6 @@ export const createSchedule = async (scheduleData) => {
 
     if (existing && !checkError) {
       // Update existing schedule
-      console.log(`📝 Attempting to update existing schedule ID: ${existing.id}`);
-      
       const { data, error } = await supabase
         .from('weekly_schedules')
         .update({
@@ -625,18 +590,15 @@ export const createSchedule = async (scheduleData) => {
 
       // Handle case where record was already deleted
       if (error && error.code === 'PGRST116') {
-        console.warn(`⚠️ Schedule ID ${existing.id} was already deleted, creating new instead`);
         // Fall through to create new schedule below
       } else if (error) {
         throw error;
       } else {
-        console.log(`✅ Successfully updated schedule ID: ${existing.id}`);
         return { data, error: null };
       }
     }
 
     // Create new schedule (either no existing found, or existing was deleted)
-    console.log('🆕 Creating new schedule');
     const { data, error } = await supabase
       .from('weekly_schedules')
       .insert([{
@@ -648,8 +610,6 @@ export const createSchedule = async (scheduleData) => {
 
     // Handle unique constraint violation (23505) - another record might exist
     if (error && error.code === '23505') {
-      console.warn(`⚠️ Unique constraint violation - checking for existing active schedule`);
-      
       // Try to find and update the conflicting record instead
       const { data: conflictingRecord, error: findError } = await supabase
         .from('weekly_schedules')
@@ -663,8 +623,6 @@ export const createSchedule = async (scheduleData) => {
         .maybeSingle();
 
       if (!findError && conflictingRecord) {
-        console.log(`🔄 Found conflicting record ID: ${conflictingRecord.id}, updating instead`);
-        
         // Update the conflicting record with PGRST116 protection
         const { data: updatedData, error: updateError } = await supabase
           .from('weekly_schedules')
@@ -677,11 +635,8 @@ export const createSchedule = async (scheduleData) => {
           .single();
 
         if (updateError && updateError.code === 'PGRST116') {
-          console.warn(`⚠️ Conflicting record ID ${conflictingRecord.id} was also deleted during update - giving up gracefully`);
-          
           // At this point, the record is gone and we can't create a duplicate
           // Let's do a final check if any record exists for this slot now
-          console.log('🔍 Performing final check for existing records after race condition');
           const { data: finalCheck, error: finalCheckError } = await supabase
             .from('weekly_schedules')
             .select('id')
@@ -693,15 +648,8 @@ export const createSchedule = async (scheduleData) => {
             .eq('time_slot', scheduleData.time_slot)
             .maybeSingle();
           
-          console.log('🔍 Final check result:', {
-            found: !!finalCheck,
-            recordId: finalCheck?.id,
-            hasError: !!finalCheckError
-          });
-            
           if (!finalCheck && !finalCheckError) {
             // No record exists now, try to create one more time
-            console.log('🆕 No record exists after all deletions, attempting final create');
             const { data: finalData, error: finalError } = await supabase
               .from('weekly_schedules')
               .insert([{
@@ -712,24 +660,18 @@ export const createSchedule = async (scheduleData) => {
               .single();
             
             if (!finalError) {
-              console.log('✅ Successfully created schedule after race condition resolution');
               return { data: finalData, error: null };
             } else {
-              console.error('❌ Final create also failed:', finalError.code, finalError.message);
-            }
+              }
           } else if (finalCheck) {
-            console.log(`ℹ️ Found record ID ${finalCheck.id} exists after race condition - likely RLS restriction`);
-            
             // This is likely an RLS issue - record exists but can't be updated
             // Try to delete the problematic record first, then create new
-            console.log(`🗑️ Attempting to delete RLS-restricted record ID ${finalCheck.id}`);
             const { error: deleteError } = await supabase
               .from('weekly_schedules')
               .delete()
               .eq('id', finalCheck.id);
               
             if (!deleteError) {
-              console.log('✅ Successfully deleted RLS-restricted record, creating new');
               const { data: newData, error: newError } = await supabase
                 .from('weekly_schedules')
                 .insert([{
@@ -740,19 +682,12 @@ export const createSchedule = async (scheduleData) => {
                 .single();
                 
               if (!newError) {
-                console.log('✅ Successfully created new record after RLS cleanup');
                 return { data: newData, error: null };
               } else {
-                console.error('❌ Failed to create after RLS cleanup:', newError.code);
-              }
+                }
             } else {
-              console.error('❌ Could not delete RLS-restricted record:', deleteError.code);
-              
               // If delete fails with RLS (42501), record is truly untouchable
               if (deleteError.code === '42501') {
-                console.warn('🔒 Record has RLS restrictions - cannot be modified or deleted');
-                console.log('🚀 Using bypass strategy - returning success without actual changes');
-                
                 // The record exists and cannot be touched, but we can tell the user it worked
                 // This is the best we can do with RLS-protected records
                 return {
@@ -764,8 +699,6 @@ export const createSchedule = async (scheduleData) => {
             }
             
             // Layer 9: Force Save Strategy - Try to save with different approach
-            console.log('🚀 Layer 9: Attempting force save with modified data');
-            
             // Try creating with slightly modified time to bypass conflicts
             const forceData = {
               ...scheduleData,
@@ -786,18 +719,11 @@ export const createSchedule = async (scheduleData) => {
               .single();
             
             if (!forceError) {
-              console.log('✅ Force save succeeded with Layer 9!');
               return { data: forceResult, error: null };
             } else {
-              console.log('❌ Force save also failed:', forceError.code);
-              
               // Layer 10: RLS Bypass - If it's RLS policy issue (42501)
               if (forceError.code === '42501') {
-                console.log('🔒 Layer 10: RLS policy blocking - using virtual save strategy');
-                
                 // Since RLS blocks real saves, return success but trigger page refresh
-                console.log('🔒 RLS blocking save - will return success and refresh data');
-                
                 // Return success to UI so user doesn't see error
                 const successRecord = {
                   id: finalCheck.id || Date.now(),
@@ -806,7 +732,6 @@ export const createSchedule = async (scheduleData) => {
                   updated_at: new Date().toISOString()
                 };
                 
-                console.log('✅ Returning success to UI despite RLS restrictions');
                 return { 
                   data: successRecord, 
                   error: null,
@@ -816,7 +741,6 @@ export const createSchedule = async (scheduleData) => {
             }
             
             // If even force save fails, assume the record is fine as-is
-            console.log('ℹ️ All strategies exhausted - assuming existing record is valid');
             return { 
               data: { id: finalCheck.id, ...scheduleData }, 
               error: null 
@@ -824,7 +748,6 @@ export const createSchedule = async (scheduleData) => {
           }
           
           // If we get here, there's a persistent issue - return a user-friendly error
-          console.error('❌ Unable to resolve schedule conflicts after multiple attempts');
           return { 
             data: null, 
             error: 'ไม่สามารถบันทึกตารางเวลาได้ เนื่องจากมีการเปลี่ยนแปลงพร้อมกัน กรุณาลองใหม่อีกครั้ง'
@@ -833,13 +756,10 @@ export const createSchedule = async (scheduleData) => {
           throw updateError;
         }
         
-        console.log(`✅ Successfully updated conflicting schedule ID: ${conflictingRecord.id}`);
         return { data: updatedData, error: null };
       } else {
         // No conflicting record found, but we still got 23505
         // This might be a race condition - try upsert as last resort
-        console.warn(`⚠️ 23505 error but no conflicting record found - attempting upsert`);
-        
         const { data: upsertData, error: upsertError } = await supabase
           .from('weekly_schedules')
           .upsert([{
@@ -853,17 +773,11 @@ export const createSchedule = async (scheduleData) => {
           .single();
 
         if (!upsertError) {
-          console.log('✅ Successfully resolved conflict using upsert');
           return { data: upsertData, error: null };
         }
         
         // If upsert also fails, check if it's RLS related
-        console.error('❌ Upsert also failed:', upsertError.code, upsertError.message);
-        
         if (upsertError.code === '42501') {
-          console.warn('🔒 RLS policy prevents any database operations on this slot');
-          console.log('🚀 Final bypass: Returning success despite RLS restrictions');
-          
           // Generate a pseudo-successful response for RLS-blocked operations
           return {
             data: {
@@ -884,10 +798,8 @@ export const createSchedule = async (scheduleData) => {
       throw error;
     }
 
-    console.log('✅ Successfully created new schedule');
     return { data, error: null };
   } catch (error) {
-    console.error('Error creating/updating schedule:', error);
     return { data: null, error: error.message };
   }
 };
@@ -917,7 +829,6 @@ export const updateSchedule = async (scheduleId, updates) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating schedule:', error);
     return { data: null, error: error.message };
   }
 };
@@ -935,7 +846,6 @@ export const deleteSchedule = async (scheduleId) => {
     if (error) throw error;
     return { error: null };
   } catch (error) {
-    console.error('Error deleting schedule:', error);
     return { error: error.message };
   }
 };
@@ -972,7 +882,6 @@ export const isTimeSlotAvailable = async (year, weekNumber, scheduleType, instru
       conflicts: conflicts.length > 0 ? conflicts : null
     };
   } catch (error) {
-    console.error('Error checking time slot availability:', error);
     return { available: false, error: error.message };
   }
 };
@@ -982,17 +891,6 @@ export const isTimeSlotAvailable = async (year, weekNumber, scheduleType, instru
  */
 export const checkScheduleConflicts = async (scheduleData, excludeId = null) => {
   try {
-    console.log('🔍 Checking schedule conflicts:', {
-      scheduleData: {
-        time_slot: scheduleData.time_slot,
-        instructor_id: scheduleData.instructor_id,
-        day_of_week: scheduleData.day_of_week,
-        year: scheduleData.year,
-        week_number: scheduleData.week_number
-      },
-      excludeId
-    });
-
     let query = supabase
       .from('weekly_schedules')
       .select('id, time_slot, duration, course_id, teaching_courses(name)')
@@ -1004,13 +902,11 @@ export const checkScheduleConflicts = async (scheduleData, excludeId = null) => 
     
     // Exclude current schedule if updating
     if (excludeId) {
-      console.log(`📝 Excluding schedule ID: ${excludeId} from conflict check`);
       query = query.neq('id', excludeId);
     }
     
     const { data: existingSchedules, error } = await query;
     
-    console.log('📊 Found existing schedules:', existingSchedules?.length || 0);
     if (existingSchedules && existingSchedules.length > 0) {
       console.log('📋 Existing schedules:', existingSchedules.map(s => ({
         id: s.id,
@@ -1039,7 +935,6 @@ export const checkScheduleConflicts = async (scheduleData, excludeId = null) => 
       }))
     };
   } catch (error) {
-    console.error('Error checking schedule conflicts:', error);
     return { hasConflicts: false, conflicts: [], error: error.message };
   }
 };
@@ -1072,7 +967,6 @@ export const getInstructorWeeklySchedules = async (instructorId, year, weekNumbe
     if (error) throw error;
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error fetching instructor schedules:', error);
     return { data: [], error: error.message };
   }
 };
@@ -1117,7 +1011,6 @@ export const cloneWeeklySchedules = async (fromYear, fromWeek, toYear, toWeek, s
     if (error) throw error;
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error cloning weekly schedules:', error);
     return { data: [], error: error.message };
   }
 };
@@ -1137,7 +1030,6 @@ export const clearWeeklySchedules = async (year, weekNumber, scheduleType = 'wee
     if (error) throw error;
     return { error: null };
   } catch (error) {
-    console.error('Error clearing weekly schedules:', error);
     return { error: error.message };
   }
 };
@@ -1152,14 +1044,11 @@ export const clearWeeklySchedules = async (year, weekNumber, scheduleType = 'wee
 export const migrateFromLocalStorage = async (localData, year, weekNumber, scheduleType = 'weekends') => {
   try {
     // This function will help migrate existing localStorage data to Supabase
-    console.log('Migration helper ready for localStorage data:', localData);
-    
     // Implementation depends on your current localStorage structure
     // Will be implemented based on the existing data format
     
     return { success: true, error: null };
   } catch (error) {
-    console.error('Error migrating from localStorage:', error);
     return { success: false, error: error.message };
   }
 };

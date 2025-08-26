@@ -44,7 +44,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
     if (hybridInitialized.current) return;
     
     try {
-      console.log('🚀 Initializing hybrid scheduling system...');
       const initResult = await hybridSchedulingService.initialize();
       
       setHybridStatus({
@@ -54,7 +53,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
       });
       
       if (initResult.success) {
-        console.log('✅ Hybrid scheduling system initialized');
         hybridInitialized.current = true;
         
         toast({
@@ -65,7 +63,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
           variant: initResult.calcomEnabled ? "default" : "warning"
         });
       } else {
-        console.warn('⚠️ Hybrid system initialization failed:', initResult.error);
         toast({
           title: "แจ้งเตือนระบบ",
           description: "ใช้งานระบบตารางสอนภายในเท่านั้น",
@@ -73,7 +70,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
         });
       }
     } catch (error) {
-      console.error('💥 Hybrid initialization error:', error);
       setHybridStatus({
         calcomEnabled: false,
         initialized: false,
@@ -93,13 +89,10 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
     setError(null);
     
     try {
-      console.log('📅 Loading hybrid schedules for week:', weekStartDate);
-      
       // Use hybrid service to load schedules
       const { data, error, meta } = await hybridSchedulingService.loadWeekSchedules(weekStartDate, company);
       
       if (error) {
-        console.error('❌ Error loading hybrid schedules:', error);
         setError(error);
         
         toast({
@@ -108,7 +101,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
           variant: "destructive"
         });
       } else {
-        console.log('✅ Hybrid schedules loaded:', data);
         setSchedules(data);
         setIsConnected(true);
         
@@ -121,7 +113,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
         }
       }
     } catch (err) {
-      console.error('💥 Exception loading hybrid schedules:', err);
       setError(err);
     } finally {
       setLoading(false);
@@ -151,8 +142,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
     }));
 
     try {
-      console.log('💾 Adding hybrid schedule:', { dayIndex, timeIndex, scheduleData });
-      
       // Use hybrid service to create schedule
       const result = await hybridSchedulingService.createSchedule(
         weekStartDate,
@@ -163,8 +152,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
       );
 
       if (result.error && !result.success) {
-        console.error('❌ Error adding hybrid schedule:', result.error);
-        
         // Revert optimistic update
         setSchedules(prev => {
           const newSchedules = { ...prev };
@@ -182,8 +169,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
       }
 
       // Success - real-time update will handle the actual data
-      console.log('✅ Hybrid schedule added successfully');
-      
       const successMessage = hybridStatus.calcomEnabled 
         ? `เพิ่ม ${scheduleData.courseTitle} แล้ว (Cal.com + ระบบภายใน)`
         : `เพิ่ม ${scheduleData.courseTitle} แล้ว`;
@@ -196,8 +181,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
       return { success: true, data: result.data };
 
     } catch (err) {
-      console.error('💥 Exception adding hybrid schedule:', err);
-      
       // Revert optimistic update
       setSchedules(prev => {
         const newSchedules = { ...prev };
@@ -225,7 +208,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
     const originalSchedule = schedules[scheduleKey];
 
     if (!originalSchedule) {
-      console.log('⚠️ No schedule to remove at:', { dayIndex, timeIndex });
       return;
     }
 
@@ -237,8 +219,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
     });
 
     try {
-      console.log('🗑️ Removing hybrid schedule:', { dayIndex, timeIndex });
-      
       // Use hybrid service to delete schedule
       const result = await hybridSchedulingService.deleteSchedule(
         weekStartDate,
@@ -248,8 +228,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
       );
 
       if (result.error) {
-        console.error('❌ Error removing hybrid schedule:', result.error);
-        
         // Revert optimistic update
         setSchedules(prev => ({
           ...prev,
@@ -265,8 +243,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
         return { success: false, error: result.error };
       }
 
-      console.log('✅ Hybrid schedule removed successfully');
-      
       const successMessage = hybridStatus.calcomEnabled
         ? `ลบ ${originalSchedule.course?.title || 'รายการ'} แล้ว (Cal.com + ระบบภายใน)`
         : `ลบ ${originalSchedule.course?.title || 'รายการ'} แล้ว`;
@@ -279,8 +255,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
       return { success: true };
 
     } catch (err) {
-      console.error('💥 Exception removing hybrid schedule:', err);
-      
       // Revert optimistic update
       setSchedules(prev => ({
         ...prev,
@@ -337,7 +311,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
     }
 
     try {
-      console.log('🔄 Manual sync with Cal.com requested');
       setLoading(true);
       
       await hybridSchedulingService.syncWithCalcom(weekStartDate, company);
@@ -350,7 +323,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
         description: "ข้อมูลตารางสอนได้รับการอัพเดทแล้ว"
       });
     } catch (error) {
-      console.error('💥 Manual sync failed:', error);
       toast({
         title: "ซิงค์ไม่สำเร็จ",
         description: "กรุณาลองใหม่อีกครั้ง",
@@ -365,14 +337,11 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
   useEffect(() => {
     if (!user) return;
 
-    console.log('🔔 Setting up hybrid subscription for week:', weekStartDate);
-    
     // Initialize hybrid system first
     initializeHybridSystem();
     
     // Clean up previous subscription if it exists
     if (channelRef.current) {
-      console.log('🧹 Cleaning up previous subscription');
       realtimeScheduleService.unsubscribeFromWeek(
         getWeekStartDate(currentWeekRef.current), 
         companyRef.current
@@ -463,7 +432,6 @@ export const useHybridSchedule = (currentWeek, company = 'login') => {
   // Cleanup all subscriptions on unmount
   useEffect(() => {
     return () => {
-      console.log('🧹 Hybrid component unmounting - cleaning up all subscriptions');
       if (channelRef.current) {
         realtimeScheduleService.unsubscribeFromWeek(weekStartDate, company);
         channelRef.current = null;

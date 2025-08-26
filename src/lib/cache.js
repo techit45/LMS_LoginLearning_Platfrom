@@ -87,14 +87,10 @@ class EnhancedCache {
           });
 
           if (this.debug) {
-            console.log(
-              `Loaded ${this.cache.size} items from ${this.storageType}`
-            );
-          }
+            }
         }
       } catch (error) {
-        console.error(`Error initializing ${this.storageType} cache:`, error);
-      }
+        }
     }
 
     // IndexedDB initialization would go here
@@ -124,8 +120,7 @@ class EnhancedCache {
     }
 
     if (this.debug && expiredCount > 0) {
-      console.log(`Cache cleanup: removed ${expiredCount} expired items`);
-    }
+      }
 
     // Persist to storage if needed
     this._persistCache();
@@ -178,8 +173,7 @@ class EnhancedCache {
     }
 
     if (this.debug) {
-      console.log(`Cache eviction: removed ${itemsToEvict} items`);
-    }
+      }
 
     return itemsToEvict;
   }
@@ -210,8 +204,7 @@ class EnhancedCache {
 
         storage.setItem(this.namespace, JSON.stringify(cacheObject));
       } catch (error) {
-        console.error(`Error persisting to ${this.storageType}:`, error);
-      }
+        }
     }
 
     // IndexedDB persistence would go here
@@ -261,8 +254,7 @@ class EnhancedCache {
     if (!item) {
       this.stats.misses++;
       if (this.debug) {
-        console.log(`Cache miss: ${key}`);
-      }
+        }
       return null;
     }
 
@@ -270,8 +262,7 @@ class EnhancedCache {
       this.cache.delete(key);
       this.stats.misses++;
       if (this.debug) {
-        console.log(`Cache expired: ${key}`);
-      }
+        }
       return null;
     }
 
@@ -308,8 +299,7 @@ class EnhancedCache {
     }
 
     if (this.debug) {
-      console.log("Cache cleared");
-    }
+      }
   }
 
   /**
@@ -322,8 +312,7 @@ class EnhancedCache {
     this._persistCache();
 
     if (this.debug && deleted) {
-      console.log(`Cache delete: ${key}`);
-    }
+      }
 
     return deleted;
   }
@@ -443,7 +432,6 @@ export const withCache = async (key, fetchFn, ttl, options = {}) => {
     }
     return result;
   } catch (error) {
-    console.error(`Cache fetch error for key ${key}:`, error);
     return { data: null, error };
   }
 };

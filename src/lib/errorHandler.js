@@ -119,8 +119,7 @@ export const handleDatabaseError = (error, toast, options = {}) => {
 
   // Log to console
   if (logToConsole) {
-    console.error("Database Error:", formattedError.fullMessage, error);
-  }
+    }
 
   // Show toast notification
   if (showToast && toast) {
@@ -336,8 +335,7 @@ export const handleAuthError = (error, toast, options = {}) => {
 
   // Log to console
   if (logToConsole) {
-    console.error("Auth Error:", userMessage, error);
-  }
+    }
 
   // Show toast notification
   if (showToast && toast) {
@@ -380,8 +378,7 @@ export const handleStorageError = (error, toast, options = {}) => {
 
   // Log to console
   if (logToConsole) {
-    console.error("Storage Error:", userMessage, error);
-  }
+    }
 
   // Show toast notification
   if (showToast && toast) {

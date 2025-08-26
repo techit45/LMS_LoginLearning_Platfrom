@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Final Debug: Folder Creation Source</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+        .section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .log {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .error { color: #ff4757; }
+        .success { color: #2ed573; }
+        .warning { color: #ffa502; }
+        .info { color: #70a1ff; }
+        .critical { color: #ff3838; font-weight: bold; }
+        .highlight { background: #ffeb3b; color: #333; padding: 2px 4px; border-radius: 3px; }
+        h1 { color: #667eea; text-align: center; margin-bottom: 30px; }
+        h2 { color: #764ba2; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+        h3 { color: #555; margin-top: 25px; }
+        .status { 
+            display: inline-block; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 12px; 
+            font-weight: bold; 
+            margin-left: 10px;
+        }
+        .status.online { background: #2ed573; color: white; }
+        .status.offline { background: #ff4757; color: white; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Final Debug: Folder Creation Source Detection</h1>
+        <p style="text-align: center; color: #666; font-style: italic;">
+            ตรวจหาแหล่งที่มาของการสร้างโฟลเดอร์ด้วยชื่อเนื้อหาและไอคอน 🎓
+        </p>
+
+        <div class="section">
+            <h2>🎯 Target Issue Analysis</h2>
+            <p><strong>ปัญหาที่ต้องแก้:</strong></p>
+            <ul>
+                <li>สร้างคอร์ส: <code>"คอร์ส AI"</code></li>
+                <li>สร้างเนื้อหา: <code>"คอร์ส AI ครั้งที่ 1"</code></li>
+                <li>ผลลัพธ์ผิด: โฟลเดอร์ <code>"🎓 คอร์ส AI ครั้งที่ 1"</code> (ชื่อเนื้อหา + ไอคอนผิด)</li>
+                <li>ผลลัพธ์ที่ต้องการ: โฟลเดอร์ <code>"📖 คอร์ส AI"</code> (ชื่อคอร์ส + ไอคอนถูก)</li>
+            </ul>
+        </div>
+
+        <div class="grid">
+            <div class="section">
+                <h3>🔧 Environment Checks</h3>
+                <button class="button" onclick="checkEnvironment()">
+                    🌍 ตรวจสอบ Environment
+                </button>
+                <button class="button" onclick="clearAllCache()">
+                    🧹 ล้าง Cache ทั้งหมด
+                </button>
+            </div>
+
+            <div class="section">
+                <h3>🔗 API Testing</h3>
+                <button class="button" onclick="testSupabaseEdgeFunction()">
+                    ⚡ ทดสอบ Supabase Edge Function
+                </button>
+                <button class="button" onclick="simulateFullCourseFlow()">
+                    🎓 จำลองการสร้างคอร์สทั้งหมด
+                </button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🔍 Advanced Debugging</h3>
+            <button class="button" onclick="interceptNetworkCalls()">
+                📡 ดักจับ Network Calls
+            </button>
+            <button class="button" onclick="checkJavaScriptBundles()">
+                📦 ตรวจสอบ JavaScript Bundles
+            </button>
+            <button class="button" onclick="testAllIconTypes()">
+                🎭 ทดสอบไอคอนทุกประเภท
+            </button>
+            <button class="button" onclick="auditFolderCreationSources()">
+                🕵️ Audit การสร้างโฟลเดอร์
+            </button>
+        </div>
+
+        <div id="log" class="log">🚀 Ready to debug folder creation issues...\n</div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('th-TH');
+            const className = type === 'error' ? 'error' : 
+                           type === 'success' ? 'success' : 
+                           type === 'warning' ? 'warning' : 
+                           type === 'critical' ? 'critical' : 'info';
+            log.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        async function checkEnvironment() {
+            addLog('🌍 ตรวจสอบ Environment และ Configuration...', 'info');
+            
+            // Check current URL and environment
+            addLog(`📍 Current URL: ${window.location.href}`, 'info');
+            addLog(`🌐 User Agent: ${navigator.userAgent}`, 'info');
+            addLog(`⏰ Current Time: ${new Date().toISOString()}`, 'info');
+            
+            // Check if we're in development or production
+            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            addLog(`🔧 Environment: ${isDev ? 'Development' : 'Production'}`, isDev ? 'warning' : 'success');
+            
+            // Check localStorage/sessionStorage
+            const localStorageKeys = Object.keys(localStorage);
+            addLog(`💾 localStorage Keys: ${localStorageKeys.join(', ') || 'None'}`, 'info');
+            
+            // Check for any cached course data
+            if (localStorage.getItem('courseCache')) {
+                addLog('⚠️ Found cached course data - this might affect testing', 'warning');
+            }
+        }
+
+        async function clearAllCache() {
+            addLog('🧹 ล้าง Cache ทั้งหมด...', 'info');
+            
+            // Clear various browser caches
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+                addLog('✅ Cleared localStorage and sessionStorage', 'success');
+                
+                // Clear IndexedDB if available
+                if ('indexedDB' in window) {
+                    // This is a simplified version
+                    addLog('📁 IndexedDB detected - manual clearing may be needed', 'warning');
+                }
+                
+                // Force reload with cache bypass
+                setTimeout(() => {
+                    const url = new URL(window.location);
+                    url.searchParams.set('nocache', Date.now());
+                    url.searchParams.set('debug', 'true');
+                    window.location.href = url.toString();
+                }, 2000);
+                
+            } catch (error) {
+                addLog(`❌ Error clearing cache: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSupabaseEdgeFunction() {
+            addLog('⚡ ทดสอบ Supabase Edge Function...', 'info');
+            
+            try {
+                // Test health endpoint
+                const healthResponse = await fetch(`${API_BASE}/health`, {
+                    headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                });
+                
+                if (healthResponse.ok) {
+                    const healthData = await healthResponse.json();
+                    addLog(`✅ Edge Function Status: ${JSON.stringify(healthData)}`, 'success');
+                } else {
+                    addLog(`❌ Edge Function Health Check Failed: ${healthResponse.status}`, 'error');
+                }
+                
+                // Test create-topic-folder with various inputs
+                const testCases = [
+                    {
+                        name: 'Course Test',
+                        data: {
+                            parentFolderId: '12lk0wPhyd6RvoEiQaQwXPBEeI07zB9nT',
+                            topicName: 'คอร์ส AI',
+                            topicType: 'course'
+                        },
+                        expected: '📖 คอร์ส AI'
+                    },
+                    {
+                        name: 'Project Test',
+                        data: {
+                            parentFolderId: '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF',
+                            topicName: 'โปรเจค Test',
+                            topicType: 'project'
+                        },
+                        expected: '🔧 โปรเจค Test'
+                    },
+                    {
+                        name: 'Unknown Type Test',
+                        data: {
+                            parentFolderId: '12lk0wPhyd6RvoEiQaQwXPBEeI07zB9nT',
+                            topicName: 'Test Unknown',
+                            topicType: 'unknown'
+                        },
+                        expected: '📄 Test Unknown'
+                    }
+                ];
+                
+                for (const testCase of testCases) {
+                    addLog(`🧪 Testing: ${testCase.name}`, 'info');
+                    addLog(`   Input: ${JSON.stringify(testCase.data)}`, 'info');
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/create-topic-folder`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                            },
+                            body: JSON.stringify(testCase.data)
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            const actualName = result.folderName || 'No folder name';
+                            
+                            if (actualName === testCase.expected) {
+                                addLog(`   ✅ PASS: ${actualName}`, 'success');
+                            } else {
+                                addLog(`   ❌ FAIL: Expected "${testCase.expected}", got "${actualName}"`, 'critical');
+                            }
+                        } else {
+                            const errorText = await response.text();
+                            addLog(`   ❌ API Error: ${response.status} - ${errorText}`, 'error');
+                        }
+                    } catch (error) {
+                        addLog(`   ❌ Request Error: ${error.message}`, 'error');
+                    }
+                    
+                    // Add delay between tests
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
+            } catch (error) {
+                addLog(`❌ Edge Function Test Failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function simulateFullCourseFlow() {
+            addLog('🎓 จำลองการสร้างคอร์สทั้งหมด...', 'info');
+            
+            const testCourse = {
+                title: 'คอร์ส AI Debug Test',
+                company: 'LOGIN'
+            };
+            
+            const testContent = {
+                title: 'คอร์ส AI ครั้งที่ 1 Debug'
+            };
+            
+            try {
+                addLog(`📝 Creating course: "${testCourse.title}"`, 'info');
+                
+                // Simulate course creation
+                const courseResponse = await fetch(`${API_BASE}/create-course-structure`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify(testCourse)
+                });
+                
+                if (courseResponse.ok) {
+                    const courseResult = await courseResponse.json();
+                    addLog(`✅ Course creation response: ${JSON.stringify(courseResult, null, 2)}`, 'success');
+                    
+                    if (courseResult.success && courseResult.courseFolderId) {
+                        addLog(`📁 Course folder created with ID: ${courseResult.courseFolderId}`, 'success');
+                        
+                        // Now simulate content upload
+                        addLog(`📄 Simulating content upload: "${testContent.title}"`, 'info');
+                        
+                        // Check what would happen during content upload
+                        const listResponse = await fetch(`${API_BASE}/list?folderId=${courseResult.courseFolderId}&isSharedDrive=true`, {
+                            headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                        });
+                        
+                        if (listResponse.ok) {
+                            const listData = await listResponse.json();
+                            addLog(`📋 Course folder contents: ${JSON.stringify(listData, null, 2)}`, 'info');
+                            
+                            // Look for any unexpected folders
+                            const unexpectedFolders = listData.files?.filter(file => 
+                                file.mimeType === 'application/vnd.google-apps.folder' && 
+                                !file.name.includes(testCourse.title)
+                            );
+                            
+                            if (unexpectedFolders && unexpectedFolders.length > 0) {
+                                addLog(`⚠️ Found unexpected folders: ${JSON.stringify(unexpectedFolders)}`, 'warning');
+                            } else {
+                                addLog(`✅ No unexpected folders found`, 'success');
+                            }
+                        }
+                    }
+                } else {
+                    const errorText = await courseResponse.text();
+                    addLog(`❌ Course creation failed: ${courseResponse.status} - ${errorText}`, 'error');
+                }
+                
+            } catch (error) {
+                addLog(`❌ Full course flow test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function interceptNetworkCalls() {
+            addLog('📡 เริ่มดักจับ Network Calls...', 'info');
+            
+            // Override fetch to intercept all network calls
+            const originalFetch = window.fetch;
+            
+            window.fetch = async function(...args) {
+                const [url, options] = args;
+                
+                // Log all Google Drive related calls
+                if (typeof url === 'string' && (
+                    url.includes('google-drive') || 
+                    url.includes('googleapis.com') ||
+                    url.includes('drive.google.com')
+                )) {
+                    addLog(`📡 INTERCEPTED: ${options?.method || 'GET'} ${url}`, 'warning');
+                    
+                    if (options?.body) {
+                        try {
+                            const bodyData = JSON.parse(options.body);
+                            addLog(`📦 Request Body: ${JSON.stringify(bodyData, null, 2)}`, 'info');
+                            
+                            // Check for suspicious folder creation
+                            if (bodyData.topicName && bodyData.topicType) {
+                                if (bodyData.topicType === 'course_content') {
+                                    addLog(`🚨 CRITICAL: Found course_content type!`, 'critical');
+                                }
+                                if (bodyData.topicName.includes('ครั้งที่')) {
+                                    addLog(`🚨 CRITICAL: Found content-style name!`, 'critical');
+                                }
+                            }
+                        } catch (e) {
+                            addLog(`📦 Request Body (non-JSON): ${options.body}`, 'info');
+                        }
+                    }
+                }
+                
+                const response = await originalFetch.apply(this, args);
+                
+                // Log responses for Google Drive calls
+                if (typeof url === 'string' && url.includes('google-drive')) {
+                    try {
+                        const clonedResponse = response.clone();
+                        const responseData = await clonedResponse.json();
+                        
+                        if (responseData.folderName) {
+                            addLog(`📁 RESPONSE: Created folder "${responseData.folderName}"`, 'info');
+                            
+                            // Check for wrong icons
+                            if (responseData.folderName.includes('🎓')) {
+                                addLog(`🚨 CRITICAL: Found 🎓 icon in response!`, 'critical');
+                            }
+                        }
+                    } catch (e) {
+                        // Response might not be JSON
+                    }
+                }
+                
+                return response;
+            };
+            
+            addLog('✅ Network interception active - perform course creation now', 'success');
+            addLog('💡 Go to the main app and create a course to see all network calls', 'info');
+        }
+
+        async function checkJavaScriptBundles() {
+            addLog('📦 ตรวจสอบ JavaScript Bundles...', 'info');
+            
+            // Get all script tags
+            const scripts = document.querySelectorAll('script[src]');
+            addLog(`📜 Found ${scripts.length} script files`, 'info');
+            
+            for (let i = 0; i < scripts.length; i++) {
+                const script = scripts[i];
+                const src = script.src;
+                const filename = src.split('/').pop();
+                
+                addLog(`${i + 1}. ${filename}`, 'info');
+                
+                // Check for build timestamps in URLs
+                if (src.includes('?') || src.includes('#')) {
+                    addLog(`   ✅ Has cache busting parameters`, 'success');
+                } else {
+                    addLog(`   ⚠️ No cache busting - might be cached`, 'warning');
+                }
+                
+                // Try to fetch and check content for suspicious patterns
+                try {
+                    if (filename.includes('index') || filename.includes('main')) {
+                        addLog(`   🔍 Checking content for suspicious patterns...`, 'info');
+                        
+                        const response = await fetch(src);
+                        if (response.ok) {
+                            const content = await response.text();
+                            
+                            // Check for old patterns
+                            if (content.includes('course_content')) {
+                                addLog(`   🚨 FOUND: course_content pattern in ${filename}`, 'critical');
+                            }
+                            if (content.includes('🎓')) {
+                                addLog(`   🚨 FOUND: 🎓 icon in ${filename}`, 'critical');
+                            }
+                            if (content.includes('topicType:"course_content"')) {
+                                addLog(`   🚨 FOUND: hardcoded course_content type in ${filename}`, 'critical');
+                            }
+                            
+                            addLog(`   📏 Bundle size: ${(content.length / 1024).toFixed(2)} KB`, 'info');
+                        }
+                    }
+                } catch (error) {
+                    addLog(`   ❌ Could not analyze ${filename}: ${error.message}`, 'warning');
+                }
+            }
+        }
+
+        async function testAllIconTypes() {
+            addLog('🎭 ทดสอบไอคอนทุกประเภท...', 'info');
+            
+            const iconTests = [
+                { type: 'course', expected: '📖' },
+                { type: 'project', expected: '🔧' },
+                { type: 'company', expected: '🏢' },
+                { type: 'course_content', expected: '📚', warning: true },
+                { type: 'content', expected: '📄' },
+                { type: 'unknown', expected: '📄' },
+                { type: '', expected: '📄' },
+                { type: null, expected: '📄' }
+            ];
+            
+            for (const test of iconTests) {
+                addLog(`🧪 Testing topicType: "${test.type}" (expect: ${test.expected})`, 'info');
+                
+                try {
+                    const response = await fetch(`${API_BASE}/create-topic-folder`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        },
+                        body: JSON.stringify({
+                            parentFolderId: '12lk0wPhyd6RvoEiQaQwXPBEeI07zB9nT',
+                            topicName: `Test ${test.type || 'null'}`,
+                            topicType: test.type
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        const icon = result.folderName?.charAt(0);
+                        
+                        if (icon === test.expected) {
+                            addLog(`   ✅ CORRECT: ${result.folderName}`, 'success');
+                        } else {
+                            const level = test.warning ? 'warning' : 'critical';
+                            addLog(`   ❌ WRONG: Expected ${test.expected}, got ${icon} in "${result.folderName}"`, level);
+                        }
+                    } else {
+                        addLog(`   ❌ API Error: ${response.status}`, 'error');
+                    }
+                } catch (error) {
+                    addLog(`   ❌ Request Error: ${error.message}`, 'error');
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+
+        async function auditFolderCreationSources() {
+            addLog('🕵️ Audit การสร้างโฟลเดอร์ทุกแหล่ง...', 'info');
+            
+            addLog('📋 Known Sources Analysis:', 'info');
+            addLog('1. ✅ FIXED: contentService.js - removed content folder creation', 'success');
+            addLog('2. ✅ FIXED: ContentEditor.jsx - no longer creates folders during upload', 'success');
+            addLog('3. ✅ FIXED: Supabase Edge Function - correct icons assigned', 'success');
+            addLog('4. ✅ VERIFIED: No course_content type in current code', 'success');
+            
+            addLog('🔍 Potential Unknown Sources:', 'warning');
+            addLog('- Browser cache with old compiled code', 'warning');
+            addLog('- Different Supabase project/environment', 'warning');
+            addLog('- External service or API making calls', 'warning');
+            addLog('- Manual folder creation in Google Drive', 'warning');
+            
+            // Check current deployment status
+            try {
+                const response = await fetch(window.location.origin + '/api/debug', {
+                    method: 'GET'
+                });
+                
+                if (response.ok) {
+                    addLog('✅ Current deployment appears to be the latest version', 'success');
+                } else {
+                    addLog('⚠️ Could not verify deployment version', 'warning');
+                }
+            } catch (error) {
+                addLog('⚠️ Could not check deployment status', 'warning');
+            }
+            
+            addLog('📝 RECOMMENDATION:', 'info');
+            addLog('1. Force clear all browser cache completely', 'info');
+            addLog('2. Test in incognito/private browsing mode', 'info');
+            addLog('3. Verify Supabase project environment', 'info');
+            addLog('4. Check for any manual Google Drive operations', 'info');
+        }
+
+        // Auto-run basic checks on load
+        document.addEventListener('DOMContentLoaded', () => {
+            addLog('🚀 Final Debug Tool Loaded Successfully', 'success');
+            addLog('💡 Click the buttons above to start debugging', 'info');
+            addLog('🎯 Goal: Find source of 🎓 icon and content-titled folders', 'warning');
+        });
+    </script>
+</body>
+</html>

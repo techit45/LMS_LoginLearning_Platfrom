@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug JavaScript Version</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+        .log {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+        .error { color: red; }
+        .success { color: green; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug JavaScript Version & Cache</h1>
+        
+        <button class="button" onclick="checkJavaScriptFiles()">
+            📄 ตรวจสอบไฟล์ JavaScript
+        </button>
+        
+        <button class="button" onclick="simulateCreateCourse()">
+            🧪 จำลองการสร้างคอร์ส
+        </button>
+        
+        <button class="button" onclick="checkSupabaseEdgeFunction()">
+            🔗 ทดสอบ Supabase Edge Function
+        </button>
+        
+        <button class="button" onclick="clearCacheAndReload()">
+            🔄 ล้าง Cache และ Reload
+        </button>
+
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('th-TH');
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
+            log.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function checkJavaScriptFiles() {
+            addLog('🔍 ตรวจสอบไฟล์ JavaScript ที่โหลด...', 'info');
+            
+            const scripts = document.querySelectorAll('script[src]');
+            addLog(`พบ script files: ${scripts.length} ไฟล์`, 'info');
+            
+            scripts.forEach((script, index) => {
+                const src = script.src;
+                const filename = src.split('/').pop();
+                addLog(`${index + 1}. ${filename}`, 'info');
+                
+                // Check for admin bundle
+                if (filename.includes('admin-')) {
+                    addLog(`   📦 Admin bundle: ${filename}`, 'warning');
+                }
+                
+                // Check for courses bundle  
+                if (filename.includes('courses-')) {
+                    addLog(`   📚 Courses bundle: ${filename}`, 'warning');
+                }
+            });
+            
+            // Check build timestamp in URL params
+            const hasTimestamp = Array.from(scripts).some(script => 
+                script.src.includes('?') || script.src.includes('#')
+            );
+            
+            if (hasTimestamp) {
+                addLog('✅ มี cache busting parameters', 'success');
+            } else {
+                addLog('⚠️ ไม่มี cache busting parameters', 'warning');
+            }
+        }
+
+        async function simulateCreateCourse() {
+            addLog('🧪 จำลองการเรียก API สร้างคอร์ส...', 'info');
+            
+            const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+            
+            try {
+                // Test course folder creation
+                const courseData = {
+                    parentFolderId: '12lk0wPhyd6RvoEiQaQwXPBEeI07zB9nT',
+                    topicName: 'คอร์สทดสอบ Debug',
+                    topicType: 'course'
+                };
+                
+                addLog('📡 กำลังทดสอบการสร้างโฟลเดอร์คอร์ส...', 'info');
+                addLog(`Data: ${JSON.stringify(courseData)}`, 'info');
+                
+                const response = await fetch(`${API_BASE}/create-topic-folder`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    },
+                    body: JSON.stringify(courseData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    addLog('✅ API ตอบกลับ: ' + JSON.stringify(result, null, 2), 'success');
+                    
+                    if (result.folderName) {
+                        if (result.folderName.includes('📖')) {
+                            addLog('✅ ใช้ไอคอนถูกต้อง: 📖', 'success');
+                        } else if (result.folderName.includes('📚')) {
+                            addLog('⚠️ ใช้ไอคอนผิด: 📚 (ควรเป็น 📖)', 'warning');
+                        } else if (result.folderName.includes('🎓')) {
+                            addLog('❌ ใช้ไอคอนผิด: 🎓 (ควรเป็น 📖)', 'error');
+                        }
+                    }
+                } else {
+                    const errorText = await response.text();
+                    addLog(`❌ API Error: ${response.status} - ${errorText}`, 'error');
+                }
+                
+            } catch (error) {
+                addLog(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkSupabaseEdgeFunction() {
+            addLog('🔗 ตรวจสอบ Supabase Edge Function...', 'info');
+            
+            const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+            
+            try {
+                const response = await fetch(`${API_BASE}/health`, {
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    addLog('✅ Edge Function Status: ' + JSON.stringify(result, null, 2), 'success');
+                } else {
+                    addLog(`❌ Edge Function Error: ${response.status}`, 'error');
+                }
+                
+                // Test what icons are returned for different types
+                addLog('🧪 ทดสอบไอคอนสำหรับ topicType ต่างๆ:', 'info');
+                
+                const testTypes = [
+                    { type: 'course', expected: '📖' },
+                    { type: 'project', expected: '🔧' },
+                    { type: 'course_content', expected: '📚', note: 'ไม่ควรใช้!' },
+                ];
+                
+                for (const test of testTypes) {
+                    addLog(`  ${test.type} → ${test.expected} ${test.note || ''}`, 
+                          test.note ? 'warning' : 'info');
+                }
+                
+            } catch (error) {
+                addLog(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'error');
+            }
+        }
+
+        function clearCacheAndReload() {
+            addLog('🔄 กำลังล้าง Cache และ Reload...', 'info');
+            
+            // Clear various caches
+            if (localStorage) {
+                localStorage.clear();
+                addLog('✅ ล้าง localStorage', 'success');
+            }
+            
+            if (sessionStorage) {
+                sessionStorage.clear();
+                addLog('✅ ล้าง sessionStorage', 'success');
+            }
+            
+            // Add cache busting parameter and reload
+            setTimeout(() => {
+                const url = new URL(window.location);
+                url.searchParams.set('_cb', Date.now());
+                window.location.href = url.toString();
+            }, 1000);
+        }
+
+        // Auto-run on load
+        document.addEventListener('DOMContentLoaded', () => {
+            addLog('🚀 Debug tool ready', 'success');
+            addLog('คลิกปุ่มด้านบนเพื่อเริ่มการตรวจสอบ', 'info');
+        });
+    </script>
+</body>
+</html>

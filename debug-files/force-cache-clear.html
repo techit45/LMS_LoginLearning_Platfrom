@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ล้าง Cache และทดสอบ</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        .button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: all 0.3s;
+        }
+        .button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        .danger {
+            background: #f44336;
+        }
+        .danger:hover {
+            background: #da190b;
+        }
+        .success {
+            background: #2196F3;
+        }
+        .success:hover {
+            background: #0b7dda;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .error { background: rgba(244, 67, 54, 0.2); }
+        .success { background: rgba(76, 175, 80, 0.2); }
+        .warning { background: rgba(255, 193, 7, 0.2); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 เครื่องมือล้าง Cache และแก้ปัญหาโฟลเดอร์</h1>
+        
+        <div class="status warning">
+            <h3>⚠️ ปัญหาที่พบ:</h3>
+            <p>ระบบยังคงสร้างโฟลเดอร์ด้วยชื่อเนื้อหา (เช่น "คอร์ส AI ครั้งที่ 1") แทนที่จะใช้ชื่อคอร์ส</p>
+        </div>
+
+        <div class="status success">
+            <h3>✅ การแก้ไขที่ทำแล้ว:</h3>
+            <ul>
+                <li>แก้ไข contentService.js</li>
+                <li>แก้ไข ContentEditor.jsx</li>
+                <li>Rebuild application</li>
+                <li>Deploy Supabase Edge Function</li>
+            </ul>
+        </div>
+
+        <h2>🔧 เครื่องมือแก้ปัญหา</h2>
+        
+        <button class="button danger" onclick="clearAllCache()">
+            🗑️ ล้าง Cache ทั้งหมด
+        </button>
+        
+        <button class="button success" onclick="forceReload()">
+            🔄 Reload แบบบังคับ
+        </button>
+        
+        <button class="button" onclick="checkCacheStatus()">
+            📊 ตรวจสอบสถานะ Cache
+        </button>
+        
+        <button class="button" onclick="testFolderCreation()">
+            🧪 ทดสอบการสร้างโฟลเดอร์
+        </button>
+
+        <div id="log" class="log"></div>
+        
+        <div class="status warning">
+            <h3>📋 ขั้นตอนการทดสอบ:</h3>
+            <ol>
+                <li>กดปุ่ม "ล้าง Cache ทั้งหมด"</li>
+                <li>กดปุ่ม "Reload แบบบังคับ"</li>
+                <li>เข้าไปสร้างคอร์สใหม่ชื่อ "คอร์สทดสอบ Final"</li>
+                <li>เพิ่มเนื้อหาชื่อ "เนื้อหาทดสอบ"</li>
+                <li>อัปโหลดไฟล์</li>
+                <li>ตรวจสอบใน Google Drive ว่าโฟลเดอร์ถูกต้องหรือไม่</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('th-TH');
+            const emoji = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            log.textContent += `[${timestamp}] ${emoji} ${message}\n`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        async function clearAllCache() {
+            addLog('เริ่มล้าง Cache ทั้งหมด...', 'info');
+            
+            try {
+                // Clear localStorage
+                localStorage.clear();
+                addLog('ล้าง localStorage เรียบร้อย', 'success');
+                
+                // Clear sessionStorage
+                sessionStorage.clear();
+                addLog('ล้าง sessionStorage เรียบร้อย', 'success');
+                
+                // Clear Service Workers
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (let registration of registrations) {
+                        await registration.unregister();
+                    }
+                    addLog(`ล้าง Service Workers (${registrations.length} รายการ)`, 'success');
+                }
+                
+                // Clear Caches API
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(
+                        cacheNames.map(cacheName => caches.delete(cacheName))
+                    );
+                    addLog(`ล้าง Caches API (${cacheNames.length} รายการ)`, 'success');
+                }
+                
+                addLog('ล้าง Cache ทั้งหมดสำเร็จ! 🎉', 'success');
+                
+            } catch (error) {
+                addLog(`เกิดข้อผิดพลาด: ${error.message}`, 'error');
+            }
+        }
+
+        function forceReload() {
+            addLog('กำลัง Reload แบบบังคับ...', 'info');
+            // Force reload without cache
+            window.location.reload(true);
+        }
+
+        async function checkCacheStatus() {
+            addLog('ตรวจสอบสถานะ Cache...', 'info');
+            
+            // Check localStorage
+            const localStorageSize = JSON.stringify(localStorage).length;
+            addLog(`localStorage: ${localStorageSize} bytes`, localStorageSize > 0 ? 'warning' : 'success');
+            
+            // Check sessionStorage
+            const sessionStorageSize = JSON.stringify(sessionStorage).length;
+            addLog(`sessionStorage: ${sessionStorageSize} bytes`, sessionStorageSize > 0 ? 'warning' : 'success');
+            
+            // Check Service Workers
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                addLog(`Service Workers: ${registrations.length} รายการ`, registrations.length > 0 ? 'warning' : 'success');
+            }
+            
+            // Check Caches API
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                addLog(`Caches API: ${cacheNames.length} รายการ`, cacheNames.length > 0 ? 'warning' : 'success');
+                cacheNames.forEach(name => addLog(`  - ${name}`, 'info'));
+            }
+            
+            // Check if JavaScript is updated
+            const scripts = document.querySelectorAll('script[src]');
+            addLog(`Script files: ${scripts.length} รายการ`, 'info');
+            
+            addLog('ตรวจสอบสถานะเสร็จสิ้น', 'success');
+        }
+
+        async function testFolderCreation() {
+            addLog('ทดสอบการเรียก API สร้างโฟลเดอร์...', 'info');
+            
+            const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+            
+            try {
+                // Test Edge Function
+                const response = await fetch(`${API_BASE}/health`, {
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    addLog('Edge Function ตอบสนอง: ' + JSON.stringify(result), 'success');
+                } else {
+                    addLog(`Edge Function Error: ${response.status}`, 'error');
+                }
+                
+                // Test create-topic-folder icons
+                addLog('ไอคอนที่ควรใช้:', 'info');
+                addLog('  📖 สำหรับคอร์ส (course)', 'info');
+                addLog('  🔧 สำหรับโปรเจค (project)', 'info');
+                addLog('  📚 สำหรับ course_content (ไม่ควรใช้!)', 'warning');
+                addLog('  🎓 ไอคอนนี้ไม่ควรปรากฏใน Google Drive', 'error');
+                
+            } catch (error) {
+                addLog(`ทดสอบ API ล้มเหลว: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-check status on load
+        document.addEventListener('DOMContentLoaded', () => {
+            addLog('🚀 เครื่องมือแก้ปัญหาพร้อมใช้งาน', 'success');
+            addLog('กรุณาล้าง Cache และ Reload ก่อนทดสอบ', 'warning');
+        });
+    </script>
+</body>
+</html>

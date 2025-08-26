@@ -57,8 +57,6 @@ const CourseChapterManager = ({
         return;
       }
 
-      console.log('🎯 Creating structure with chapters:', chapters);
-
       // Create Google Drive structure
       const result = await createCourseStructure(courseData, chapters);
       
@@ -77,7 +75,6 @@ const CourseChapterManager = ({
       }
 
     } catch (error) {
-      console.error('Error creating course structure:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: error.message || 'ไม่สามารถสร้างโครงสร้างคอร์สได้',

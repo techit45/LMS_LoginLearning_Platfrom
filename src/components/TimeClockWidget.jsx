@@ -12,14 +12,18 @@ import {
   Square,
   Coffee,
   BookOpen,
-  Users
+  Users,
+  CalendarDays
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCompany } from '../contexts/CompanyContext';
 import timeTrackingService from '../lib/timeTrackingService';
+import { secureCheckIn, secureCheckOut, validateCurrentLocation } from '../lib/secureTimeTrackingService';
 import * as locationService from '../lib/locationService';
 import * as teachingIntegrationService from '../lib/teachingTimeIntegrationService';
 import TeachingStatusWidget from './TeachingStatusWidget';
+import LeaveRequestForm from './LeaveRequestForm';
+import { ENTRY_TYPES, WORK_LOCATIONS, getDefaultHourlyRate } from '../constants/entryTypes';
 
 const TimeClockWidget = ({ 
   onCheckIn, 
@@ -28,8 +32,10 @@ const TimeClockWidget = ({
   showSessionDetails = true,
   compact = false 
 }) => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { currentCompany } = useCompany();
+  
+  // Removed debug console log to fix performance issues
   
   const [loading, setLoading] = useState(false);
   const [activeEntry, setActiveEntry] = useState(null);
@@ -38,10 +44,9 @@ const TimeClockWidget = ({
   const [locationStatus, setLocationStatus] = useState('checking');
   const [showSessionForm, setShowSessionForm] = useState(false);
   const [sessionDetails, setSessionDetails] = useState({
-    entryType: 'regular',
-    workLocation: 'onsite', // onsite, remote, online
+    entryType: ENTRY_TYPES.OTHER,
+    workLocation: WORK_LOCATIONS.ONSITE, // onsite, remote, online
     courseTaught: '',
-    studentCount: '',
     notes: '',
     remoteReason: '', // เหตุผลในการทำงานนอกสถานที่
     onlineClassPlatform: '', // แพลตฟอร์มสำหรับสอน Online
@@ -64,6 +69,8 @@ const TimeClockWidget = ({
   const [realTimeMinutes, setRealTimeMinutes] = useState(0);
   const [teachingStatus, setTeachingStatus] = useState(null);
   const [specialCaseDialog, setSpecialCaseDialog] = useState(null);
+  const [showLeaveForm, setShowLeaveForm] = useState(false);
+  const [locationMonitoring, setLocationMonitoring] = useState(true); // Enable location monitoring by default
 
   // Real-time clock
   useEffect(() => {
@@ -80,35 +87,229 @@ const TimeClockWidget = ({
     checkInstructorStatus();
   }, [user]);
 
+  // Re-check instructor status every minute to detect schedule changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const userRole = user?.user_metadata?.role;
+      if (userRole === 'instructor' || userRole === 'admin' || userRole === 'super_admin' || isAdmin) {
+        checkInstructorStatus();
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [user, isAdmin]);
+
+  // Real-time location monitoring when checked in
+  useEffect(() => {
+    let locationInterval;
+    
+    if (activeEntry && allowedLocations.length > 0 && locationMonitoring) {
+      // Check location every 30 seconds when user is checked in
+      locationInterval = setInterval(async () => {
+        try {
+          // Verify if still within allowed locations using secure validation
+          const verification = await validateCurrentLocation(allowedLocations);
+          
+          if (!verification.isValid) {
+              // User is outside allowed area - auto check out
+              console.warn('🚨 User left allowed area, auto checking out...');
+              setError('⚠️ ตรวจพบออกจากพื้นที่ทำงาน - เช็คเอาท์อัตโนมัติ');
+              
+              // Auto check out with reason
+              try {
+                const autoCheckOutData = {
+                  verifyLocation: false, // Skip verification since we know they're outside
+                  notes: 'เช็คเอาท์อัตโนมัติ - ออกจากพื้นที่ทำงานที่อนุญาต',
+                  breakMinutes: 0 // No default break - user must specify manually
+                };
+
+                const { data, error } = await secureCheckOut(autoCheckOutData);
+                
+                if (!error) {
+                  setActiveEntry(null);
+                  setSuccess('🔄 เช็คเอาท์อัตโนมัติสำเร็จ - ออกจากพื้นที่ทำงาน');
+                  
+                  // Reset session details
+                  setSessionDetails({
+                    entryType: ENTRY_TYPES.OTHER,
+                    courseTaught: '',
+                    notes: ''
+                  });
+                  
+                  if (onCheckOut) onCheckOut(data);
+                } else {
+                  console.error('Auto checkout failed:', error);
+                }
+              } catch (autoCheckoutError) {
+                console.error('Auto checkout error:', autoCheckoutError);
+                setError('ไม่สามารถเช็คเอาท์อัตโนมัติได้ กรุณาเช็คเอาท์ด้วยตนเอง');
+              }
+          } else {
+            // User is still in allowed area - update location status
+            setLocationStatus('valid');
+            setError(null); // Clear any previous location errors
+          }
+        } catch (locationError) {
+          console.warn('Location monitoring error:', locationError);
+          // Don't auto-checkout on location error, just log it
+        }
+      }, 30000); // Check every 30 seconds
+    }
+    
+    return () => {
+      if (locationInterval) {
+        clearInterval(locationInterval);
+      }
+    };
+  }, [activeEntry, allowedLocations, onCheckOut, locationMonitoring]);
+
   // Check instructor status and teaching detection
   const checkInstructorStatus = async () => {
-    if (user?.user_metadata?.role === 'instructor' || user?.user_metadata?.role === 'admin') {
+    const userRole = user?.user_metadata?.role;
+    const isInstructorType = userRole === 'instructor' || userRole === 'admin' || userRole === 'super_admin' || isAdmin;
+    
+    if (isInstructorType) {
       setIsInstructor(true);
       
       // Check for scheduled class
       try {
-        const { data: scheduleDetection } = await timeTrackingService.getTeachingScheduleDetection(
+        console.log('🔍 About to call getTeachingScheduleDetection with:', {
+          userId: user.id,
+          currentTime: new Date().toISOString(),
+          timeTrackingService: !!timeTrackingService,
+          hasFunction: !!timeTrackingService.getTeachingScheduleDetection
+        });
+        
+        const { data: scheduleDetection, error: detectionError } = await timeTrackingService.getTeachingScheduleDetection(
           user.id,
           new Date()
         );
         
-        if (scheduleDetection && scheduleDetection.length > 0) {
-          const detection = scheduleDetection[0];
-          setTeachingDetection(detection);
+        if (detectionError) {
+          }
+        
+        // Only enable teaching mode if there's a match with good confidence
+        const validDetection = scheduleDetection?.find(d => d.is_match && d.confidence_score >= 70);
+        
+        if (validDetection) {
+          setTeachingDetection(validDetection);
           
-          // Auto-enable teaching mode if high confidence
-          if (detection.confidence_score >= 80) {
+          // Check if it's an online class from schedule
+          const isOnlineClass = validDetection.location_type === 'online' || validDetection.location_type === 'hybrid';
+          
+          // Only auto-enable teaching mode when there's a real time match
+          setTeachingMode(true);
+          setSessionDetails(prev => ({
+            ...prev,
+            entryType: 'teaching',
+            courseTaught: validDetection.course_name,
+            // Auto-set work location based on schedule
+            workLocation: isOnlineClass ? 'online' : 'onsite',
+            // Auto-fill online class details if available
+            onlineClassPlatform: validDetection.online_platform || '',
+            onlineClassUrl: validDetection.online_meeting_url || ''
+          }));
+          
+          // Show appropriate message
+          if (isOnlineClass) {
+            setSuccess(`🎓 ตรวจพบคลาสออนไลน์: ${validDetection.course_name}`);
+            setError(null); // Clear location error for online classes
+          } else {
+            setSuccess(`📚 ตรวจพบคลาสที่ต้องสอน: ${validDetection.course_name}`);
+          }
+        } else {
+          // No teaching schedule found from database - clear teaching state
+          // Clear teaching detection and disable teaching mode automatically
+          setTeachingDetection(null);
+          setTeachingMode(false);
+          setSessionDetails(prev => ({
+            ...prev,
+            entryType: ENTRY_TYPES.OTHER,
+            courseTaught: '',
+            workLocation: '',
+            onlineClassPlatform: '',
+            onlineClassUrl: ''
+          }));
+          
+          // Check if we should enable a temporary teaching mode for testing when there's a class shown in calendar
+          const now = new Date();
+          const currentHour = now.getHours();
+          const currentDay = now.getDay(); // 0=Sunday, 1=Monday, 2=Tuesday, etc.
+          const currentTime = currentHour * 60 + now.getMinutes();
+          
+          // Disable automatic calendar fallback - use manual toggle instead
+          const isTuesdayTeachingTime = false;
+          
+          console.log('🗓️ Checking for calendar-based teaching time:', {
+            currentDay,
+            currentHour,
+            currentTime,
+            isTuesdayTeachingTime,
+            dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][currentDay],
+            requirement: 'Tuesday (day 2) AND 13:00-17:00 (780-1020 minutes)',
+            currentTeachingMode: teachingMode
+          });
+          
+          if (isTuesdayTeachingTime) {
+            // Create teaching detection based on calendar info (from screenshots)
+            const calendarBasedDetection = {
+              schedule_id: 'calendar-w2d',
+              course_name: 'W2D KL Workshop',
+              location_type: 'onsite', // Based on calendar
+              online_platform: null,
+              online_meeting_url: null,
+              scheduled_start: '13:00',
+              scheduled_end: '17:00',
+              time_variance_minutes: 0,
+              confidence_score: 80, // Lower score since it's calendar-based
+              source: 'calendar_fallback'
+            };
+            
+            setTeachingDetection(calendarBasedDetection);
             setTeachingMode(true);
             setSessionDetails(prev => ({
               ...prev,
               entryType: 'teaching',
-              courseTaught: detection.course_name
+              courseTaught: calendarBasedDetection.course_name,
+              workLocation: WORK_LOCATIONS.ONSITE
             }));
-          }
+            
+            setSuccess(`📚 ตรวจพบคลาสจากปฏิทิน: ${calendarBasedDetection.course_name}`);
+            setError(null);
+            } else {
+            // Clear teaching mode - no schedule found
+            setTeachingDetection(null);
+            setTeachingMode(false);
+            setSessionDetails(prev => ({
+              ...prev,
+              entryType: ENTRY_TYPES.OTHER,
+              courseTaught: '',
+              workLocation: WORK_LOCATIONS.ONSITE
+            }));
+            }
         }
       } catch (error) {
-        console.warn('Teaching detection failed:', error);
+        // Make sure to clear teaching mode on error
+        setTeachingDetection(null);
+        setTeachingMode(false);
+        setSessionDetails(prev => ({
+          ...prev,
+          entryType: ENTRY_TYPES.OTHER,
+          courseTaught: '',
+          workLocation: WORK_LOCATIONS.ONSITE
+        }));
       }
+    } else {
+      // User is not instructor/admin - clear teaching mode
+      setIsInstructor(false);
+      setTeachingDetection(null);
+      setTeachingMode(false);
+      setSessionDetails(prev => ({
+        ...prev,
+        entryType: ENTRY_TYPES.OTHER,
+        courseTaught: '',
+        workLocation: WORK_LOCATIONS.ONSITE
+      }));
     }
   };
 
@@ -146,7 +347,17 @@ const TimeClockWidget = ({
         
         // Subtract pause duration
         const pauseDurationMs = (activeEntry.pause_duration_minutes || 0) * 60 * 1000;
-        const workingMs = diffMs - pauseDurationMs;
+        let workingMs = diffMs - pauseDurationMs;
+        
+        // Auto-calculate lunch break (12:00-13:00) if working across lunch time
+        const checkInHour = checkInTime.getHours();
+        const checkInMinute = checkInTime.getMinutes();
+        const nowHour = now.getHours();
+        const nowMinute = now.getMinutes();
+        
+        // REMOVED: Automatic lunch break deduction as requested
+        // No longer automatically deduct lunch break time
+        // Users should manually specify break time if needed
         
         const hours = Math.floor(workingMs / (1000 * 60 * 60));
         const minutes = Math.floor((workingMs % (1000 * 60 * 60)) / (1000 * 60));
@@ -180,13 +391,11 @@ const TimeClockWidget = ({
     try {
       const { data, error } = await locationService.getCompanyLocations(selectedCompany, true);
       if (error) {
-        console.error('Error loading company locations:', error);
-      } else {
+        } else {
         setCompanyLocations(data || []);
       }
     } catch (err) {
-      console.error('Error loading company locations:', err);
-    }
+      }
   };
 
   const loadAvailableCenters = async () => {
@@ -196,15 +405,13 @@ const TimeClockWidget = ({
       // First, get all company locations for the selected company
       const { data: companyLocations, error: companyError } = await locationService.getCompanyLocations(selectedCompany, true);
       if (companyError) {
-        console.error('Error loading company locations:', companyError);
         return;
       }
 
       // Get user's existing registrations
       const { data: registrations, error } = await locationService.getUserRegisteredLocations();
       if (error) {
-        console.error('Error loading registered locations:', error);
-      }
+        }
 
       // Create map of existing registrations
       const existingRegistrations = new Set(
@@ -240,14 +447,11 @@ const TimeClockWidget = ({
               );
               
               if (registrationResult.success) {
-                console.log(`Auto-registered for ${companyLocation.location_name}`);
                 setSuccess(`🎯 ลงทะเบียนอัตโนมัติสำหรับ ${companyLocation.location_name}`);
               } else {
-                console.log(`Auto-registration skipped: ${registrationResult.error}`);
-              }
+                }
             } catch (regError) {
-              console.error('Auto registration failed:', regError);
-            }
+              }
           }
         }
 
@@ -287,8 +491,7 @@ const TimeClockWidget = ({
               setAvailableCenters([...approvedCenters, additionalCenter]);
             }
           } catch (err) {
-            console.warn('Could not fetch selected center info:', err);
-          }
+            }
         }
       } else {
         // No GPS or no company locations - use existing registrations only
@@ -322,13 +525,11 @@ const TimeClockWidget = ({
               setAvailableCenters([...approvedCenters, additionalCenter]);
             }
           } catch (err) {
-            console.warn('Could not fetch selected center info:', err);
-          }
+            }
         }
       }
     } catch (err) {
-      console.error('Error loading available centers:', err);
-    }
+      }
   };
 
   const autoDetectCenter = async () => {
@@ -425,7 +626,6 @@ const TimeClockWidget = ({
       }, 1000);
       
     } catch (err) {
-      console.error('Error auto-detecting center:', err);
       setError('เกิดข้อผิดพลาดในการตรวจจับศูนย์');
       setAutoDetecting(false);
     }
@@ -450,13 +650,11 @@ const TimeClockWidget = ({
     try {
       const { data, error } = await timeTrackingService.getActiveTimeEntry(user.id);
       if (error) {
-        console.error('Error checking active entry:', error);
-      } else {
+        } else {
         setActiveEntry(data);
       }
     } catch (err) {
-      console.error('Error checking active entry:', err);
-    }
+      }
     setLoading(false);
   };
 
@@ -495,20 +693,57 @@ const TimeClockWidget = ({
     setSuccess(null);
 
     try {
-      // For remote work or online teaching, we can skip center validation
-      const isRemoteWork = sessionDetails.workLocation === 'remote' || sessionDetails.workLocation === 'online';
+      // Validate teaching fields if teaching is selected
+      if (sessionDetails.entryType === 'teaching') {
+        if (!sessionDetails.courseTaught || sessionDetails.courseTaught.trim() === '') {
+          setError('กรุณาใส่ชื่อวิชาที่จะสอน');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Skip validation if we're in teaching mode (auto-detected from schedule)
+      const isTeachingMode = teachingMode || sessionDetails.entryType === 'teaching';
       
-      // Validate center selection only for onsite work
-      if (!isRemoteWork && !selectedCenter) {
-        setError('กรุณาเลือกศูนย์ก่อนเช็คอิน');
-        setLoading(false);
-        return;
+      // For remote work or online teaching, we can skip center validation
+      const isRemoteWork = sessionDetails.workLocation === WORK_LOCATIONS.REMOTE || sessionDetails.workLocation === WORK_LOCATIONS.ONLINE;
+      
+      // Skip all location validation for teaching mode - use schedule settings
+      if (!isTeachingMode) {
+        // For online teaching, validate platform and URL only if not auto-detected
+        if (sessionDetails.workLocation === WORK_LOCATIONS.ONLINE) {
+          if (!sessionDetails.onlineClassPlatform) {
+            setError('กรุณาเลือกแพลตฟอร์มการสอนออนไลน์');
+            setLoading(false);
+            return;
+          }
+          if (!sessionDetails.onlineClassUrl && sessionDetails.onlineClassPlatform !== 'other') {
+            setError('กรุณาใส่ลิงก์/URL ของคลาสออนไลน์');
+            setLoading(false);
+            return;
+          }
+        }
+        
+        // Validate center selection only for onsite work and non-teaching mode
+        if (!isRemoteWork && !selectedCenter) {
+          setError('กรุณาเลือกศูนย์ก่อนเช็คอิน');
+          setLoading(false);
+          return;
+        }
       }
 
       let selectedCenterInfo = null;
       
-      // Get center info only for onsite work
-      if (!isRemoteWork) {
+      // For teaching mode, use schedule-based location info
+      if (isTeachingMode && teachingDetection) {
+        // Use teaching schedule location information
+        selectedCenterInfo = {
+          id: 'teaching_schedule',
+          name: teachingDetection.location_type === 'online' ? 'การสอนออนไลน์' : 'ที่ศูนย์การสอน',
+          company: selectedCompany
+        };
+      } else if (!isRemoteWork) {
+        // Get center info only for onsite work (non-teaching mode)
         // Get selected center info - check both availableCenters and database
         selectedCenterInfo = availableCenters.find(center => center.id === selectedCenter);
       
@@ -524,8 +759,7 @@ const TimeClockWidget = ({
               };
             }
           } catch (err) {
-            console.error('Error getting center info:', err);
-          }
+            }
         }
         
         if (!selectedCenterInfo) {
@@ -537,26 +771,36 @@ const TimeClockWidget = ({
 
       const checkInData = {
         company: selectedCompany,
-        center: isRemoteWork ? 'remote' : selectedCenter,
-        centerName: isRemoteWork ? 
-          (sessionDetails.workLocation === 'online' ? 'การสอนออนไลน์' : 'ทำงานนอกสถานที่') : 
-          selectedCenterInfo.name,
-        verifyLocation: !isRemoteWork, // Skip location verification for remote work
-        allowedLocations: isRemoteWork ? [] : allowedLocations,
+        center: isTeachingMode ? (teachingDetection?.location_type === 'online' ? 'remote' : selectedCenter) :
+                (isRemoteWork ? 'remote' : selectedCenter),
+        centerName: isTeachingMode ? selectedCenterInfo?.name :
+                   (isRemoteWork ? 
+                     (sessionDetails.workLocation === WORK_LOCATIONS.ONLINE ? 'การสอนออนไลน์' : 'ทำงานนอกสถานที่') : 
+                     selectedCenterInfo.name),
+        verifyLocation: !isRemoteWork && !isTeachingMode, // Skip location verification for remote work and teaching mode
+        allowedLocations: (isRemoteWork || isTeachingMode) ? [] : allowedLocations,
+        // Add teaching schedule information
+        weeklyScheduleId: isTeachingMode && teachingDetection ? teachingDetection.schedule_id : null,
         ...sessionDetails
       };
 
-      const { data, error } = await timeTrackingService.checkIn(checkInData);
+      const { data, error } = await secureCheckIn(checkInData);
       
       if (error) {
         setError(error);
       } else {
         setActiveEntry(data);
         
-        // Show success message based on work location
-        if (isRemoteWork) {
+        // Show success message based on mode
+        if (isTeachingMode) {
           setSuccess(
-            sessionDetails.workLocation === 'online' ? 'เช็คอินสำเร็จสำหรับการสอนออนไลน์!' :
+            teachingDetection?.location_type === 'online' ? 
+            `🎓 เช็คอินเข้าสอนออนไลน์สำเร็จ: ${sessionDetails.courseTaught}` :
+            `🎓 เช็คอินเข้าสอนสำเร็จ: ${sessionDetails.courseTaught}`
+          );
+        } else if (isRemoteWork) {
+          setSuccess(
+            sessionDetails.workLocation === WORK_LOCATIONS.ONLINE ? 'เช็คอินสำเร็จสำหรับการสอนออนไลน์!' :
             'เช็คอินสำเร็จสำหรับการทำงานนอกสถานที่!'
           );
         } else if (location && selectedCenter) {
@@ -569,7 +813,6 @@ const TimeClockWidget = ({
               setSuccess(`เช็คอินสำเร็จ (${selectedCenterInfo?.name})!`);
             }
           } catch (err) {
-            console.error('Error getting location data:', err);
             setSuccess(`เช็คอินสำเร็จ (${selectedCenterInfo?.name})!`);
           }
         } else {
@@ -578,9 +821,8 @@ const TimeClockWidget = ({
         
         setShowSessionForm(false);
         setSessionDetails({
-          entryType: 'regular',
+          entryType: ENTRY_TYPES.OTHER,
           courseTaught: '',
-          studentCount: '',
           notes: ''
         });
         
@@ -602,10 +844,10 @@ const TimeClockWidget = ({
       const checkOutData = {
         verifyLocation: allowedLocations.length > 0,
         notes: sessionDetails.notes,
-        breakMinutes: 60 // Default 1 hour lunch break
+        breakMinutes: 0 // No default break - user must specify manually
       };
 
-      const { data, error } = await timeTrackingService.checkOut(checkOutData);
+      const { data, error } = await secureCheckOut(checkOutData);
       
       if (error) {
         setError(error);
@@ -613,9 +855,8 @@ const TimeClockWidget = ({
         setActiveEntry(null);
         setSuccess('เช็คเอาท์สำเร็จ!');
         setSessionDetails({
-          entryType: 'regular',
+          entryType: ENTRY_TYPES.OTHER,
           courseTaught: '',
-          studentCount: '',
           notes: ''
         });
         
@@ -634,8 +875,17 @@ const TimeClockWidget = ({
     const checkInTime = new Date(activeEntry.check_in_time);
     const now = new Date();
     const diffMs = now - checkInTime;
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    // Subtract pause duration
+    const pauseDurationMs = (activeEntry.pause_duration_minutes || 0) * 60 * 1000;
+    let workingMs = diffMs - pauseDurationMs;
+    
+    // REMOVED: Automatic lunch break deduction as requested
+    // No longer automatically deduct lunch break time
+    // Users should manually specify break time if needed
+    
+    const hours = Math.floor(workingMs / (1000 * 60 * 60));
+    const minutes = Math.floor((workingMs % (1000 * 60 * 60)) / (1000 * 60));
     
     return { hours, minutes };
   };
@@ -650,8 +900,7 @@ const TimeClockWidget = ({
         setActiveEntry(data);
       }
     } catch (err) {
-      console.error('Error refreshing active entry:', err);
-    }
+      }
   };
 
   // Handle special cases from TeachingStatusWidget
@@ -747,14 +996,12 @@ const TimeClockWidget = ({
           break;
 
         default:
-          console.warn('Unknown special case:', caseType);
-      }
+          }
 
       if (result && result.error) {
         setError(result.error);
       }
     } catch (error) {
-      console.error('Special case handling error:', error);
       setError("ไม่สามารถดำเนินการได้");
     } finally {
       setLoading(false);
@@ -832,16 +1079,16 @@ const TimeClockWidget = ({
                 className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm font-medium disabled:opacity-50"
               >
                 <Square className="w-4 h-4 mr-1 inline" />
-                เช็คเอาท์
+                {teachingMode || activeEntry?.entry_type === 'teaching' ? 'จบการสอน' : 'เช็คเอาท์'}
               </button>
             ) : (
               <button
                 onClick={handleCheckIn}
-                disabled={loading || (allowedLocations.length > 0 && locationStatus !== 'valid')}
+                disabled={loading || (!teachingMode && allowedLocations.length > 0 && locationStatus !== 'valid')}
                 className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium disabled:opacity-50"
               >
                 <Play className="w-4 h-4 mr-1 inline" />
-                เช็คอิน
+                {teachingMode ? 'เช็คอินเข้าสอน' : 'เช็คอิน'}
               </button>
             )}
           </div>
@@ -876,8 +1123,8 @@ const TimeClockWidget = ({
         onSpecialCase={handleSpecialCase}
       />
 
-      {/* Company and Center Selection */}
-      {!activeEntry && (
+      {/* Company and Center Selection - Hide when in teaching mode */}
+      {!activeEntry && !teachingMode && (
         <div className="mb-6 space-y-4">
           {/* Company Selection */}
           <div>
@@ -929,8 +1176,7 @@ const TimeClockWidget = ({
                 )}
               </button>
             </div>
-            
-            
+
             {(availableCenters.length > 0 || selectedCenter) ? (
               selectedCenter && availableCenters.length === 0 ? (
                 <div className="w-full px-3 py-2 border border-green-300 rounded-lg bg-green-50 text-green-700 text-sm">
@@ -957,28 +1203,38 @@ const TimeClockWidget = ({
                     ))}
                   </select>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      หรือเลือกสถานที่ทำงาน:
-                    </label>
-                    <select
-                      value={sessionDetails.workLocation}
-                      onChange={(e) => {
-                        setSessionDetails(prev => ({ 
-                          ...prev, 
-                          workLocation: e.target.value 
-                        }));
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    >
-                      <option value="onsite">ที่ศูนย์/สำนักงาน</option>
-                      <option value="remote">ทำงานนอกสถานที่</option>
-                      <option value="online">สอนออนไลน์</option>
-                    </select>
-                  </div>
+                  {/* แสดงข้อมูลสถานที่ทำงานที่ตรวจจับได้อัตโนมัติ */}
+                  {(teachingDetection || sessionDetails.workLocation !== WORK_LOCATIONS.ONSITE) && (
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center space-x-2">
+                        {sessionDetails.workLocation === WORK_LOCATIONS.ONLINE ? (
+                          <BookOpen className="w-4 h-4 text-blue-600" />
+                        ) : sessionDetails.workLocation === WORK_LOCATIONS.REMOTE ? (
+                          <MapPin className="w-4 h-4 text-orange-600" />
+                        ) : (
+                          <Users className="w-4 h-4 text-green-600" />
+                        )}
+                        <div>
+                          <div className="text-sm font-medium text-gray-700">
+                            {sessionDetails.workLocation === WORK_LOCATIONS.ONLINE ? 'การสอนออนไลน์' :
+                             sessionDetails.workLocation === WORK_LOCATIONS.REMOTE ? 'ทำงานนอกสถานที่' :
+                             'ที่ศูนย์/สำนักงาน'}
+                          </div>
+                          {teachingDetection && (
+                            <div className="text-xs text-blue-600">
+                              คลาส: {teachingDetection.course_name}
+                              {teachingDetection.online_platform && (
+                                <span> • แพลตฟอร์ม: {teachingDetection.online_platform}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Show additional fields for remote/online work */}
-                  {sessionDetails.workLocation === 'remote' && (
+                  {sessionDetails.workLocation === WORK_LOCATIONS.REMOTE && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         เหตุผลในการทำงานนอกสถานที่:
@@ -1003,7 +1259,7 @@ const TimeClockWidget = ({
                     </div>
                   )}
                   
-                  {sessionDetails.workLocation === 'online' && (
+                  {sessionDetails.workLocation === WORK_LOCATIONS.ONLINE && (
                     <div className="space-y-3">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1060,30 +1316,38 @@ const TimeClockWidget = ({
                   </div>
                 </div>
                 
-                {/* Work location selector when no center available */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    เลือกสถานที่ทำงาน:
-                  </label>
-                  <select
-                    value={sessionDetails.workLocation}
-                    onChange={(e) => {
-                      console.log('Work location changed to:', e.target.value);
-                      setSessionDetails(prev => ({ 
-                        ...prev, 
-                        workLocation: e.target.value 
-                      }));
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    <option value="onsite">ที่ศูนย์/สำนักงาน</option>
-                    <option value="remote">ทำงานนอกสถานที่</option>
-                    <option value="online">สอนออนไลน์</option>
-                  </select>
-                </div>
+                {/* แสดงข้อมูลสถานที่ทำงานที่ตรวจจับได้อัตโนมัติ */}
+                {(teachingDetection || sessionDetails.workLocation !== WORK_LOCATIONS.ONSITE) && (
+                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center space-x-2">
+                      {sessionDetails.workLocation === WORK_LOCATIONS.ONLINE ? (
+                        <BookOpen className="w-4 h-4 text-blue-600" />
+                      ) : sessionDetails.workLocation === WORK_LOCATIONS.REMOTE ? (
+                        <MapPin className="w-4 h-4 text-orange-600" />
+                      ) : (
+                        <Users className="w-4 h-4 text-green-600" />
+                      )}
+                      <div>
+                        <div className="text-sm font-medium text-gray-700">
+                          {sessionDetails.workLocation === WORK_LOCATIONS.ONLINE ? 'การสอนออนไลน์' :
+                           sessionDetails.workLocation === WORK_LOCATIONS.REMOTE ? 'ทำงานนอกสถานที่' :
+                           'ที่ศูนย์/สำนักงาน'}
+                        </div>
+                        {teachingDetection && (
+                          <div className="text-xs text-blue-600">
+                            คลาส: {teachingDetection.course_name}
+                            {teachingDetection.online_platform && (
+                              <span> • แพลตฟอร์ม: {teachingDetection.online_platform}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 
                 {/* Show additional fields for remote/online work */}
-                {sessionDetails.workLocation === 'remote' && (
+                {sessionDetails.workLocation === WORK_LOCATIONS.REMOTE && (
                   <div className="mt-3">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       เหตุผลในการทำงานนอกสถานที่:
@@ -1108,7 +1372,7 @@ const TimeClockWidget = ({
                   </div>
                 )}
                 
-                {sessionDetails.workLocation === 'online' && (
+                {sessionDetails.workLocation === WORK_LOCATIONS.ONLINE && (
                   <div className="mt-3 space-y-2">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -1153,6 +1417,46 @@ const TimeClockWidget = ({
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Teaching Information Section - Show when in teaching mode */}
+      {!activeEntry && teachingMode && teachingDetection && (
+        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+          <div className="flex items-center space-x-2 mb-3">
+            <BookOpen className="w-5 h-5 text-blue-600" />
+            <h3 className="text-sm font-semibold text-blue-900">ข้อมูลการสอน</h3>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-600">วิชา:</span>
+              <span className="text-sm font-medium text-gray-900">{teachingDetection.course_name}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-600">เวลา:</span>
+              <span className="text-sm font-medium text-gray-900">{teachingDetection.scheduled_start} - {teachingDetection.scheduled_end}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-600">ประเภท:</span>
+              <span className="text-sm font-medium text-gray-900">
+                {teachingDetection.location_type === 'online' ? '🌐 สอนออนไลน์' : '🏢 สอนที่ศูนย์'}
+              </span>
+            </div>
+            {teachingDetection.online_platform && (
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600">แพลตฟอร์ม:</span>
+                <span className="text-sm font-medium text-gray-900">{teachingDetection.online_platform}</span>
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-3 p-2 bg-blue-100 rounded text-xs text-blue-700">
+            <div className="flex items-center space-x-1">
+              <CheckCircle className="w-3 h-3" />
+              <span>พร้อมเช็คอินเข้าสอนได้ทันที ไม่ต้องเลือกสถานที่</span>
+            </div>
           </div>
         </div>
       )}
@@ -1204,6 +1508,35 @@ const TimeClockWidget = ({
           </div>
         )}
 
+        {/* Location Monitoring Control */}
+        {allowedLocations.length > 0 && (
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <MapPin className="w-4 h-4 text-gray-400" />
+              <span className="text-sm font-medium text-gray-700">ติดตามตำแหน่ง</span>
+              {activeEntry && locationMonitoring && (
+                <span className="text-xs text-blue-600">(กำลังติดตาม)</span>
+              )}
+            </div>
+            <div className="flex items-center space-x-2">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={locationMonitoring}
+                  onChange={(e) => setLocationMonitoring(e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`w-11 h-6 rounded-full ${locationMonitoring ? 'bg-blue-600' : 'bg-gray-300'} transition-colors duration-200 ease-in-out`}>
+                  <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out ${locationMonitoring ? 'translate-x-5' : 'translate-x-0'} translate-y-0.5`} />
+                </div>
+              </label>
+              <span className={`text-xs font-medium ${locationMonitoring ? 'text-blue-600' : 'text-gray-500'}`}>
+                {locationMonitoring ? 'เปิด' : 'ปิด'}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Worked Time */}
         {activeEntry && workedTime && (
           <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
@@ -1236,35 +1569,43 @@ const TimeClockWidget = ({
                 }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               >
-                <option value="regular">งานทั่วไป</option>
-                <option value="teaching">สอน</option>
-                <option value="prep">เตรียมการสอน</option>
-                <option value="meeting">ประชุม</option>
-                <option value="admin">งานธุรการ</option>
+                <option value={ENTRY_TYPES.OTHER}>งานทั่วไป</option>
+                <option value={ENTRY_TYPES.TEACHING}>🎓 การสอน</option>
+                <option value={ENTRY_TYPES.PREP}>เตรียมการสอน</option>
+                <option value={ENTRY_TYPES.MEETING}>ประชุม</option>
+                <option value={ENTRY_TYPES.ADMIN}>งานธุรการ</option>
               </select>
             </div>
 
-            {/* Work Location Selection */}
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                สถานที่ทำงาน
-              </label>
-              <select
-                value={sessionDetails.workLocation}
-                onChange={(e) => setSessionDetails(prev => ({ 
-                  ...prev, 
-                  workLocation: e.target.value 
-                }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              >
-                <option value="onsite">ที่ศูนย์/สำนักงาน</option>
-                <option value="remote">ทำงานนอกสถานที่</option>
-                <option value="online">สอนออนไลน์</option>
-              </select>
-            </div>
+            {/* แสดงข้อมูลสถานที่ทำงานที่ตรวจจับได้อัตโนมัติ */}
+            {(teachingDetection || sessionDetails.workLocation !== WORK_LOCATIONS.ONSITE) && (
+              <div className="p-2 bg-blue-50 rounded border border-blue-200">
+                <div className="flex items-center space-x-2">
+                  {sessionDetails.workLocation === WORK_LOCATIONS.ONLINE ? (
+                    <BookOpen className="w-3 h-3 text-blue-600" />
+                  ) : sessionDetails.workLocation === WORK_LOCATIONS.REMOTE ? (
+                    <MapPin className="w-3 h-3 text-orange-600" />
+                  ) : (
+                    <Users className="w-3 h-3 text-green-600" />
+                  )}
+                  <div>
+                    <div className="text-xs font-medium text-gray-700">
+                      {sessionDetails.workLocation === WORK_LOCATIONS.ONLINE ? 'การสอนออนไลน์' :
+                       sessionDetails.workLocation === WORK_LOCATIONS.REMOTE ? 'ทำงานนอกสถานที่' :
+                       'ที่ศูนย์/สำนักงาน'}
+                    </div>
+                    {teachingDetection && (
+                      <div className="text-xs text-blue-600">
+                        {teachingDetection.course_name}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Remote Work Reason */}
-            {sessionDetails.workLocation === 'remote' && (
+            {sessionDetails.workLocation === WORK_LOCATIONS.REMOTE && (
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">
                   เหตุผลในการทำงานนอกสถานที่
@@ -1290,7 +1631,7 @@ const TimeClockWidget = ({
             )}
 
             {/* Online Class Platform */}
-            {sessionDetails.workLocation === 'online' && (
+            {sessionDetails.workLocation === WORK_LOCATIONS.ONLINE && (
               <>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -1335,40 +1676,53 @@ const TimeClockWidget = ({
             )}
 
             {sessionDetails.entryType === 'teaching' && (
-              <>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    วิชาที่สอน
-                  </label>
-                  <input
-                    type="text"
-                    value={sessionDetails.courseTaught}
-                    onChange={(e) => setSessionDetails(prev => ({ 
-                      ...prev, 
-                      courseTaught: e.target.value 
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    placeholder="ชื่อวิชา..."
-                  />
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex items-center space-x-2 mb-3">
+                  <BookOpen className="w-4 h-4 text-blue-600" />
+                  <h4 className="text-sm font-medium text-blue-900">ข้อมูลการสอน</h4>
                 </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-blue-700 mb-1">
+                      วิชาที่สอน <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={sessionDetails.courseTaught}
+                      onChange={(e) => setSessionDetails(prev => ({ 
+                        ...prev, 
+                        courseTaught: e.target.value 
+                      }))}
+                      className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="เช่น React Programming, Web Development"
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    จำนวนนักเรียน
-                  </label>
-                  <input
-                    type="number"
-                    value={sessionDetails.studentCount}
-                    onChange={(e) => setSessionDetails(prev => ({ 
-                      ...prev, 
-                      studentCount: parseInt(e.target.value) || '' 
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    placeholder="จำนวน..."
-                    min="1"
-                  />
+                  <div>
+                    <label className="block text-xs font-medium text-blue-700 mb-1">
+                      รูปแบบการสอน
+                    </label>
+                    <select
+                      value={sessionDetails.workLocation}
+                      onChange={(e) => setSessionDetails(prev => ({ 
+                        ...prev, 
+                        workLocation: e.target.value 
+                      }))}
+                      className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value={WORK_LOCATIONS.ONSITE}>ในห้องเรียน</option>
+                      <option value={WORK_LOCATIONS.ONLINE}>ออนไลน์</option>
+                      <option value={WORK_LOCATIONS.REMOTE}>ผสมผสาน</option>
+                    </select>
+                  </div>
                 </div>
-              </>
+                
+                <div className="mt-3 text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                  💡 ระบบจะคำนวณเวลาสอนและเก็บสถิติให้อัตโนมัติ
+                </div>
+              </div>
             )}
 
             <div>
@@ -1385,6 +1739,23 @@ const TimeClockWidget = ({
                 placeholder="หมายเหตุเพิ่มเติม..."
                 rows="2"
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Location Monitoring Alert */}
+      {activeEntry && locationMonitoring && allowedLocations.length > 0 && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start space-x-2">
+            <MapPin className="w-4 h-4 text-blue-500 mt-0.5" />
+            <div>
+              <div className="text-sm font-medium text-blue-700">
+                📍 ระบบกำลังติดตามตำแหน่งของคุณ
+              </div>
+              <div className="text-xs text-blue-600 mt-1">
+                หากออกจากพื้นที่ทำงานจะเช็คเอาท์อัตโนมัติ (ตรวจสอบทุก 30 วินาที)
+              </div>
             </div>
           </div>
         </div>
@@ -1422,7 +1793,7 @@ const TimeClockWidget = ({
             ) : (
               <>
                 <Square className="w-4 h-4" />
-                <span>เช็คเอาท์</span>
+                <span>{teachingMode || activeEntry?.entry_type === 'teaching' ? 'จบการสอน' : 'เช็คเอาท์'}</span>
               </>
             )}
           </button>
@@ -1440,8 +1811,8 @@ const TimeClockWidget = ({
             <button
               onClick={handleCheckIn}
               disabled={loading || 
-                (sessionDetails.workLocation === 'onsite' && !selectedCenter) || 
-                (allowedLocations.length > 0 && sessionDetails.workLocation === 'onsite' && locationStatus !== 'valid' && locationStatus !== 'not_required')}
+                (!teachingMode && sessionDetails.workLocation === 'onsite' && !selectedCenter) || 
+                (!teachingMode && allowedLocations.length > 0 && sessionDetails.workLocation === 'onsite' && locationStatus !== 'valid' && locationStatus !== 'not_required')}
               className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium disabled:opacity-50 flex items-center justify-center space-x-2"
             >
               {loading ? (
@@ -1449,7 +1820,7 @@ const TimeClockWidget = ({
               ) : (
                 <>
                   <Play className="w-4 h-4" />
-                  <span>เช็คอิน</span>
+                  <span>{teachingMode ? 'เช็คอินเข้าสอน' : 'เช็คอิน'}</span>
                 </>
               )}
             </button>
@@ -1464,6 +1835,15 @@ const TimeClockWidget = ({
             ยกเลิก
           </button>
         )}
+
+        {/* Leave Request Button */}
+        <button
+          onClick={() => setShowLeaveForm(true)}
+          className="w-full bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded-lg font-medium text-sm flex items-center justify-center space-x-2 mt-2"
+        >
+          <CalendarDays className="w-4 h-4" />
+          <span>ขอลา</span>
+        </button>
       </div>
 
       {/* Current Entry Info */}
@@ -1587,6 +1967,18 @@ const TimeClockWidget = ({
             )}
           </div>
         </div>
+      )}
+
+      {/* Leave Request Modal */}
+      {showLeaveForm && (
+        <LeaveRequestForm
+          showModal={true}
+          onSubmit={(data) => {
+            setShowLeaveForm(false);
+            setSuccess('ส่งคำขอลาสำเร็จ! รอการอนุมัติจากผู้จัดการ');
+          }}
+          onCancel={() => setShowLeaveForm(false)}
+        />
       )}
     </div>
   );

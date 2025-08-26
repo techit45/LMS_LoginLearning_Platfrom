@@ -36,6 +36,7 @@ const ProjectDetailPage = React.lazy(() => import('./pages/ProjectDetailPage'));
 const SystemDiagnosticPage = React.lazy(() => import('./pages/SystemDiagnosticPage'));
 const TestDrivePage = React.lazy(() => import('./pages/TestDrivePage'));
 
+
 // Admin components (lazy loaded)
 const AdminLayout = React.lazy(() => import('./components/AdminLayout'));
 const AdminPage = React.lazy(() => import('./pages/AdminPage'));
@@ -62,6 +63,8 @@ import LeaveRequestForm from './components/LeaveRequestForm';
 import AttendanceCalendar from './components/AttendanceCalendar';
 import AdminTimeManagement from './components/AdminTimeManagement';
 import TimeTrackingDebug from './components/TimeTrackingDebug';
+const LeaveManagementPage = React.lazy(() => import('./pages/LeaveManagementPage'));
+const WorkHoursPage = React.lazy(() => import('./pages/WorkHoursPage'));
 
 // Location Management components
 import LocationRegistration from './components/LocationRegistration';
@@ -236,6 +239,8 @@ const AppLayout = () => {
               </ProtectedRoute>
             } 
           />
+          
+          
           <Route 
             path="/settings" 
             element={
@@ -271,10 +276,26 @@ const AppLayout = () => {
             } 
           />
           <Route 
+            path="/leave-management" 
+            element={
+              <ProtectedRoute>
+                <LeaveManagementPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/attendance" 
             element={
               <ProtectedRoute>
                 <AttendanceCalendar />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/work-hours" 
+            element={
+              <ProtectedRoute>
+                <WorkHoursPage />
               </ProtectedRoute>
             } 
           />

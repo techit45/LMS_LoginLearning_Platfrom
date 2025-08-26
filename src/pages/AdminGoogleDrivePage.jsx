@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../lib/supabaseClient';
 import { 
   Upload, 
   Folder, 
@@ -65,20 +66,16 @@ const AdminGoogleDrivePage = () => {
 
   // Production API base URL - SUPABASE EDGE FUNCTION
   const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
-  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
   // Load files from current folder using googleDriveClientService
   const loadFiles = async (folderId = currentFolder) => {
     setLoading(true);
     setServerError(false);
     try {
-      console.log('📁 Loading files from folder:', folderId);
       const data = await listFiles(folderId, 50, IS_SHARED_DRIVE);
-      console.log('📁 Loaded files from API:', data.files);
       setFiles(data.files || []);
       setServerError(false);
     } catch (error) {
-      console.error('Error loading files:', error);
       setServerError(true);
       setFiles([]);
       alert('ไม่สามารถโหลดไฟล์ได้: ' + error.message);
@@ -106,7 +103,6 @@ const AdminGoogleDrivePage = () => {
 
         if (response.ok) {
           const result = await response.json();
-          console.log('✅ File uploaded:', result);
           setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
           
           setTimeout(() => {
@@ -121,8 +117,6 @@ const AdminGoogleDrivePage = () => {
           throw new Error(errorData.error || `Upload failed for ${file.name}`);
         }
       } catch (error) {
-        console.error('Error uploading file:', error);
-        
         // Handle specific quota error
         if (error.message.includes('Service Accounts do not have storage quota')) {
           alert(`❌ ไม่สามารถอัพโหลด "${file.name}" ได้\n\n🔧 สาเหตุ: Service Account ไม่มี storage quota\n\n💡 วิธีแก้ไข:\n1. สร้าง Shared Drive ใน Google Drive\n2. เพิ่ม service account เข้า Shared Drive\n3. หรือใช้ OAuth delegation\n\nดู GOOGLE_DRIVE_QUOTA_SOLUTION.md สำหรับรายละเอียด`);
@@ -159,7 +153,6 @@ const AdminGoogleDrivePage = () => {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ Folder created:', result);
         // Force refresh with delay to ensure server sync
         setTimeout(() => {
           loadFiles();
@@ -168,7 +161,6 @@ const AdminGoogleDrivePage = () => {
         throw new Error('Failed to create folder');
       }
     } catch (error) {
-      console.error('Error creating folder:', error);
       alert('ไม่สามารถสร้างโฟลเดอร์ได้: ' + error.message);
     }
   };
@@ -178,10 +170,16 @@ const AdminGoogleDrivePage = () => {
     if (!confirm(`คุณต้องการลบ "${fileName}" หรือไม่?`)) return;
 
     try {
+      // 🔒 SECURE: Get dynamic session token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        throw new Error('Authentication required for file operations');
+      }
+
       const response = await fetch(`${API_BASE}/delete-file`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${session.access_token}`, // 🔒 Dynamic token
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -191,7 +189,6 @@ const AdminGoogleDrivePage = () => {
       });
 
       if (response.ok) {
-        console.log('✅ File deleted');
         loadFiles();
         setSelectedFiles(prev => {
           const newSet = new Set(prev);
@@ -202,7 +199,6 @@ const AdminGoogleDrivePage = () => {
         throw new Error('Failed to delete file');
       }
     } catch (error) {
-      console.error('Error deleting file:', error);
       alert('ไม่สามารถลบไฟล์ได้: ' + error.message);
     }
   };
@@ -220,13 +216,11 @@ const AdminGoogleDrivePage = () => {
       });
 
       if (response.ok) {
-        console.log('✅ File renamed');
         loadFiles();
       } else {
         throw new Error('Failed to rename file');
       }
     } catch (error) {
-      console.error('Error renaming file:', error);
       alert('ไม่สามารถเปลี่ยนชื่อได้: ' + error.message);
     }
   };
@@ -260,7 +254,6 @@ const AdminGoogleDrivePage = () => {
       const data = await response.json();
       setFiles(data || []);
     } catch (error) {
-      console.error('Error searching files:', error);
       alert('ไม่สามารถค้นหาได้: ' + error.message);
     } finally {
       setLoading(false);
@@ -295,7 +288,6 @@ const AdminGoogleDrivePage = () => {
         setAvailableFolders(folderFiles);
       }
     } catch (error) {
-      console.error('Error loading folders:', error);
       // Fallback: use current files that are folders
       const folderFiles = files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
       setAvailableFolders(folderFiles);
@@ -312,7 +304,6 @@ const AdminGoogleDrivePage = () => {
       });
 
       if (response.ok) {
-        console.log('✅ Files moved successfully');
         loadFiles(); // Refresh current folder
         setSelectedFiles(new Set()); // Clear selection
         setShowMoveDialog(false);
@@ -328,8 +319,6 @@ const AdminGoogleDrivePage = () => {
         throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error('Error moving files:', error);
-      
       if (error.name === 'SyntaxError' && error.message.includes('expected pattern')) {
         alert('เซิร์ฟเวอร์ยังไม่พร้อม กรุณารีเฟรชหน้าและลองใหม่');
       } else if (error.message.includes('404')) {
@@ -460,19 +449,12 @@ const AdminGoogleDrivePage = () => {
   );
 
   useEffect(() => {
-    console.log('🔄 Effect triggered - loading files for folder:', currentFolder);
     loadFiles();
   }, [currentFolder, sortBy]);
 
   // Debug current state
   useEffect(() => {
-    console.log('📊 Current state:', {
-      currentFolder,
-      filesCount: files.length,
-      filteredCount: filteredFiles.length,
-      searchQuery
-    });
-  }, [currentFolder, files, filteredFiles, searchQuery]);
+    }, [currentFolder, files, filteredFiles, searchQuery]);
 
   const FileCard = ({ file }) => {
     const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
@@ -619,7 +601,6 @@ const AdminGoogleDrivePage = () => {
               
               <Button
                 onClick={() => {
-                  console.log('🔄 Force refresh clicked');
                   loadFiles();
                 }}
                 variant="ghost"

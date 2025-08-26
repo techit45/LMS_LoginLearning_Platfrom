@@ -1,14 +1,9 @@
 import React from 'react';
 
 const TestModal = ({ isOpen, onClose, entry }) => {
-  console.log('🚀 TestModal render called!', { isOpen, hasEntry: !!entry });
-  
   if (!isOpen) {
-    console.log('❌ TestModal - isOpen is false');
     return null;
   }
-  
-  console.log('✅ TestModal - SHOULD RENDER NOW!');
   
   return (
     <>

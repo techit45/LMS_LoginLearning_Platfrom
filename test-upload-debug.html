@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Debug Test</title>
+</head>
+<body>
+    <h1>File Upload Debug Test</h1>
+    <input type="file" id="fileInput" />
+    <button onclick="testUpload()">Test Upload</button>
+    <div id="result"></div>
+
+    <script type="module">
+        window.testUpload = async () => {
+            const fileInput = document.getElementById('fileInput');
+            const result = document.getElementById('result');
+            
+            if (!fileInput.files[0]) {
+                result.innerHTML = 'Please select a file first';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            console.log('Testing upload with file:', file.name, file.size);
+            
+            try {
+                // Test the uploadFileToFolder function directly
+                const { uploadFileToFolder } = await import('./src/lib/googleDriveClientService.js');
+                
+                // Use a known course folder ID for testing
+                const testFolderId = '18BmNBBwDSUMLUdq4ODhxLWPD8w0Lh189'; // LOGIN courses folder
+                
+                result.innerHTML = 'Uploading...';
+                
+                const uploadResult = await uploadFileToFolder(file, testFolderId);
+                
+                result.innerHTML = `✅ Upload successful: ${JSON.stringify(uploadResult, null, 2)}`;
+                console.log('✅ Upload result:', uploadResult);
+                
+            } catch (error) {
+                result.innerHTML = `❌ Error: ${error.message}`;
+                console.error('❌ Upload error:', error);
+            }
+        };
+    </script>
+</body>
+</html>

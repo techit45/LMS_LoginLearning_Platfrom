@@ -9,6 +9,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../hooks/use-toast.jsx"
 import { loginSchema } from "../lib/validationSchemas";
 import { supabase } from "../lib/supabaseClient";
+import GoogleLoginButton from "../components/GoogleLoginButton";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_TIME = 60 * 1000; // 1 minute
@@ -21,7 +22,7 @@ const LoginPage = () => {
   const [validationErrors, setValidationErrors] = useState({});
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [retryAfter, setRetryAfter] = useState(0);
-  const { signInWithPassword, isSupabaseConnected } =
+  const { signInWithPassword, signInWithGoogle, isSupabaseConnected, loading: authLoading } =
     useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -111,7 +112,6 @@ const LoginPage = () => {
     }
   };
 
-
   const pageVariants = {
     initial: { opacity: 0, y: 20 },
     in: { opacity: 1, y: 0 },
@@ -122,6 +122,38 @@ const LoginPage = () => {
     type: "tween",
     ease: "anticipate",
     duration: 0.5,
+  };
+
+  const handleGoogleLogin = async () => {
+    if (!isSupabaseConnected) {
+      toast({
+        title: "ไม่สามารถเชื่อมต่อได้",
+        description: "Supabase ยังไม่ได้เชื่อมต่อ กรุณาติดต่อผู้ดูแลระบบ",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setError("");
+      const { error } = await signInWithGoogle();
+      
+      if (error) {
+        setError(error.message);
+        toast({
+          title: "ไม่สามารถเข้าสู่ระบบได้",
+          description: "เกิดข้อผิดพลาดขณะเข้าสู่ระบบด้วย Google",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      setError("เกิดข้อผิดพลาดขณะเข้าสู่ระบบ");
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "กรุณาลองใหม่อีกครั้ง",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -269,6 +301,34 @@ const LoginPage = () => {
               </span>
               {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
             </Button>
+          </motion.div>
+
+          {/* Divider */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.7 }}
+            className="relative"
+          >
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-50 text-gray-500">หรือ</span>
+            </div>
+          </motion.div>
+
+          {/* Google Login Button */}
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.8 }}
+          >
+            <GoogleLoginButton
+              onClick={handleGoogleLogin}
+              loading={authLoading}
+              disabled={!isSupabaseConnected || retryAfter > 0}
+            />
           </motion.div>
         </form>
         {!isSupabaseConnected && (

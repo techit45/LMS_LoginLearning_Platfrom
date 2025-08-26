@@ -40,8 +40,6 @@ export const useRealtimeSchedule = (company, weekStartDate) => {
       setLoading(true)
       setError(null)
 
-      console.log('📅 Fetching schedules for:', { company, weekStartDate })
-      
       const { data, error: fetchError } = await supabase
         .from('teaching_schedules')
         .select(`
@@ -62,10 +60,8 @@ export const useRealtimeSchedule = (company, weekStartDate) => {
         throw fetchError
       }
 
-      console.log('✅ Schedules loaded:', data?.length, 'items')
       setSchedules(data || [])
     } catch (err) {
-      console.error('❌ Error fetching schedules:', err)
       setError(`Failed to load schedules: ${err.message}`)
       
       toast({
@@ -87,8 +83,6 @@ export const useRealtimeSchedule = (company, weekStartDate) => {
       subscriptionRef.current.unsubscribe()
     }
 
-    console.log('🔔 Setting up realtime subscription for:', { company, weekStartDate })
-
     // Create new subscription
     const subscription = supabase
       .channel(`teaching-schedules-${company}-${weekStartDate}`)
@@ -101,8 +95,6 @@ export const useRealtimeSchedule = (company, weekStartDate) => {
           filter: `company=eq.${company}`
         },
         (payload) => {
-          console.log('📡 Realtime change:', payload)
-
           const { eventType, new: newRecord, old: oldRecord } = payload
 
           // Only process changes for current week
@@ -123,7 +115,6 @@ export const useRealtimeSchedule = (company, weekStartDate) => {
         }
       )
       .subscribe((status) => {
-        console.log('📡 Realtime subscription status:', status)
         setIsConnected(status === 'SUBSCRIBED')
         
         if (status === 'SUBSCRIPTION_ERROR') {
@@ -246,8 +237,6 @@ export const useRealtimeSchedule = (company, weekStartDate) => {
         throw new Error('No active session')
       }
 
-      console.log('💾 Calling upsertSchedule Edge Function:', scheduleData)
-      
       const response = await fetch(`${supabase.supabaseUrl}/functions/v1/upsert-schedule`, {
         method: 'POST',
         headers: {
@@ -276,8 +265,6 @@ export const useRealtimeSchedule = (company, weekStartDate) => {
       }
 
       // Success - the realtime subscription will handle the actual update
-      console.log('✅ Schedule upsert successful:', result.data)
-      
       toast({
         title: isUpdate ? "แก้ไขตารางสำเร็จ" : "เพิ่มตารางสำเร็จ",
         description: `${result.data.teaching_courses?.name || 'ตาราง'} ${isUpdate ? 'ถูกแก้ไข' : 'ถูกเพิ่ม'}แล้ว`
@@ -286,8 +273,6 @@ export const useRealtimeSchedule = (company, weekStartDate) => {
       return result.data
 
     } catch (error) {
-      console.error('❌ Error in addOrUpdateSchedule:', error)
-
       // Rollback optimistic update
       if (isUpdate) {
         // Revert to original data
@@ -334,7 +319,6 @@ export const useRealtimeSchedule = (company, weekStartDate) => {
   const deleteSchedule = useCallback(async (scheduleId) => {
     const scheduleToDelete = schedules.find(s => s.id === scheduleId)
     if (!scheduleToDelete) {
-      console.log('⚠️ No schedule to delete with id:', scheduleId)
       return
     }
 
@@ -342,8 +326,6 @@ export const useRealtimeSchedule = (company, weekStartDate) => {
     setSchedules(prev => prev.filter(s => s.id !== scheduleId))
 
     try {
-      console.log('🗑️ Deleting schedule:', scheduleId)
-      
       const { error } = await supabase
         .from('teaching_schedules')
         .delete()
@@ -353,8 +335,6 @@ export const useRealtimeSchedule = (company, weekStartDate) => {
         throw error
       }
 
-      console.log('✅ Schedule deleted successfully')
-      
       toast({
         title: "ลบตารางสำเร็จ",
         description: `ลบ ${scheduleToDelete.teaching_courses?.name || 'ตาราง'} แล้ว`
@@ -363,8 +343,6 @@ export const useRealtimeSchedule = (company, weekStartDate) => {
       return scheduleToDelete
       
     } catch (error) {
-      console.error('❌ Error deleting schedule:', error)
-      
       // Rollback optimistic deletion
       setSchedules(prev => {
         const restored = [...prev, scheduleToDelete]
@@ -485,8 +463,7 @@ function ScheduleComponent() {
         company: 'login'
       })
     } catch (error) {
-      console.error('Failed to add schedule:', error)
-    }
+      }
   }
 
   const handleUpdateSchedule = async (schedule) => {
@@ -496,16 +473,14 @@ function ScheduleComponent() {
         notes: 'Updated notes'
       })
     } catch (error) {
-      console.error('Failed to update schedule:', error)
-    }
+      }
   }
 
   const handleDeleteSchedule = async (scheduleId) => {
     try {
       await deleteSchedule(scheduleId)
     } catch (error) {
-      console.error('Failed to delete schedule:', error)
-    }
+      }
   }
 
   if (loading) return <div>Loading...</div>

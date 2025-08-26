@@ -47,10 +47,8 @@ const CourseDetailPage = () => {
 
   const loadCourseImages = useCallback(async (courseId, courseData) => {
     try {
-      console.log('Loading course images for course:', courseId);
       const { images, error } = await getCourseImages(courseId);
       if (error) {
-        console.error('Error loading course images:', error);
         // Fallback to default images if no gallery images
         setCourseImages([
           { src: courseData?.thumbnail_url || "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8", alt: courseData?.title || "Course image" }
@@ -61,17 +59,14 @@ const CourseDetailPage = () => {
           src: img.url,
           alt: `${courseData?.title || 'Course'} - รูปที่ ${index + 1}`
         }));
-        console.log('Course images loaded:', galleryImages);
         setCourseImages(galleryImages);
       } else {
         // No images found, use thumbnail as fallback
-        console.log('No gallery images found, using thumbnail as fallback');
         setCourseImages([
           { src: courseData?.thumbnail_url || "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8", alt: courseData?.title || "Course image" }
         ]);
       }
     } catch (error) {
-      console.error('Exception loading course images:', error);
       // Fallback to default image
       setCourseImages([
         { src: courseData?.thumbnail_url || "https://images.unsplash.com/photo-1635251595512-dc52146d5ae8", alt: courseData?.title || "Course image" }
@@ -81,11 +76,8 @@ const CourseDetailPage = () => {
 
   const loadCourse = useCallback(async () => {
     setLoading(true);
-    console.log('Loading course with ID:', courseId);
     const { data, error } = await getCourseById(courseId);
-    console.log('Course data:', data, 'Error:', error);
     if (error) {
-      console.error('Course loading error:', error);
       toast({
         title: "ข้อผิดพลาดในการโหลดข้อมูล",
         description: error.message,
@@ -111,7 +103,6 @@ const CourseDetailPage = () => {
       if (error) throw error;
       setForumTopics(data || []);
     } catch (error) {
-      console.error('Error loading forum topics:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถโหลดหัวข้อฟอรัมได้",
@@ -124,15 +115,11 @@ const CourseDetailPage = () => {
 
   const checkEnrollmentStatus = useCallback(async () => {
     if (!user) return;
-    console.log('CourseDetailPage: Checking enrollment status for user:', user?.id, 'course:', courseId);
     const { isEnrolled, status, error } = await isUserEnrolled(courseId);
-    console.log('CourseDetailPage: Enrollment check result:', { isEnrolled, status, error });
     if (!error) {
       setEnrollmentStatus({ isEnrolled, status });
-      console.log('CourseDetailPage: Enrollment status updated:', { isEnrolled, status });
-    } else {
-      console.error('CourseDetailPage: Enrollment check error:', error);
-    }
+      } else {
+      }
   }, [courseId, user]);
 
   useEffect(() => {
@@ -158,30 +145,22 @@ const CourseDetailPage = () => {
       return;
     }
 
-    console.log('CourseDetailPage: Starting enrollment for user:', user.id, 'course:', courseId);
     setEnrolling(true);
     const { data, error } = await enrollInCourse(courseId);
-    console.log('CourseDetailPage: Enrollment result:', { data, error });
-    
     if (error) {
-      console.error('CourseDetailPage: Enrollment failed:', error);
       toast({
         title: "ไม่สามารถลงทะเบียนได้",
         description: error.message,
         variant: "destructive"
       });
     } else {
-      console.log('CourseDetailPage: Enrollment successful, updating state');
       toast({
         title: "ลงทะเบียนสำเร็จ!",
         description: `คุณได้ลงทะเบียนคอร์ส "${course?.title}" เรียบร้อยแล้ว`
       });
       setEnrollmentStatus({ isEnrolled: true, status: 'active' });
-      console.log('CourseDetailPage: Enrollment status set to:', { isEnrolled: true, status: 'active' });
-      
       // Re-check enrollment status to ensure it's properly stored
       setTimeout(() => {
-        console.log('CourseDetailPage: Re-checking enrollment status after enrollment');
         checkEnrollmentStatus();
       }, 1000);
     }
@@ -220,8 +199,7 @@ const CourseDetailPage = () => {
           : topic
       ));
     } catch (error) {
-      console.error('Error liking topic:', error);
-    }
+      }
   };
 
   const handleTopicPin = async (topicId, isPinned) => {
@@ -235,8 +213,7 @@ const CourseDetailPage = () => {
         description: "สถานะหัวข้อถูกอัปเดตแล้ว"
       });
     } catch (error) {
-      console.error('Error pinning topic:', error);
-    }
+      }
   };
 
   const handleTopicLock = async (topicId, isLocked) => {
@@ -250,8 +227,7 @@ const CourseDetailPage = () => {
         description: "สถานะหัวข้อถูกอัปเดตแล้ว"
       });
     } catch (error) {
-      console.error('Error locking topic:', error);
-    }
+      }
   };
 
   const handleTopicDelete = async (topicId) => {
@@ -263,8 +239,7 @@ const CourseDetailPage = () => {
         description: "หัวข้อถูกลบออกจากฟอรัมแล้ว"
       });
     } catch (error) {
-      console.error('Error deleting topic:', error);
-    }
+      }
   };
   
   const pageVariants = {
@@ -480,8 +455,7 @@ const CourseDetailPage = () => {
                             onDelete={handleTopicDelete}
                             onEdit={(topic) => {
                               // TODO: Implement edit functionality
-                              console.log('Edit topic:', topic);
-                            }}
+                              }}
                             userRole={user?.user_profiles?.role || 'student'}
                             currentUserId={user?.id}
                           />
@@ -637,7 +611,6 @@ const CourseDetailPage = () => {
                         </div>
                       ));
                     } catch (error) {
-                      console.warn('Error parsing learning outcomes:', error);
                       return [
                         'ความรู้และทักษะทางวิศวกรรมที่แข็งแกร่ง',
                         'ประสบการณ์ทำโปรเจกต์จริง',
@@ -713,8 +686,7 @@ const CourseDetailPage = () => {
                 );
               }
             } catch (error) {
-              console.warn('Error parsing tools required:', error);
-            }
+              }
             return null;
           })()}
 
@@ -731,7 +703,5 @@ const CourseDetailPage = () => {
     </motion.div>
   );
 };
-
-
 
 export default CourseDetailPage;

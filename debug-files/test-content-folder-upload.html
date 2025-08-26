@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบการอัปโหลดไฟล์ไปโฟลเดอร์เนื้อหา</title>
+    <style>
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px;
+        }
+        .success { 
+            background-color: #d4edda; 
+            border-color: #c3e6cb; 
+            color: #155724; 
+        }
+        .error { 
+            background-color: #f8d7da; 
+            border-color: #f5c6cb; 
+            color: #721c24; 
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .loading { opacity: 0.6; cursor: not-allowed; }
+        pre { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 5px; 
+            overflow: auto; 
+            max-height: 300px;
+        }
+        .file-input { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border: 2px dashed #ddd; 
+            border-radius: 5px; 
+        }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 ทดสอบการสร้างโฟลเดอร์เนื้อหาและอัปโหลดไฟล์</h1>
+        
+        <div class="test-section">
+            <h2>1. ทดสอบการสร้างโฟลเดอร์เนื้อหา</h2>
+            <p>ทดสอบ create-content-folder endpoint</p>
+            
+            <div>
+                <label>Parent Folder ID:</label><br>
+                <input type="text" id="parentFolderId" value="148MPiUE7WLAvluF1o2VuPA2VlplzJMJF" style="width: 400px; padding: 5px;">
+                <br><br>
+                
+                <label>Content Name:</label><br>
+                <input type="text" id="contentName" value="บทที่ 1: ความรู้พื้นฐาน" style="width: 400px; padding: 5px;">
+                <br><br>
+                
+                <button onclick="testCreateContentFolder()">สร้างโฟลเดอร์เนื้อหา</button>
+            </div>
+            
+            <div id="folderResult" class="status" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>2. ทดสอบการอัปโหลดไฟล์</h2>
+            <p>อัปโหลดไฟล์ไปยังโฟลเดอร์ที่สร้างใหม่</p>
+            
+            <div>
+                <label>Target Folder ID:</label><br>
+                <input type="text" id="targetFolderId" value="" style="width: 400px; padding: 5px;" placeholder="จะได้จากการสร้างโฟลเดอร์ข้างต้น">
+                <br><br>
+                
+                <div class="file-input">
+                    <label>เลือกไฟล์:</label><br>
+                    <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.jpg,.png">
+                </div>
+                
+                <button onclick="testFileUpload()">อัปโหลดไฟล์</button>
+            </div>
+            
+            <div id="uploadResult" class="status" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>3. ผลลัพธ์การทดสอบ</h2>
+            <div id="testResults"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+        const AUTH_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString('th-TH');
+            const color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff';
+            
+            results.innerHTML += `<div style="color: ${color}; margin: 5px 0;">[${timestamp}] ${message}</div>`;
+            console.log(message);
+        }
+
+        async function testCreateContentFolder() {
+            const parentFolderId = document.getElementById('parentFolderId').value;
+            const contentName = document.getElementById('contentName').value;
+            
+            if (!parentFolderId || !contentName) {
+                alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+                return;
+            }
+
+            try {
+                log('🔄 กำลังสร้างโฟลเดอร์เนื้อหา...', 'info');
+                
+                const response = await fetch(`${API_BASE}/create-topic-folder`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        parentFolderId: parentFolderId,
+                        topicName: contentName,
+                        topicType: 'course_content'
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    log(`✅ สร้างโฟลเดอร์สำเร็จ: ${result.folderName}`, 'success');
+                    log(`📁 Folder ID: ${result.topicFolderId}`, 'success');
+                    
+                    // อัปเดต target folder ID
+                    document.getElementById('targetFolderId').value = result.topicFolderId;
+                    
+                    document.getElementById('folderResult').style.display = 'block';
+                    document.getElementById('folderResult').className = 'status success';
+                    document.getElementById('folderResult').innerHTML = `
+                        <strong>สร้างโฟลเดอร์สำเร็จ!</strong><br>
+                        ชื่อ: ${result.folderName}<br>
+                        ID: ${result.topicFolderId}<br>
+                        (สร้างใหม่)
+                    `;
+                } else {
+                    log(`❌ สร้างโฟลเดอร์ไม่สำเร็จ: ${result.error}`, 'error');
+                    
+                    document.getElementById('folderResult').style.display = 'block';
+                    document.getElementById('folderResult').className = 'status error';
+                    document.getElementById('folderResult').innerHTML = `
+                        <strong>สร้างโฟลเดอร์ไม่สำเร็จ!</strong><br>
+                        ${result.error}
+                    `;
+                }
+            } catch (error) {
+                log(`🚨 เกิดข้อผิดพลาด: ${error.message}`, 'error');
+            }
+        }
+
+        async function testFileUpload() {
+            const folderId = document.getElementById('targetFolderId').value;
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!folderId) {
+                alert('กรุณาสร้างโฟลเดอร์เนื้อหาก่อน');
+                return;
+            }
+            
+            if (!file) {
+                alert('กรุณาเลือกไฟล์ที่ต้องการอัปโหลด');
+                return;
+            }
+
+            try {
+                log(`🔄 กำลังอัปโหลดไฟล์: ${file.name}...`, 'info');
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('folderId', folderId);
+                
+                const response = await fetch(`${API_BASE}/simple-upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    log(`✅ อัปโหลดไฟล์สำเร็จ: ${result.fileName}`, 'success');
+                    log(`🔗 Google Drive ID: ${result.fileId}`, 'success');
+                    log(`📄 View Link: ${result.webViewLink || 'N/A'}`, 'success');
+                    
+                    document.getElementById('uploadResult').style.display = 'block';
+                    document.getElementById('uploadResult').className = 'status success';
+                    document.getElementById('uploadResult').innerHTML = `
+                        <strong>อัปโหลดไฟล์สำเร็จ!</strong><br>
+                        ชื่อไฟล์: ${result.fileName}<br>
+                        Google Drive ID: ${result.fileId}<br>
+                        ${result.webViewLink ? `<a href="${result.webViewLink}" target="_blank">เปิดใน Google Drive</a>` : ''}
+                    `;
+                } else {
+                    log(`❌ อัปโหลดไฟล์ไม่สำเร็จ: ${result.error}`, 'error');
+                    
+                    document.getElementById('uploadResult').style.display = 'block';
+                    document.getElementById('uploadResult').className = 'status error';
+                    document.getElementById('uploadResult').innerHTML = `
+                        <strong>อัปโหลดไฟล์ไม่สำเร็จ!</strong><br>
+                        ${result.error}
+                    `;
+                }
+            } catch (error) {
+                log(`🚨 เกิดข้อผิดพลาด: ${error.message}`, 'error');
+            }
+        }
+
+        // เริ่มต้นด้วยการทดสอบ health check
+        window.onload = async function() {
+            try {
+                log('🚀 เริ่มการทดสอบระบบ...', 'info');
+                
+                const response = await fetch(`${API_BASE}/health`, {
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    }
+                });
+                
+                const result = await response.json();
+                log(`📊 Health Check: ${result.status} (${result.version})`, 'success');
+            } catch (error) {
+                log(`🚨 Health Check ล้มเหลว: ${error.message}`, 'error');
+            }
+        };
+    </script>
+</body>
+</html>

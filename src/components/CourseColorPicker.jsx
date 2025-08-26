@@ -38,12 +38,6 @@ const CourseColorPicker = ({
       label: 'EdTech'
     },
     { 
-      id: 'Innotech', 
-      name: 'Innovation Technology Lab', 
-      color: '#ea580c', // ส้ม
-      label: 'Innotech'
-    },
-    { 
       id: 'W2D', 
       name: 'W2D', 
       color: '#0ea5e9', // ฟ้า

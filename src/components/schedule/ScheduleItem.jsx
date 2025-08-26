@@ -129,7 +129,6 @@ const ScheduleItem = ({
         </button>
         <button
           onClick={(e) => {
-            console.log('DELETE BUTTON CLICKED IN CORRECT FILE!', schedule);
             e.preventDefault();
             e.stopPropagation();
             onDelete(schedule);

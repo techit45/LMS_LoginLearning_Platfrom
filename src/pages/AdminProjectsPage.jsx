@@ -73,13 +73,11 @@ const AdminProjectsPage = () => {
   }, []);
 
   useEffect(() => {
-    console.log('AdminProjectsPage mounted');
     loadProjects();
     loadStats();
     
     // Check if we should open create modal from navigation state
     if (location.state?.openCreateModal) {
-      console.log('Opening create modal from navigation state');
       setShowCreateForm(true);
       // Clear the state to prevent reopening on refresh
       navigate(location.pathname, { replace: true });
@@ -88,13 +86,7 @@ const AdminProjectsPage = () => {
 
   // Debug state
   useEffect(() => {
-    console.log('Current state:', { 
-      loading, 
-      projects: projects.length, 
-      showCreateForm,
-      stats 
-    });
-  }, [loading, projects, showCreateForm, stats]);
+    }, [loading, projects, showCreateForm, stats]);
 
   const handleToggleProjectApproval = async (projectId, projectTitle, currentApproval) => {
     const newApproval = !currentApproval;
@@ -297,7 +289,6 @@ const AdminProjectsPage = () => {
         <meta name="description" content="จัดการโครงงานและผลงานทั้งหมดในระบบ Login Learning" />
       </Helmet>
 
-
       <motion.div 
         initial={{ y: -30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -322,7 +313,6 @@ const AdminProjectsPage = () => {
         
         <Button 
           onClick={() => {
-            console.log('Create project button clicked');
             setShowCreateForm(true);
           }}
           className="bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:from-[#5a6fcf] hover:to-[#673f8b] text-white font-semibold shadow-lg"
@@ -403,7 +393,6 @@ const AdminProjectsPage = () => {
             </Button>
             <Button
               onClick={() => {
-                console.log('Search area create button clicked');
                 setShowCreateForm(true);
               }}
               className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2"

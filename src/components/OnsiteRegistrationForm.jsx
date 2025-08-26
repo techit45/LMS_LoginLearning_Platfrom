@@ -85,7 +85,6 @@ const OnsiteRegistrationForm = ({ course, isOpen, onClose, onSuccess }) => {
       if (error) throw error;
       setSchedules(data || []);
     } catch (error) {
-      console.error('Error loading schedules:', error);
       toast({
         title: "ไม่สามารถโหลดตารางเรียนได้",
         description: error.message,
@@ -104,8 +103,7 @@ const OnsiteRegistrationForm = ({ course, isOpen, onClose, onSuccess }) => {
       if (error) throw error;
       setProjectTemplates(data || []);
     } catch (error) {
-      console.error('Error loading project templates:', error);
-    }
+      }
   }, [course, formData.preferred_project_type]);
 
   useEffect(() => {

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สรุปการลบบริษัท InnoTech</title>
+    <style>
+        body { font-family: 'Sarabun', Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; color: #856404; }
+        .removed { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .code { background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; margin: 10px 0; font-size: 14px; }
+        h1 { color: #2c3e50; text-align: center; }
+        h3 { color: #34495e; }
+        .file-list { background: #f8f9fa; padding: 10px; border-left: 4px solid #007bff; margin: 10px 0; }
+        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; margin-left: 10px; }
+        .removed-badge { background: #dc3545; color: white; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f8f9fa; }
+        .line-through { text-decoration: line-through; opacity: 0.6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗑️ สรุปการลบบริษัท InnoTech Labs</h1>
+        
+        <div class="section removed">
+            <h3>❌ บริษัทที่ลบออกแล้ว <span class="status-badge removed-badge">REMOVED</span></h3>
+            <div class="code">
+<span class="line-through">innotech: {
+    id: 'innotech',
+    name: 'InnoTech Labs',
+    fullName: 'Innovation Technology Laboratories',
+    description: 'ห้องปฏิบัติการวิจัยและพัฒนาเทคโนโลジี',
+    color: 'orange',
+    logo: '/assets/logos/innotech-logo.png',
+    domains: ['innotech-labs.com']
+}</span>
+            </div>
+        </div>
+
+        <div class="section success">
+            <h3>✅ ไฟล์ที่ได้รับการแก้ไข</h3>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>ไฟล์</th>
+                        <th>การเปลี่ยนแปลง</th>
+                        <th>สถานะ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>src/contexts/CompanyContext.jsx</code></td>
+                        <td>ลบ innotech object ออกจาก COMPANIES</td>
+                        <td>✅ สำเร็จ</td>
+                    </tr>
+                    <tr>
+                        <td><code>src/lib/colorSystem.js</code></td>
+                        <td>ลบ innotech color scheme</td>
+                        <td>✅ สำเร็จ</td>
+                    </tr>
+                    <tr>
+                        <td><code>src/components/ScheduleGrid.jsx</code></td>
+                        <td>ลบ 'Innovation Technology Lab': 'Innotech'</td>
+                        <td>✅ สำเร็จ</td>
+                    </tr>
+                    <tr>
+                        <td><code>src/components/CourseColorPicker.jsx</code></td>
+                        <td>ลบ Innotech color option</td>
+                        <td>✅ สำเร็จ</td>
+                    </tr>
+                    <tr>
+                        <td><code>src/components/CourseManager.jsx</code></td>
+                        <td>ลบ innotech จาก company options</td>
+                        <td>✅ สำเร็จ</td>
+                    </tr>
+                    <tr>
+                        <td><code>src/components/forms/CourseForm.jsx</code></td>
+                        <td>ลบ Innotech references</td>
+                        <td>✅ สำเร็จ</td>
+                    </tr>
+                    <tr>
+                        <td><code>src/components/WorkSummaryReport.jsx</code></td>
+                        <td>ลบ Innotech references</td>
+                        <td>✅ สำเร็จ</td>
+                    </tr>
+                    <tr>
+                        <td><code>src/components/TeachingHoursSummary.jsx</code></td>
+                        <td>ลบ Innotech references</td>
+                        <td>✅ สำเร็จ</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section info">
+            <h3>📋 บริษัทที่เหลือในระบบ</h3>
+            <div class="file-list">
+                <h4>🏢 บริษัทที่ยังคงอยู่:</h4>
+                <ul>
+                    <li><strong>Login Learning Platform</strong> - แพลตฟอร์มการศึกษาออนไลน์หลัก</li>
+                    <li><strong>Meta Tech Academy</strong> - สถาบันพัฒนาทักษะด้านเทคโนโลยี</li>
+                    <li><strong>Med Solutions</strong> - ศูนย์พัฒนาเทคโนโลยีการแพทย์</li>
+                    <li><strong>EdTech Innovation</strong> - ศูนย์นวัตกรรมเทคโนโลยีการศึกษา</li>
+                    <li><strong>W2D Studio</strong> - สตูดิโอสร้างสรรค์ดิจิทัล</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section warning">
+            <h3>⚠️ ผลกระทบที่อาจเกิดขึ้น</h3>
+            <ul>
+                <li><strong>Company Selection:</strong> InnoTech จะไม่แสดงในรายการเลือกบริษัทอีกต่อไป</li>
+                <li><strong>Course Creation:</strong> ไม่สามารถสร้างคอร์สใหม่ภายใต้ InnoTech ได้</li>
+                <li><strong>Color Scheme:</strong> สีส้ม (#ff6d00) ของ InnoTech จะไม่ใช้ได้</li>
+                <li><strong>Existing Data:</strong> ข้อมูลเก่าที่มี company='innotech' อาจต้องการการทำความสะอาด</li>
+            </ul>
+        </div>
+
+        <div class="section info">
+            <h3>🔍 การตรวจสอบหลังลบ</h3>
+            <ol>
+                <li><strong>Company Selection:</strong>
+                    <div class="code">
+เปิดหน้าสร้างคอร์สหรือโปรเจกต์ใหม่
+ตรวจสอบว่า InnoTech ไม่แสดงในรายการบริษัท
+                    </div>
+                </li>
+                <li><strong>Teaching Schedule:</strong>
+                    <div class="code">
+เปิดหน้า Teaching Schedule
+ตรวจสอบว่าไม่มี InnoTech ในรายการบริษัท
+                    </div>
+                </li>
+                <li><strong>Color Picker:</strong>
+                    <div class="code">
+ทดสอบการเลือกสีในคอร์ส
+ตรวจสอบว่าไม่มีสีส้ม InnoTech
+                    </div>
+                </li>
+            </ol>
+        </div>
+
+        <div class="section success">
+            <h3>✅ การลบเสร็จสมบูรณ์</h3>
+            <p><strong>InnoTech Labs ได้ถูกลบออกจากระบบทั้งหมดแล้ว:</strong></p>
+            <ul>
+                <li>✅ ลบจาก Company Context</li>
+                <li>✅ ลบจาก Color System</li>
+                <li>✅ ลบจาก UI Components</li>
+                <li>✅ ลบจาก Form Options</li>
+                <li>✅ ลบจาก Reports</li>
+            </ul>
+            <p><strong>🎯 ระบบพร้อมใช้งานโดยไม่มี InnoTech อีกต่อไป</strong></p>
+        </div>
+
+        <div class="section warning">
+            <h3>📋 หมายเหตุสำหรับฐานข้อมูล</h3>
+            <p>การลบนี้เป็นการลบจากโค้ดเท่านั้น หากมีข้อมูลในฐานข้อมูลที่อ้างอิงถึง 'innotech' อาจต้อง:</p>
+            <div class="code">
+-- ตรวจสอบข้อมูลเก่า
+SELECT * FROM courses WHERE company = 'innotech';
+SELECT * FROM projects WHERE company = 'innotech';
+SELECT * FROM time_entries WHERE company = 'innotech';
+
+-- อัปเดตข้อมูลเก่า (ถ้าต้องการ)
+UPDATE courses SET company = 'login' WHERE company = 'innotech';
+UPDATE projects SET company = 'login' WHERE company = 'innotech';
+UPDATE time_entries SET company = 'login' WHERE company = 'innotech';
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Track completion time
+        const completionTime = new Date().toLocaleString('th-TH', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        
+        document.title = `InnoTech ลบเสร็จสิ้น - ${completionTime}`;
+        
+        console.log('🗑️ InnoTech Labs ถูกลบออกจากระบบเรียบร้อยแล้ว');
+        console.log('✅ การลบเสร็จสิ้น:', completionTime);
+        console.log('📋 บริษัทที่เหลือ: Login, Meta, Med, EdTech, W2D');
+    </script>
+</body>
+</html>

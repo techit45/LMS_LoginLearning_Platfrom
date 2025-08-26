@@ -44,7 +44,6 @@ const AdminAnalyticsDashboardSimple = () => {
       // Get dashboard statistics
       const { data: dashboardStats, error: statsError } = await getDashboardStats();
       if (statsError) {
-        console.error('Error loading dashboard stats:', statsError);
         toast({
           title: "เกิดข้อผิดพลาด",
           description: "ไม่สามารถโหลดข้อมูลสถิติได้",
@@ -74,7 +73,6 @@ const AdminAnalyticsDashboardSimple = () => {
       }
 
     } catch (error) {
-      console.error('Error loading analytics data:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถโหลดข้อมูล Analytics ได้",

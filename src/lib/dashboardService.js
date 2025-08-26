@@ -41,7 +41,6 @@ const calculateSystemUptime = async () => {
       return 99.8; // Good response
     }
   } catch (error) {
-    console.error('Error calculating uptime:', error);
     return 90.0; // Fallback for errors
   }
 };
@@ -52,8 +51,6 @@ const calculateSystemUptime = async () => {
  */
 const calculateServerLoad = async () => {
   try {
-    console.log('calculateServerLoad: Using simplified version to avoid access control issues');
-    
     // Get basic counts without time filters to avoid access control issues
     const { count: totalUsers } = await supabase
       .from('user_profiles')
@@ -73,7 +70,6 @@ const calculateServerLoad = async () => {
     
     return Math.round(load);
   } catch (error) {
-    console.error('Error calculating server load:', error);
     return 35; // Fallback moderate load
   }
 };
@@ -105,7 +101,6 @@ const calculateStorageUsage = async () => {
     
     return Math.round(totalStorageGB * 10) / 10; // Round to 1 decimal place
   } catch (error) {
-    console.error('Error calculating storage usage:', error);
     return 2.1; // Fallback storage estimate
   }
 };
@@ -116,8 +111,6 @@ const calculateStorageUsage = async () => {
  */
 const calculateActiveSessions = async () => {
   try {
-    console.log('calculateActiveSessions: Using correct course_progress schema');
-    
     // Get recent activity from course_progress with correct columns
     const thirtyMinutesAgo = new Date();
     thirtyMinutesAgo.setMinutes(thirtyMinutesAgo.getMinutes() - 30);
@@ -129,8 +122,7 @@ const calculateActiveSessions = async () => {
       .gte('last_accessed_at', thirtyMinutesAgo.toISOString());
 
     if (progressError) {
-      console.warn('Could not fetch recent progress:', progressError.message);
-    }
+      }
 
     // Count recent enrollments - Check authentication first
     let recentEnrollments = 0;
@@ -143,8 +135,7 @@ const calculateActiveSessions = async () => {
         .gte('enrolled_at', thirtyMinutesAgo.toISOString());
       
       if (enrollError) {
-        console.warn('Could not fetch recent enrollments:', enrollError.message);
-      } else {
+        } else {
         recentEnrollments = count || 0;
       }
     }
@@ -158,7 +149,6 @@ const calculateActiveSessions = async () => {
 
     return activeSessions;
   } catch (error) {
-    console.error('Error calculating active sessions:', error);
     return 1; // Fallback to 1 session
   }
 };
@@ -169,8 +159,6 @@ const calculateActiveSessions = async () => {
  */
 export const getUserGrowthData = async () => {
   try {
-    console.log('getUserGrowthData temporarily disabled due to access control issues');
-    
     // Return mock data to prevent errors while still showing dashboard
     const mockGrowthData = [];
     for (let i = 29; i >= 0; i--) {
@@ -186,7 +174,6 @@ export const getUserGrowthData = async () => {
 
     return { data: mockGrowthData, error: null };
   } catch (error) {
-    console.error('Error in getUserGrowthData mock:', error);
     return { data: [], error };
   }
 };
@@ -196,16 +183,13 @@ export const getUserGrowthData = async () => {
  */
 export const getDashboardStats = async () => {
   try {
-    console.log('Fetching dashboard statistics...');
-
     // Get user statistics
     const { count: totalUsers, error: usersError } = await supabase
       .from('user_profiles')
       .select('*', { count: 'exact', head: true });
 
     if (usersError) {
-      console.warn('Could not fetch user count:', usersError);
-    }
+      }
 
     // Get recent users (last 7 days)
     const sevenDaysAgo = new Date();
@@ -217,8 +201,7 @@ export const getDashboardStats = async () => {
       .gte('created_at', sevenDaysAgo.toISOString());
 
     if (newUsersError) {
-      console.warn('Could not fetch new users count:', newUsersError);
-    }
+      }
 
     // Get course statistics
     const { count: totalCourses, error: coursesError } = await supabase
@@ -226,8 +209,7 @@ export const getDashboardStats = async () => {
       .select('*', { count: 'exact', head: true });
 
     if (coursesError) {
-      console.warn('Could not fetch courses count:', coursesError);
-    }
+      }
 
     const { count: activeCourses, error: activeCoursesError } = await supabase
       .from('courses')
@@ -235,8 +217,7 @@ export const getDashboardStats = async () => {
       .eq('is_active', true);
 
     if (activeCoursesError) {
-      console.warn('Could not fetch active courses count:', activeCoursesError);
-    }
+      }
 
     // Get project statistics
     const { count: totalProjects, error: projectsError } = await supabase
@@ -244,8 +225,7 @@ export const getDashboardStats = async () => {
       .select('*', { count: 'exact', head: true });
 
     if (projectsError) {
-      console.warn('Could not fetch projects count:', projectsError);
-    }
+      }
 
     const { count: approvedProjects, error: approvedProjectsError } = await supabase
       .from('projects')
@@ -253,8 +233,7 @@ export const getDashboardStats = async () => {
       .eq('is_approved', true);
 
     if (approvedProjectsError) {
-      console.warn('Could not fetch approved projects count:', approvedProjectsError);
-    }
+      }
 
     const { count: pendingProjects, error: pendingProjectsError } = await supabase
       .from('projects')
@@ -262,8 +241,7 @@ export const getDashboardStats = async () => {
       .eq('is_approved', false);
 
     if (pendingProjectsError) {
-      console.warn('Could not fetch pending projects count:', pendingProjectsError);
-    }
+      }
 
     // Get enrollment statistics - Check authentication first  
     let totalEnrollments = 0;
@@ -275,8 +253,7 @@ export const getDashboardStats = async () => {
         .select('*', { count: 'exact', head: true });
 
       if (enrollmentsError) {
-        console.warn('Could not fetch enrollments count:', enrollmentsError);
-      } else {
+        } else {
         totalEnrollments = count || 0;
       }
     }
@@ -304,8 +281,7 @@ export const getDashboardStats = async () => {
       .gte('created_at', today.toISOString());
 
     if (todayUsersError) {
-      console.warn('Could not fetch today users count:', todayUsersError);
-    }
+      }
 
     // Get draft courses count
     const { count: draftCourses, error: draftCoursesError } = await supabase
@@ -314,8 +290,7 @@ export const getDashboardStats = async () => {
       .eq('is_active', false);
 
     if (draftCoursesError) {
-      console.warn('Could not fetch draft courses count:', draftCoursesError);
-    }
+      }
 
     // Get featured projects count
     const { count: featuredProjects, error: featuredProjectsError } = await supabase
@@ -324,8 +299,7 @@ export const getDashboardStats = async () => {
       .eq('is_featured', true);
 
     if (featuredProjectsError) {
-      console.warn('Could not fetch featured projects count:', featuredProjectsError);
-    }
+      }
 
     const stats = {
       // User Statistics
@@ -355,11 +329,9 @@ export const getDashboardStats = async () => {
       activeSessions: await calculateActiveSessions()
     };
 
-    console.log('Dashboard stats calculated:', stats);
     return { data: stats, error: null };
 
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
     return { 
       data: {
         // Fallback data
@@ -393,8 +365,6 @@ export const getDashboardStats = async () => {
  */
 export const getRecentActivity = async () => {
   try {
-    console.log('getRecentActivity: Using real data with simple queries');
-    
     const activities = [];
 
     try {
@@ -417,8 +387,7 @@ export const getRecentActivity = async () => {
         });
       }
     } catch (error) {
-      console.warn('Could not fetch user activities:', error.message);
-    }
+      }
 
     try {
       // Get recent project submissions
@@ -440,8 +409,7 @@ export const getRecentActivity = async () => {
         });
       }
     } catch (error) {
-      console.warn('Could not fetch project activities:', error.message);
-    }
+      }
 
     // If no real activities found, add at least one mock activity
     if (activities.length === 0) {
@@ -462,7 +430,6 @@ export const getRecentActivity = async () => {
     return { data: sortedActivities, error: null };
 
   } catch (error) {
-    console.error('Error in getRecentActivity:', error);
     return { 
       data: [{
         type: 'error',
@@ -537,7 +504,6 @@ export const getSystemHealth = async () => {
     return { data: health, error: null };
 
   } catch (error) {
-    console.error('Error fetching system health:', error);
     return { 
       data: {
         database: { status: 'error', responseTime: 0 },

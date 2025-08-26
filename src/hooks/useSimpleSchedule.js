@@ -92,8 +92,6 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
       setLoading(true)
       setError(null)
       
-      // console.log('📅 Fetching schedules:', { company, weekStartDate })
-      
       const weekStartDateObj = new Date(weekStartDate)
       const year = weekStartDateObj.getFullYear()
       const weekNumber = getWeekNumber(weekStartDateObj)
@@ -135,27 +133,15 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
         user_profiles: schedule.instructor_id ? instructorProfiles[schedule.instructor_id] : null
       }))
       
-      // console.log('✅ Schedules loaded:', data?.length || 0, 'items')
-      // console.log('👥 Instructor profiles loaded:', Object.keys(instructorProfiles).length, 'profiles')
+      // // console.log('👥 Instructor profiles loaded:', Object.keys(instructorProfiles).length, 'profiles')
       
       // Debug log to check data structure (disabled for performance)
       // if (data && data.length > 0) {
-      //   console.log('📊 Sample schedule data:', {
-      //     first_item: {
-      //       id: data[0].id,
-      //       time_slot: data[0].time_slot,
-      //       day_of_week: data[0].day_of_week,
-      //       course_name: data[0].teaching_courses?.name,
-      //       instructor_id: data[0].instructor_id
-      //     },
-      //     total_count: data.length
-      //   })
-      // }
+      //   // }
       
       setSchedules(data || [])
       
     } catch (err) {
-      console.error('❌ Error fetching schedules:', err)
       setError(err.message)
       toast({
         title: "เกิดข้อผิดพลาด",
@@ -203,15 +189,7 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
     )
     
     if (existingSchedule) {
-      // console.log('🔄 Found existing schedule locally, updating instead of creating:', {
-      //   existingId: existingSchedule.id,
-      //   currentCourse: existingSchedule.course_id,
-      //   newCourse: scheduleData.course_id,
-      //   instructor: scheduleData.instructor_id,
-      //   timeSlot: normalizedTimeSlot
-      // })
-      
-      // Update the existing schedule instead of creating new
+      // // Update the existing schedule instead of creating new
       return updateSchedule(existingSchedule.id, {
         course_id: scheduleData.course_id,
         duration: scheduleData.duration || 1,
@@ -225,9 +203,7 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
     const tempId = `temp-${Date.now()}-${Math.random()}`
     
     try {
-      // console.log('➕ Creating schedule:', scheduleData)
-      
-      // Use the selected week instead of current date
+      // // Use the selected week instead of current date
       const weekStartDateObj = new Date(weekStartDate)
       const year = weekStartDateObj.getFullYear()
       const weekNumber = getWeekNumber(weekStartDateObj)
@@ -255,9 +231,6 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
       // Immediately update UI (Optimistic)
       setSchedules(prev => [...prev, optimisticEntry])
       
-      // console.log('📝 useSimpleSchedule: Final schedule data to insert:', newSchedule)
-      // console.log('📝 Course data received:', scheduleData)
-      
       const { data, error } = await supabase
         .from('weekly_schedules')
         .insert(newSchedule)
@@ -269,9 +242,7 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
       
       if (error) throw error
       
-      // console.log('✅ Schedule created:', data)
-      
-      // Track this creation as manual to avoid real-time override
+      // // Track this creation as manual to avoid real-time override
       recentManualUpdatesRef.current.add(data.id)
       setTimeout(() => {
         recentManualUpdatesRef.current.delete(data.id)
@@ -286,14 +257,6 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
         if (exists) return withoutTemp
         
         const newSchedules = [...withoutTemp, data]
-        console.log('🔄 Added schedule to local state:', {
-          id: data.id,
-          course_name: data.teaching_courses?.name,
-          time_slot: data.time_slot,
-          day_of_week: data.day_of_week,
-          instructor_id: data.instructor_id,
-          total_schedules: newSchedules.length
-        })
         return newSchedules
       })
       
@@ -311,39 +274,17 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
       // Rollback optimistic UI on error
       setSchedules(prev => prev.filter(s => s.id !== tempId))
       
-      console.error('❌ Error creating schedule:', err)
-      console.log('🔍 Error object type:', typeof err)
+      console.log('🔍 createSchedule Error:', err)
       console.log('🔍 Error properties:', Object.keys(err))
-      console.log('🔍 Error code check:', err.code, err.code === '23505')
-      console.log('🔍 Error code type:', typeof err.code)
-      
       // Handle specific errors
       if (err.code === '23505') {
-        console.log('🎯 ENTERING 23505 HANDLER!')
-        console.log('🔍 Constraint violation details:', {
-          message: err.message,
-          details: err.details,
-          hint: err.hint,
-          code: err.code
-        })
-        
         // All 23505 errors indicate a unique constraint violation
         // The most common case is instructor conflict in same time slot
-        console.log('🔄 Detected constraint violation, searching for conflicting record in database...')
-        
         try {
           // Query database directly to find the conflicting record
           const weekStartDateObj = new Date(weekStartDate)
           const year = weekStartDateObj.getFullYear()
           const weekNumber = getWeekNumber(weekStartDateObj)
-          
-          console.log('🔍 Searching for conflict:', {
-            year,
-            weekNumber,
-            day_of_week: scheduleData.day_of_week,
-            instructor_id: scheduleData.instructor_id,
-            normalizedTimeSlot
-          })
           
           const { data: conflictingRecords, error: searchError } = await supabase
             .from('weekly_schedules')
@@ -358,8 +299,6 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
           
           if (searchError) throw searchError
           
-          console.log('📊 Found potential conflicts:', conflictingRecords?.length || 0)
-          
           if (conflictingRecords && conflictingRecords.length > 0) {
             // Find record with matching or similar time
             const exactMatch = conflictingRecords.find(r => 
@@ -367,12 +306,6 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
             )
             
             const conflictingRecord = exactMatch || conflictingRecords[0] // Use first if no exact match
-            
-            console.log('🔄 Found conflicting record in DB, updating:', {
-              id: conflictingRecord.id,
-              current_time: conflictingRecord.time_slot,
-              new_time: timeSlot
-            })
             
             // Update the existing record instead of creating new
             const updatedData = await updateSchedule(conflictingRecord.id, {
@@ -385,19 +318,15 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
             
             // Manually update local state for immediate UI feedback
             if (updatedData) {
-              console.log('🔄 Updating local state after conflict resolution:', updatedData)
-              
               setSchedules(prev => {
                 const updatedSchedules = prev.map(s => 
                   s.id === conflictingRecord.id ? updatedData : s
                 )
-                console.log('🔄 Local state updated:', updatedSchedules.length, 'total schedules')
                 return updatedSchedules
               })
               
               // Also refresh to ensure consistency
               setTimeout(() => {
-                console.log('🔄 Delayed refresh after conflict resolution')
                 fetchSchedules()
               }, 1000)
             }
@@ -411,17 +340,12 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
           } else {
             // No conflicting record found in database, but constraint still triggered
             // This might be a hidden constraint or race condition
-            console.warn('⚠️ Constraint violation but no conflicting record found')
-            
             // Try to refresh schedules first, then check again
-            console.log('🔄 Refreshing schedules to check for race condition...')
             await fetchSchedules()
             
             throw new Error('มีการขัดแย้งในช่วงเวลานี้ กรุณาโหลดหน้าใหม่และลองอีกครั้ง')
           }
         } catch (updateError) {
-          console.error('❌ Database search/update failed:', updateError)
-          
           if (updateError.message.includes('กรุณาโหลด')) {
             throw updateError // Re-throw the refresh message
           }
@@ -446,8 +370,6 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
     }
     
     try {
-      // console.log('✏️ Updating schedule:', scheduleId, updates)
-      
       const { data, error } = await supabase
         .from('weekly_schedules')
         .update(updates)
@@ -460,9 +382,7 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
       
       if (error) throw error
       
-      // console.log('✅ Schedule updated:', data)
-      
-      // Track this update as manual to avoid real-time override
+      // // Track this update as manual to avoid real-time override
       recentManualUpdatesRef.current.add(data.id)
       setTimeout(() => {
         recentManualUpdatesRef.current.delete(data.id)
@@ -471,15 +391,6 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
       // Immediately update local state for instant UI feedback
       setSchedules(prev => {
         const updated = prev.map(s => s.id === data.id ? data : s)
-        console.log('🔄 Manual state update - Updated schedule:', {
-          id: data.id,
-          course_name: data.teaching_courses?.name,
-          instructor_id: data.instructor_id,
-          day_of_week: data.day_of_week,
-          time_slot: data.time_slot,
-          color: data.teaching_courses?.company_color
-        })
-        console.log('🔄 Manual state update - Total schedules after update:', updated.length)
         return updated
       })
       
@@ -490,13 +401,10 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
         title: "แก้ไขตารางสำเร็จ",
         description: `แก้ไข ${data.course_title || data.teaching_courses?.name || 'ตาราง'} แล้ว`
       })
-      
-      
+
       return data
       
     } catch (err) {
-      console.error('❌ Error updating schedule:', err)
-      
       if (err.code === '23505') {
         throw new Error('ช่วงเวลาใหม่มีตารางอยู่แล้ว')
       }
@@ -514,18 +422,8 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
     }
     
     try {
-      // console.log('🗑️ Deleting schedule:', scheduleId)
-      
       // Get schedule info before deletion
       const schedule = schedules.find(s => s.id === scheduleId)
-      // console.log('🗑️ Schedule to delete:', {
-      //   id: scheduleId,
-      //   course: schedule?.teaching_courses?.name,
-      //   instructor: schedule?.instructor_id,
-      //   time: schedule?.time_slot,
-      //   day: schedule?.day_of_week
-      // })
-      
       const { error, data } = await supabase
         .from('weekly_schedules')
         .delete()
@@ -534,10 +432,7 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
       
       if (error) throw error
       
-      // console.log('✅ Schedule deleted from database:', data)
-      // console.log('🔍 Verifying deletion - checking if record still exists...')
-      
-      // ตรวจสอบว่า record ถูกลบจาก database จริงๆ (แต่ไม่ใช้ .single())
+      // // // ตรวจสอบว่า record ถูกลบจาก database จริงๆ (แต่ไม่ใช้ .single())
       const { data: checkDeleted, error: checkError } = await supabase
         .from('weekly_schedules')
         .select('id')
@@ -546,10 +441,8 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
       // if (checkError) {
       //   console.log('✅ Check after delete had error (expected):', checkError.message)
       // } else if (checkDeleted?.length === 0) {
-      //   console.log('✅ Confirmed: Record deleted from database')
-      // } else if (checkDeleted?.length > 0) {
-      //   console.error('⚠️ WARNING: Record still exists in database!', checkDeleted)
-      // }
+      //   // } else if (checkDeleted?.length > 0) {
+      //   // }
       
       // Track this deletion as manual to avoid real-time override
       recentManualUpdatesRef.current.add(scheduleId)
@@ -560,11 +453,6 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
       // Immediately update local state for instant UI feedback (Optimistic UI)
       setSchedules(prev => {
         const updated = prev.filter(s => s.id !== scheduleId)
-        console.log('🔄 Manual state update: Removed schedule from local state', {
-          beforeCount: prev.length,
-          afterCount: updated.length,
-          removedId: scheduleId
-        })
         return updated
       })
       
@@ -579,7 +467,6 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
       return true
       
     } catch (err) {
-      console.error('❌ Error deleting schedule:', err)
       throw new Error(`ลบตารางไม่สำเร็จ: ${err.message}`)
     }
   }, [schedules, toast])
@@ -640,13 +527,6 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
     const newEndTimeIndex = startTimeIndex + newDuration
     const newEndTime = `${(8 + newEndTimeIndex).toString().padStart(2, '0')}:00`
     
-    console.log('🔧 Calculated end time:', {
-      startTimeIndex,
-      newDuration, 
-      newEndTimeIndex,
-      newEndTime
-    })
-    
     return updateSchedule(scheduleId, {
       duration: newDuration,
       end_time: newEndTime
@@ -656,7 +536,7 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
   /**
    * Get schedule at specific position
    */
-  const getScheduleAt = useCallback((dayOfWeek, timeSlotIndex) => {
+  const getScheduleAt = useCallback((dayOfWeek, timeSlotIndex, instructorId = null) => {
     const timeSlot = `${(8 + timeSlotIndex).toString().padStart(2, '0')}:00`
     
     // Handle both "8:00" and "08:00" formats
@@ -668,7 +548,8 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
     
     return schedules.find(s => 
       s.day_of_week === dayOfWeek && 
-      normalizeTimeSlot(s.time_slot) === normalizeTimeSlot(timeSlot)
+      normalizeTimeSlot(s.time_slot) === normalizeTimeSlot(timeSlot) &&
+      (instructorId ? s.instructor_id === instructorId : true)
     )
   }, [schedules])
   
@@ -698,8 +579,6 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
       subscriptionRef.current.unsubscribe()
     }
     
-    // console.log('🔔 Setting up real-time subscription')
-    
     const subscription = supabase
       .channel(`schedules-${company}-${weekStartDate}`)
       .on(
@@ -713,9 +592,7 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
         (payload) => {
           const { eventType, new: newRecord, old: oldRecord } = payload
           
-          // console.log('📡 Real-time update received:', eventType, newRecord || oldRecord)
-          
-          // Filter by current week (using year and week_number)
+          // // Filter by current week (using year and week_number)
           const weekStartDateObj = new Date(weekStartDate)
           const currentYear = weekStartDateObj.getFullYear()
           const currentWeekNumber = getWeekNumber(weekStartDateObj)
@@ -724,13 +601,10 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
           const recordWeekNumber = newRecord?.week_number || oldRecord?.week_number
           
           if (recordYear !== currentYear || recordWeekNumber !== currentWeekNumber) {
-            // console.log('📡 Skipping update - different week:', { recordYear, currentYear, recordWeekNumber, currentWeekNumber })
-            return
+            // return
           }
           
-          // console.log('📡 Processing real-time update:', eventType, newRecord || oldRecord)
-          
-          // Update local state
+          // // Update local state
           switch (eventType) {
             case 'INSERT':
               // console.log('📡 Real-time INSERT received:', {
@@ -740,8 +614,7 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
               
               // Skip if this was a recent manual insert to avoid duplicates
               if (recentManualUpdatesRef.current.has(newRecord.id)) {
-                // console.log('📡 Skipping real-time insert - was manual creation')
-                break
+                // break
               }
               
               setSchedules(prev => [...prev, newRecord])
@@ -760,8 +633,7 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
               
               // Skip if this was a recent manual update to avoid overriding with incomplete data
               if (recentManualUpdatesRef.current.has(newRecord.id)) {
-                // console.log('📡 Skipping real-time update - was manual update')
-                break
+                // break
               }
               
               setSchedules(prev => 
@@ -778,8 +650,7 @@ export const useSimpleSchedule = (currentWeek, company = 'login') => {
         }
       )
       .subscribe((status) => {
-        // console.log('📡 Subscription status:', status)
-        setIsConnected(status === 'SUBSCRIBED')
+        // setIsConnected(status === 'SUBSCRIBED')
       })
     
     subscriptionRef.current = subscription

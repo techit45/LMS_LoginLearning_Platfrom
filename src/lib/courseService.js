@@ -3,6 +3,128 @@ import { withCache, getCacheKey } from './cache';
 import { getEmergencyData } from './quickFix';
 import { uploadToStorage, deleteFromStorage } from './attachmentService';
 import { createCourseStructure, deleteProjectFolder, transferFolderContents, folderHasContents } from './googleDriveClientService';
+import { ensureCourseFolderExists } from './courseFolderService';
+
+// 🔒 SECURITY FIX: Removed hardcoded folder IDs
+// Folder mappings now stored securely in database
+// Use getCompanyDriveFolders() function instead
+
+// Cache for folder mappings to reduce database calls
+let folderCache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * 🔒 SECURE: Get company drive folders from database
+ * @param {string} company - Company slug (e.g., 'login', 'meta')
+ * @returns {Promise<Object>} - Folder configuration object
+ */
+export const getCompanyDriveFolders = async (company) => {
+  try {
+    const companyKey = (company || 'login').toLowerCase();
+    const cacheKey = `folders_${companyKey}`;
+    const cached = folderCache.get(cacheKey);
+    
+    // Check cache first
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.data;
+    }
+
+    // Call secure database function
+    const { data, error } = await supabase.rpc('get_company_drive_folders', {
+      p_company_slug: companyKey
+    });
+
+    if (error) {
+      console.error('❌ Error getting company folders:', error);
+      throw error;
+    }
+
+    if (!data?.success) {
+      throw new Error(data?.error || 'Failed to get company folders');
+    }
+
+    const result = {
+      success: true,
+      folderIds: data.folderIds,
+      companyName: data.companyName
+    };
+
+    // Cache the result
+    folderCache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now()
+    });
+
+    return result;
+  } catch (error) {
+    console.error('❌ getCompanyDriveFolders error:', error);
+    // Fallback to basic structure without exposing IDs
+    return {
+      success: false,
+      error: error.message,
+      folderIds: null,
+      companyName: 'Unknown Company'
+    };
+  }
+};
+
+/**
+ * @deprecated - Use getCompanyDriveFolders() instead
+ * This function is kept for backward compatibility but returns null
+ */
+export const getCompanyDriveFolder = (company, type = 'courses') => {
+  console.warn('⚠️ getCompanyDriveFolder is deprecated. Use getCompanyDriveFolders() instead.');
+  return null; // Force migration to secure method
+  
+  if (!config) {
+    console.warn(`Unknown company: ${company}`);
+    return null;
+  }
+  
+  return config[type] || null;
+};
+
+/**
+ * Validate that a Google Drive folder ID is correct for the intended use
+ * @param {string} folderId - Folder ID to validate
+ * @param {string} company - Company name  
+ * @param {string} expectedType - 'courses' or 'projects'
+ * @returns {Object} - Validation result with isValid and message
+ */
+export const validateDriveFolder = (folderId, company, expectedType = 'courses') => {
+  const companyKey = company?.toLowerCase();
+  const config = COMPANY_DRIVE_FOLDERS[companyKey];
+  
+  if (!config) {
+    return {
+      isValid: false,
+      message: `Unknown company: ${company}`
+    };
+  }
+  
+  const correctFolderId = config[expectedType];
+  const wrongType = expectedType === 'courses' ? 'projects' : 'courses';
+  const wrongFolderId = config[wrongType];
+  
+  if (folderId === wrongFolderId) {
+    return {
+      isValid: false,
+      message: `Wrong folder type: This is the ${wrongType} folder, not ${expectedType} folder`
+    };
+  }
+  
+  if (folderId !== correctFolderId) {
+    return {
+      isValid: false,
+      message: `Incorrect folder ID for ${company} ${expectedType}. Expected: ${correctFolderId}`
+    };
+  }
+  
+  return {
+    isValid: true,
+    message: 'Folder ID is correct'
+  };
+};
 
 // ==========================================
 // COURSE CRUD OPERATIONS
@@ -16,8 +138,6 @@ export const getCoursesByCompany = async (companyId = null) => {
   
   return withCache(cacheKey, async () => {
     try {
-      console.log('Attempting to fetch courses from database for company:', companyId);
-      
       let query = supabase
         .from('courses')
         .select(`
@@ -36,20 +156,20 @@ export const getCoursesByCompany = async (companyId = null) => {
         `)
         .eq('is_active', true);
 
-      // Note: Company filtering temporarily disabled due to schema mismatch
-      // TODO: Update when company_id foreign key is properly implemented
+      // Apply company filtering if specified
+      if (company && company !== 'all') {
+        query = query.eq('company_id', company);
+      }
 
       const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(20);
 
       if (error) {
-        console.error('Database error:', error);
         throw error;
       }
 
       if (data && data.length > 0) {
-        console.log('Successfully fetched courses from database:', data.length);
         const coursesWithStats = data.map(course => ({
           ...course,
           enrollment_count: Math.floor(Math.random() * 150) + 10,
@@ -59,7 +179,6 @@ export const getCoursesByCompany = async (companyId = null) => {
         return { data: coursesWithStats, error: null };
       } else {
         // No data found, use emergency data
-        console.log('No courses found in database, using emergency data');
         const emergencyData = getEmergencyData();
         let filteredCourses = emergencyData.courses;
         
@@ -73,8 +192,6 @@ export const getCoursesByCompany = async (companyId = null) => {
         return { data: filteredCourses, error: null };
       }
     } catch (error) {
-      console.error('Error in getCoursesByCompany:', error);
-      
       // Fallback to emergency data
       const emergencyData = getEmergencyData();
       let filteredCourses = emergencyData.courses;
@@ -99,12 +216,8 @@ export const getAllCourses = async () => {
   return withCache(cacheKey, async () => {
     try {
       // Try simple database query first
-      console.log('Attempting to fetch courses from database...');
-      
       // Check authentication status
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('User status for courses:', user ? 'Authenticated' : 'Anonymous');
-      
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Courses query timeout')), 5000);
@@ -134,12 +247,10 @@ export const getAllCourses = async () => {
         const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
         if (error) {
-          console.error('Database error:', error);
           throw error;
         }
 
         if (data && data.length > 0) {
-          console.log('Successfully fetched courses from database:', data.length);
           const coursesWithStats = data.map(course => ({
             ...course,
             enrollment_count: 0
@@ -148,14 +259,11 @@ export const getAllCourses = async () => {
         }
         
         // If no data from database, use emergency data
-        console.log('No courses in database, using emergency data');
         const emergencyData = getEmergencyData();
         return { data: emergencyData.courses, error: null };
         
       } catch (dbError) {
-        console.error('Database connection failed:', dbError);
         const emergencyData = getEmergencyData();
-        console.log('🚑 Using emergency courses data due to database error');
         return { data: emergencyData.courses, error: null };
       }
 
@@ -167,11 +275,8 @@ export const getAllCourses = async () => {
 
       return { data: coursesWithStats, error: null };
     } catch (error) {
-      console.error('Error fetching courses:', error);
       // Return emergency data on any error
       const emergencyData = getEmergencyData();
-      console.log('🚑 Database error - Using emergency courses data after error in getAllCourses');
-      console.warn('Consider running the SQL fix script: /sql_scripts/fix-student-access-final.sql');
       return { data: emergencyData.courses, error: null };
     }
   }, 2 * 60 * 1000); // Cache for 2 minutes
@@ -182,7 +287,6 @@ export const getAllCourses = async () => {
  */
 export const getCourseById = async (courseId) => {
   try {
-    console.log('getCourseById: Fetching course with ID:', courseId);
     // Use specific columns to avoid issues with missing columns
     const { data, error } = await supabase
       .from('courses')
@@ -213,15 +317,11 @@ export const getCourseById = async (courseId) => {
       .eq('is_active', true)
       .maybeSingle();
 
-    console.log('getCourseById: Database result:', { data, error });
-
     if (error) {
-      console.error('getCourseById: Database error:', error);
       throw error;
     }
 
     if (!data) {
-      console.log('getCourseById: Course not found or inactive');
       return { data: null, error: { message: 'ไม่พบคอร์สที่ระบุหรือคอร์สไม่เปิดใช้งาน', code: 'COURSE_NOT_FOUND' } };
     }
 
@@ -233,10 +333,8 @@ export const getCourseById = async (courseId) => {
         .select('*', { count: 'exact', head: true })
         .eq('course_id', courseId);
       enrollmentCount = count || 0;
-      console.log('getCourseById: Enrollment count:', enrollmentCount);
-    } catch (countError) {
-      console.warn('Could not fetch enrollment count:', countError);
-    }
+      } catch (countError) {
+      }
 
     const result = { 
       data: {
@@ -247,10 +345,8 @@ export const getCourseById = async (courseId) => {
       error: null 
     };
     
-    console.log('getCourseById: Final result:', result);
     return result;
   } catch (error) {
-    console.error('getCourseById: Error fetching course:', error);
     return { data: null, error };
   }
 };
@@ -284,8 +380,7 @@ export const getCourseByIdAdmin = async (courseId) => {
         .eq('course_id', courseId);
       enrollmentCount = count || 0;
     } catch (countError) {
-      console.warn('Could not fetch enrollment count:', countError);
-    }
+      }
 
     return { 
       data: {
@@ -296,7 +391,6 @@ export const getCourseByIdAdmin = async (courseId) => {
       error: null 
     };
   } catch (error) {
-    console.error('Error fetching course for admin:', error);
     return { data: null, error };
   }
 };
@@ -328,7 +422,6 @@ export const getCoursesByCategory = async (category) => {
 
     return { data: coursesWithStats, error: null };
   } catch (error) {
-    console.error('Error fetching courses by category:', error);
     return { data: null, error };
   }
 };
@@ -356,7 +449,6 @@ export const createCourse = async (courseData) => {
       .maybeSingle();
 
     if (profileError) {
-      console.error('Error checking user profile:', profileError);
       throw new Error('ไม่สามารถตรวจสอบข้อมูลผู้ใช้ได้');
     }
 
@@ -381,13 +473,12 @@ export const createCourse = async (courseData) => {
       is_active: courseData.is_active !== false,
       is_featured: courseData.is_featured === true,
       thumbnail_url: courseData.thumbnail_url || null,
+      company: courseData.company || 'login', // Add company field
       instructor_id: user.id,
       instructor_name: profile.full_name || user.email?.split('@')[0] || 'Instructor',
       instructor_email: profile.email || user.email
     };
 
-    console.log('Creating course with data:', courseDataWithInstructor);
-    
     const { data, error } = await supabase
       .from('courses')
       .insert([courseDataWithInstructor])
@@ -395,8 +486,6 @@ export const createCourse = async (courseData) => {
       .single();
 
     if (error) {
-      console.error('Database error creating course:', error);
-      
       // Handle specific database errors
       if (error.code === '42703') {
         throw new Error('ฐานข้อมูลยังไม่พร้อม - กรุณารันคำสั่ง SQL setup ก่อน');
@@ -409,9 +498,37 @@ export const createCourse = async (courseData) => {
       }
     }
 
+    // After successfully creating the course, create Google Drive folder
+    if (data && data.id) {
+      try {
+        console.log('🏗️ Creating Google Drive folder for new course:', data.title);
+        const folderResult = await ensureCourseFolderExists(data);
+        console.log('✅ Google Drive folder created:', folderResult.courseFolderName || folderResult.folderName);
+        
+        // Return the updated course data with folder info
+        const { data: updatedCourse } = await supabase
+          .from('courses')
+          .select('*')
+          .eq('id', data.id)
+          .single();
+          
+        return { data: updatedCourse || data, error: null, folderCreated: true };
+        
+      } catch (folderError) {
+        console.warn('⚠️ Course created but folder creation failed:', folderError.message);
+        
+        // Don't fail the course creation if folder creation fails
+        return { 
+          data, 
+          error: null, 
+          folderCreated: false, 
+          folderError: folderError.message 
+        };
+      }
+    }
+
     return { data, error: null };
   } catch (error) {
-    console.error('Error creating course:', error);
     return { data: null, error };
   }
 };
@@ -432,7 +549,6 @@ export const updateCourse = async (courseId, courseData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating course:', error);
     return { data: null, error };
   }
 };
@@ -451,7 +567,6 @@ export const deleteCourse = async (courseId) => {
 
     return { error: null };
   } catch (error) {
-    console.error('Error deleting course:', error);
     return { error };
   }
 };
@@ -470,7 +585,6 @@ export const toggleCourseStatus = async (courseId, isActive) => {
 
     return { error: null };
   } catch (error) {
-    console.error('Error toggling course status:', error);
     return { error };
   }
 };
@@ -480,8 +594,6 @@ export const toggleCourseStatus = async (courseId, isActive) => {
  */
 export const deleteCourseCompletely = async (courseId) => {
   try {
-    console.log(`🗑️ Starting permanent deletion of course: ${courseId}`);
-
     // Get current user for logging
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
@@ -496,31 +608,23 @@ export const deleteCourseCompletely = async (courseId) => {
       .single();
     
     if (fetchError) {
-      console.error('Error fetching course for deletion:', fetchError);
       throw fetchError;
     }
-    
-    console.log(`📋 Course details: ${courseData.title}, Google Drive ID: ${courseData.google_drive_folder_id}`);
     
     // Step 2: Delete Google Drive folder if it exists
     if (courseData.google_drive_folder_id) {
       try {
-        console.log(`🗑️ Deleting Google Drive folder: ${courseData.google_drive_folder_id}`);
-        
         // Import the deleteProjectFolder function from googleDriveClientService
         const { deleteProjectFolder } = await import('./googleDriveClientService.js');
         await deleteProjectFolder(courseData.google_drive_folder_id, courseData.title);
-        console.log(`✅ Google Drive folder deleted successfully`);
-      } catch (driveError) {
+        } catch (driveError) {
         console.warn(`⚠️ Failed to delete Google Drive folder (continuing with database deletion):`, driveError.message);
         // Continue with database deletion even if Google Drive deletion fails
       }
     } else {
-      console.log(`ℹ️ No Google Drive folder to delete`);
-    }
+      }
 
     // Step 3: Delete related data to maintain referential integrity
-    console.log(`🗑️ Deleting related data for course: ${courseId}`);
     const deletePromises = [
       // Delete enrollments
       supabase
@@ -558,21 +662,17 @@ export const deleteCourseCompletely = async (courseId) => {
     console.log(`📊 Related data deletion results:`, deleteResults.map(r => r.status));
 
     // Step 4: Finally, delete the course itself from database
-    console.log(`🗑️ Deleting course from database: ${courseId}`);
     const { error: courseError } = await supabase
       .from('courses')
       .delete()
       .eq('id', courseId);
 
     if (courseError) {
-      console.error('❌ Failed to delete course from database:', courseError);
       throw courseError;
     }
 
-    console.log('✅ Course permanently deleted successfully from both Google Drive and database');
     return { error: null };
   } catch (error) {
-    console.error('💥 Error permanently deleting course:', error);
     return { 
       error: {
         message: error.message || 'เกิดข้อผิดพลาดในการลบคอร์ส',
@@ -587,8 +687,6 @@ export const deleteCourseCompletely = async (courseId) => {
  */
 export const getAllCoursesAdmin = async () => {
   try {
-    console.log('Fetching admin courses...');
-    
     if (!supabase) {
       throw new Error('Supabase client not initialized');
     }
@@ -615,14 +713,11 @@ export const getAllCoursesAdmin = async () => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Supabase error:', error);
       throw new Error(`Database error: ${error.message}`);
     }
 
-    console.log('Admin courses fetched successfully:', data?.length || 0, 'courses');
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error fetching admin courses:', error);
     return { 
       data: null, 
       error: {
@@ -655,7 +750,6 @@ export const addCourseContent = async (courseId, contentData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error adding course content:', error);
     return { data: null, error };
   }
 };
@@ -676,7 +770,6 @@ export const updateCourseContent = async (contentId, contentData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating course content:', error);
     return { data: null, error };
   }
 };
@@ -695,7 +788,6 @@ export const deleteCourseContent = async (contentId) => {
 
     return { error: null };
   } catch (error) {
-    console.error('Error deleting course content:', error);
     return { error };
   }
 };
@@ -728,7 +820,6 @@ export const getCourseContent = async (courseId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching course content:', error);
     return { data: null, error };
   }
 };
@@ -745,8 +836,6 @@ export const getFeaturedCourses = async () => {
   
   return withCache(cacheKey, async () => {
     try {
-      console.log('Fetching featured courses from database...');
-      
       try {
         const { data, error } = await supabase
           .from('courses')
@@ -771,19 +860,14 @@ export const getFeaturedCourses = async () => {
           .limit(6);
 
         if (error) {
-          console.error('Featured courses database error:', error);
-          console.error('🚨 This is likely due to missing environment variables in production');
-          console.error('Check NETLIFY_SETUP.md for configuration instructions');
           throw error;
         }
 
         if (data && data.length > 0) {
-          console.log('Successfully fetched featured courses:', data.length);
           return { data, error: null };
         }
         
         // If no featured courses, get recent active courses
-        console.log('No featured courses found, getting recent courses');
         const { data: recentData, error: recentError } = await supabase
           .from('courses')
           .select(`
@@ -808,16 +892,12 @@ export const getFeaturedCourses = async () => {
         return { data: recentData || [], error: null };
         
       } catch (dbError) {
-        console.error('Featured courses database connection failed:', dbError);
         const emergencyData = getEmergencyData();
-        console.log('🚑 Using emergency courses data for featured courses');
         return { data: emergencyData.courses, error: null };
       }
 
       // If no featured courses, get first 6 active courses
       if (!data || data.length === 0) {
-        console.log('No featured courses found, getting first 6 active courses');
-        
         // Simplified fallback query without joins to avoid 400 errors
         const fallbackQueryPromise = supabase
           .from('courses')
@@ -844,8 +924,6 @@ export const getFeaturedCourses = async () => {
           fallbackQueryPromise, 
           new Promise((_, reject) => setTimeout(() => reject(new Error('Fallback timeout')), 3000))
         ]);
-
-        console.log('Fallback courses query result:', { fallbackData, fallbackError });
 
         if (fallbackError) throw fallbackError;
 
@@ -885,11 +963,8 @@ export const getFeaturedCourses = async () => {
         };
       });
 
-      console.log('Enhanced featured courses:', coursesWithStats);
       return { data: coursesWithStats, error: null };
     } catch (error) {
-      console.error('Error fetching featured courses:', error);
-      
       // Return mock data on error to prevent blank screen
       const mockCourses = [
         {
@@ -958,7 +1033,6 @@ export const toggleCourseFeatured = async (courseId, isFeatured) => {
 
     return { error: null };
   } catch (error) {
-    console.error('Error toggling course featured status:', error);
     return { error };
   }
 };
@@ -1010,7 +1084,6 @@ export const getCourseStats = async () => {
       error: null
     };
   } catch (error) {
-    console.error('Error fetching course stats:', error);
     return { data: null, error };
   }
 };
@@ -1065,8 +1138,6 @@ export const uploadCourseImages = async (courseId, formData) => {
     
     if (result1.error && result1.error.message.includes('Bucket not found')) {
       // Fallback to attachments bucket or create in default
-      console.warn('course-files bucket not found, trying attachments bucket');
-      
       const result2 = await supabase.storage
         .from('attachments')
         .upload(`courses/${filePath}`, file, {
@@ -1087,7 +1158,6 @@ export const uploadCourseImages = async (courseId, formData) => {
     }
 
     if (uploadError) {
-      console.error('Upload error:', uploadError);
       throw new Error('เกิดข้อผิดพลาดในการอัปโหลด');
     }
 
@@ -1107,13 +1177,6 @@ export const uploadCourseImages = async (courseId, formData) => {
       publicUrl = courseUrl;
     }
 
-    console.log('Course image uploaded successfully:', {
-      courseId,
-      fileName,
-      filePath,
-      publicUrl
-    });
-
     return {
       url: publicUrl,
       fileName: fileName,
@@ -1122,7 +1185,6 @@ export const uploadCourseImages = async (courseId, formData) => {
     };
 
   } catch (error) {
-    console.error('Error uploading course image:', error);
     return {
       url: null,
       error: error.message || 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ'
@@ -1136,7 +1198,6 @@ export const uploadCourseImages = async (courseId, formData) => {
 export const deleteCourseImage = async (imageUrl) => {
   try {
     if (!imageUrl || typeof imageUrl !== 'string') {
-      console.error('Invalid imageUrl:', imageUrl);
       throw new Error('Image URL is required and must be a string');
     }
 
@@ -1161,17 +1222,14 @@ export const deleteCourseImage = async (imageUrl) => {
           .remove([filePath]);
 
         if (deleteError) {
-          console.error('Delete error from attachments:', deleteError);
           throw new Error('เกิดข้อผิดพลาดในการลบรูปภาพ');
         }
 
-        console.log('Course image deleted successfully from attachments:', filePath);
         return { success: true, error: null };
       }
     }
 
     if (!filePath) {
-      console.error('Could not extract file path from URL:', imageUrl);
       throw new Error('Invalid image URL format');
     }
 
@@ -1181,15 +1239,12 @@ export const deleteCourseImage = async (imageUrl) => {
       .remove([filePath]);
 
     if (deleteError) {
-      console.error('Delete error:', deleteError);
       throw new Error('เกิดข้อผิดพลาดในการลบรูปภาพ');
     }
 
-    console.log('Course image deleted successfully:', filePath);
     return { success: true, error: null };
 
   } catch (error) {
-    console.error('Error deleting course image:', error);
     return {
       success: false,
       error: error.message || 'เกิดข้อผิดพลาดในการลบรูปภาพ'
@@ -1202,8 +1257,6 @@ export const deleteCourseImage = async (imageUrl) => {
  */
 export const updateCourseImages = async (courseId, imageUrls, coverImageUrl = null) => {
   try {
-    console.log('🎯 updateCourseImages called with:', { courseId, imageUrls, coverImageUrl });
-    
     if (!courseId) {
       throw new Error('Course ID is required');
     }
@@ -1218,10 +1271,7 @@ export const updateCourseImages = async (courseId, imageUrls, coverImageUrl = nu
       // If cover image is specified, update thumbnail_url
       if (coverImageUrl) {
         updateData.thumbnail_url = coverImageUrl;
-        console.log('🖼️ Setting thumbnail_url to:', coverImageUrl);
-      }
-
-      console.log('📝 Updating course with data:', updateData);
+        }
 
       const { data, error } = await supabase
         .from('courses')
@@ -1229,12 +1279,8 @@ export const updateCourseImages = async (courseId, imageUrls, coverImageUrl = nu
         .eq('id', courseId)
         .select();
 
-      console.log('📊 Database update result:', { data, error });
-
       if (error && error.code === 'PGRST204') {
         // Images column doesn't exist, update only thumbnail_url
-        console.warn('Images column not found, updating thumbnail_url only');
-        
         const fallbackUpdateData = {
           updated_at: new Date().toISOString()
         };
@@ -1261,12 +1307,6 @@ export const updateCourseImages = async (courseId, imageUrls, coverImageUrl = nu
       
       if (error) throw error;
 
-      console.log('Course images updated successfully:', {
-        courseId,
-        imageCount: imageUrls?.length || 0,
-        coverImage: coverImageUrl
-      });
-
       return { data, error: null };
       
     } catch (updateError) {
@@ -1274,7 +1314,6 @@ export const updateCourseImages = async (courseId, imageUrls, coverImageUrl = nu
     }
 
   } catch (error) {
-    console.error('Error updating course images:', error);
     return {
       data: null,
       error: error.message || 'เกิดข้อผิดพลาดในการอัปเดตรูปภาพ'
@@ -1304,7 +1343,6 @@ export const getCourseImages = async (courseId) => {
       
       if (error && error.code === '42703') {
         // Column doesn't exist, fall back to thumbnail_url only
-        console.warn('Images column not found, using thumbnail_url only');
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('courses')
           .select('thumbnail_url')
@@ -1362,7 +1400,6 @@ export const getCourseImages = async (courseId) => {
     }
 
   } catch (error) {
-    console.error('Error getting course images:', error);
     return {
       images: [],
       coverImage: null,
@@ -1377,8 +1414,6 @@ export const getCourseImages = async (courseId) => {
  */
 export const transferItemToCompany = async (courseId, targetCompany, options = {}) => {
   try {
-    console.log(`🔄 Starting course transfer: ${courseId} -> ${targetCompany}`);
-    
     const { 
       fromCompany, 
       itemTitle, 
@@ -1401,8 +1436,6 @@ export const transferItemToCompany = async (courseId, targetCompany, options = {
       throw new Error('Course not found');
     }
 
-    console.log(`📋 Current course data:`, currentCourse);
-
     // Step 2: Validate target company
     const validCompanies = ['login', 'meta', 'med', 'edtech', 'innotech', 'w2d'];
     if (!validCompanies.includes(targetCompany)) {
@@ -1415,12 +1448,8 @@ export const transferItemToCompany = async (courseId, targetCompany, options = {
     
     if (transferDriveFolder && currentCourse.google_drive_folder_id) {
       try {
-        console.log(`🗂️ Starting Google Drive transfer for company: ${targetCompany}`);
-        
         // Step 3a: Check if source folder has contents
         const hasContents = await folderHasContents(currentCourse.google_drive_folder_id);
-        console.log(`📋 Source folder has contents: ${hasContents}`);
-        
         // Step 3b: Create new course structure in target company
         const driveStructure = await createCourseStructure({
           ...currentCourse,
@@ -1429,12 +1458,8 @@ export const transferItemToCompany = async (courseId, targetCompany, options = {
 
         if (driveStructure.success && driveStructure.courseFolderId) {
           newDriveFolderId = driveStructure.courseFolderId;
-          console.log(`✅ New Google Drive folder created: ${newDriveFolderId}`);
-          
           // Step 3c: Transfer files from old folder to new folder
           if (hasContents) {
-            console.log(`🔄 Transferring files from ${currentCourse.google_drive_folder_id} to ${newDriveFolderId}`);
-            
             const transferResult = await transferFolderContents(
               currentCourse.google_drive_folder_id,
               newDriveFolderId,
@@ -1444,27 +1469,20 @@ export const transferItemToCompany = async (courseId, targetCompany, options = {
             
             if (transferResult.success) {
               filesTransferred = true;
-              console.log(`✅ Files transferred successfully`);
-            } else {
-              console.warn(`⚠️ File transfer completed with warnings`);
-            }
+              } else {
+              }
           } else {
-            console.log(`ℹ️ Source folder is empty, no files to transfer`);
             // Still delete the empty source folder
             try {
               await deleteProjectFolder(currentCourse.google_drive_folder_id, currentCourse.title);
-              console.log(`✅ Empty source folder deleted`);
-            } catch (deleteError) {
-              console.warn(`⚠️ Could not delete empty source folder:`, deleteError.message);
-            }
+              } catch (deleteError) {
+              }
           }
         }
         
       } catch (driveError) {
-        console.error(`⚠️ Google Drive transfer failed:`, driveError);
         // Continue with database transfer even if Drive transfer fails
-        console.log(`📝 Continuing with database transfer only`);
-      }
+        }
     }
 
     // Step 4: Update course in database
@@ -1473,8 +1491,6 @@ export const transferItemToCompany = async (courseId, targetCompany, options = {
       ...(newDriveFolderId && { google_drive_folder_id: newDriveFolderId }),
       updated_at: new Date().toISOString()
     };
-
-    console.log(`💾 Updating course in database:`, updateData);
 
     const { data: updatedCourse, error: updateError } = await supabase
       .from('courses')
@@ -1486,8 +1502,6 @@ export const transferItemToCompany = async (courseId, targetCompany, options = {
     if (updateError) {
       throw new Error(`Failed to update course: ${updateError.message}`);
     }
-
-    console.log(`✅ Course transfer completed:`, updatedCourse);
 
     // Step 5: Clear caches to ensure fresh data
     const cacheKeys = [
@@ -1519,7 +1533,6 @@ export const transferItemToCompany = async (courseId, targetCompany, options = {
     };
 
   } catch (error) {
-    console.error('❌ Error transferring course:', error);
     return { 
       data: null, 
       error: {

@@ -12,8 +12,6 @@ import NotificationIntegrations from './notificationIntegrations';
  */
 export const getCourseContent = async (courseId) => {
   try {
-    console.log('📚 Fetching course content for:', courseId);
-
     const { data, error } = await supabase
       .from('course_content')
       .select(`
@@ -34,15 +32,12 @@ export const getCourseContent = async (courseId) => {
       .order('order_index', { ascending: true });
 
     if (error) {
-      console.error('❌ Error fetching course content:', error);
       throw error;
     }
 
-    console.log('✅ Course content loaded:', data?.length || 0, 'items');
     return { data: data || [], error: null };
 
   } catch (error) {
-    console.error('💥 Exception in getCourseContent:', error);
     return { 
       data: [], 
       error: {
@@ -61,8 +56,6 @@ export const getCourseContent = async (courseId) => {
  */
 export const addCourseContent = async (courseId, contentData) => {
   try {
-    console.log('➕ Adding course content:', contentData);
-
     // Get course info first to obtain company information for Google Drive folder creation
     const { data: courseInfo, error: courseError } = await supabase
       .from('courses')
@@ -71,7 +64,6 @@ export const addCourseContent = async (courseId, contentData) => {
       .single();
     
     if (courseError) {
-      console.error('❌ Error fetching course info:', courseError);
       throw new Error('ไม่สามารถดึงข้อมูลคอร์สได้');
     }
 
@@ -122,8 +114,6 @@ export const addCourseContent = async (courseId, contentData) => {
       is_preview: contentData.is_preview || false
     };
 
-    console.log('💾 Inserting content data:', insertData);
-
     const { data, error } = await supabase
       .from('course_content')
       .insert([insertData])
@@ -131,8 +121,6 @@ export const addCourseContent = async (courseId, contentData) => {
       .single();
 
     if (error) {
-      console.error('❌ Database error adding content:', error);
-      
       // Handle specific database errors
       if (error.code === '23503') {
         throw new Error('คอร์สที่ระบุไม่มีอยู่ในระบบ');
@@ -145,68 +133,15 @@ export const addCourseContent = async (courseId, contentData) => {
       }
     }
 
-    console.log('✅ Content added successfully:', data);
+    // ❌ REMOVED: Individual content folder creation
+    // Course content files should go directly to the main course folder, 
+    // not separate folders for each content item.
+    // This prevents the creation of folders like "เนื้อหาบทที่ 1" that the user complained about.
     
-    // Create Google Drive folder for the course content
-    try {
-      console.log('📁 Creating Google Drive folder for course content...');
-      
-      // Determine the parent folder based on company and course structure
-      const companyName = courseInfo.company || 'login';
-      const folderName = data.title;
-      
-      // Get the course folder structure from Edge Function
-      const structureResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-drive/create-course-structure`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          title: courseInfo.title,
-          companySlug: companyName
-        })
-      });
-      
-      if (!structureResponse.ok) {
-        throw new Error(`Course structure API failed: ${structureResponse.status}`);
-      }
-      
-      const structureData = await structureResponse.json();
-      console.log('📋 Course structure response:', structureData);
-      
-      // Create the content folder inside the courses folder
-      const createFolderResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-drive/create-topic-folder`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          parentFolderId: structureData.folderIds.courses, // คอร์สเรียน folder
-          topicName: folderName,
-          topicType: 'course_content'
-        })
-      });
-      
-      if (!createFolderResponse.ok) {
-        console.error('⚠️ Failed to create Google Drive folder, but content was saved to database');
-      } else {
-        const folderData = await createFolderResponse.json();
-        console.log('✅ Google Drive folder created:', folderData);
-        
-        // Update the content with Google Drive folder ID
-        if (folderData.success && folderData.topicFolderId) {
-          await supabase
-            .from('course_content')
-            .update({ google_drive_folder_id: folderData.topicFolderId })
-            .eq('id', data.id);
-        }
-      }
-    } catch (driveError) {
-      console.error('⚠️ Google Drive folder creation failed:', driveError);
-      // Don't fail the entire operation - content is still saved to database
-    }
+    // ✅ NEW APPROACH: Content uses the existing course folder
+    // The course folder should already exist from when the course was created.
+    // Files uploaded for this content will be handled by attachmentService.js
+    // which will find and use the existing course folder.
 
     // Send new content notification to enrolled students
     try {
@@ -221,16 +156,13 @@ export const addCourseContent = async (courseId, contentData) => {
           content_type: data.content_type
         }
       );
-      console.log('New course content notification sent');
-    } catch (notificationError) {
-      console.error('Error sending new content notification:', notificationError);
+      } catch (notificationError) {
       // Don't fail the content creation if notification fails
     }
 
     return { data, error: null };
 
   } catch (error) {
-    console.error('💥 Error adding course content:', error);
     return { 
       data: null, 
       error: {
@@ -249,8 +181,6 @@ export const addCourseContent = async (courseId, contentData) => {
  */
 export const updateCourseContent = async (contentId, contentData) => {
   try {
-    console.log('📝 Updating course content:', contentId, contentData);
-
     const { data, error } = await supabase
       .from('course_content')
       .update(contentData)
@@ -259,15 +189,12 @@ export const updateCourseContent = async (contentId, contentData) => {
       .single();
 
     if (error) {
-      console.error('❌ Database error updating content:', error);
       throw new Error(`ไม่สามารถอัปเดตเนื้อหาได้: ${error.message}`);
     }
 
-    console.log('✅ Content updated successfully:', data);
     return { data, error: null };
 
   } catch (error) {
-    console.error('💥 Error updating course content:', error);
     return { 
       data: null, 
       error: {
@@ -285,23 +212,18 @@ export const updateCourseContent = async (contentId, contentData) => {
  */
 export const deleteCourseContent = async (contentId) => {
   try {
-    console.log('🗑️ Deleting course content:', contentId);
-
     const { error } = await supabase
       .from('course_content')
       .delete()
       .eq('id', contentId);
 
     if (error) {
-      console.error('❌ Database error deleting content:', error);
       throw new Error(`ไม่สามารถลบเนื้อหาได้: ${error.message}`);
     }
 
-    console.log('✅ Content deleted successfully');
     return { error: null };
 
   } catch (error) {
-    console.error('💥 Error deleting course content:', error);
     return { 
       error: {
         message: error.message || 'ไม่สามารถลบเนื้อหาได้',
@@ -328,17 +250,13 @@ export const deleteContent = deleteCourseContent;
  */
 export const reorderContent = async (courseId, contentObjects) => {
   try {
-    console.log('🔄 Reordering course content:', courseId, contentObjects.length, 'items');
-
     if (!Array.isArray(contentObjects) || contentObjects.length === 0) {
-      console.log('⚠️ No content to reorder');
       return { error: null };
     }
 
     // Validate content objects
     const validContent = contentObjects.filter(content => {
       if (!content.id || typeof content.order_index !== 'number') {
-        console.error('❌ Invalid content object:', content);
         return false;
       }
       return true;
@@ -347,8 +265,6 @@ export const reorderContent = async (courseId, contentObjects) => {
     if (validContent.length === 0) {
       throw new Error('ไม่มีเนื้อหาที่ถูกต้องสำหรับการจัดเรียง');
     }
-
-    console.log('📦 Valid content items to update:', validContent.length);
 
     // Use RPC function for atomic bulk update
     const { error } = await supabase.rpc('bulk_update_content_order', {
@@ -359,25 +275,18 @@ export const reorderContent = async (courseId, contentObjects) => {
     });
 
     if (error) {
-      console.error('❌ RPC bulk update failed:', error);
-      
       // Fallback to individual updates if RPC doesn't exist
       if (error.code === '42883' || error.code === 'PGRST202') { // function does not exist
-        console.log('⚠️ RPC function not found, falling back to individual updates');
         return await reorderContentFallback(contentObjects);
       }
       
       throw error;
     }
 
-    console.log('✅ Content reordered successfully using bulk update:', validContent.length, 'items');
     return { error: null };
 
   } catch (error) {
-    console.error('💥 Error reordering content:', error);
-    
     // Try fallback method
-    console.log('🔄 Attempting fallback method...');
     return await reorderContentFallback(contentObjects);
   }
 };
@@ -389,23 +298,16 @@ export const reorderContent = async (courseId, contentObjects) => {
  */
 const reorderContentFallback = async (contentObjects) => {
   try {
-    console.log('🔧 Using fallback reorder method...');
-    
     const validContent = contentObjects.filter(content => 
       content.id && typeof content.order_index === 'number'
     );
 
     if (validContent.length === 0) {
-      console.log('⚠️ No valid content to update in fallback');
       return { error: null };
     }
 
-    console.log(`📦 Updating ${validContent.length} items sequentially...`);
-
     // Sequential updates to prevent race conditions
     for (const content of validContent) {
-      console.log(`📝 Updating content ${content.id} to order ${content.order_index}`);
-      
       const { error } = await supabase
         .from('course_content')
         .update({ 
@@ -415,7 +317,6 @@ const reorderContentFallback = async (contentObjects) => {
         .eq('id', content.id);
         
       if (error) {
-        console.error(`❌ Failed to update content ${content.id}:`, error);
         throw error;
       }
       
@@ -423,11 +324,9 @@ const reorderContentFallback = async (contentObjects) => {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
 
-    console.log('✅ Fallback reorder completed:', validContent.length, 'items updated');
     return { error: null };
 
   } catch (error) {
-    console.error('💥 Fallback reorder failed:', error);
     return { 
       error: {
         message: error.message || 'ไม่สามารถจัดเรียงเนื้อหาใหม่ได้',

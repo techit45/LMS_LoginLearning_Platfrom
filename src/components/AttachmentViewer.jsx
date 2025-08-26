@@ -104,7 +104,6 @@ const AttachmentViewer = ({
           return <File className={`${size} text-slate-500`} />;
       }
     } catch (error) {
-      console.error('AttachmentViewer: Error getting file icon:', error);
       return <File className={`${size} text-slate-500`} />;
     }
   };
@@ -112,7 +111,7 @@ const AttachmentViewer = ({
   // Handle file download
   const handleDownload = async (attachment) => {
     try {
-      const { error } = await downloadAttachment(attachment.file_path, attachment.file_name);
+      const { error } = await downloadAttachment(attachment.file_url, attachment.file_name);
       if (error) throw error;
       
       toast({
@@ -120,7 +119,6 @@ const AttachmentViewer = ({
         description: `ดาวน์โหลด ${attachment.file_name} เสร็จสิ้น`
       });
     } catch (error) {
-      console.error('Download error:', error);
       toast({
         title: "ไม่สามารถดาวน์โหลดได้",
         description: error.message,
@@ -149,12 +147,11 @@ const AttachmentViewer = ({
   // Handle external link
   const handleExternalLink = async (attachment) => {
     try {
-      const { data: url, error } = await getAttachmentDownloadUrl(attachment.file_path);
+      const { data: url, error } = await getAttachmentDownloadUrl(attachment.file_url);
       if (error) throw error;
       
       window.open(url, '_blank');
     } catch (error) {
-      console.error('External link error:', error);
       toast({
         title: "ไม่สามารถเปิดลิงก์ได้",
         description: error.message,
@@ -341,7 +338,6 @@ const AttachmentViewer = ({
           </Button>
         )}
       </div>
-
 
       {/* File Grid */}
       {attachments.length === 0 ? (
@@ -532,7 +528,7 @@ const FilePreviewModal = ({ file, onClose, getFileIcon }) => {
         <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
           {category === 'image' ? (
             <img
-              src={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/course-files/${file.file_path}`}
+              src={file.file_url}
               alt={file.file_name}
               className="max-w-full max-h-full object-contain transition-transform duration-200"
               style={{
@@ -541,7 +537,7 @@ const FilePreviewModal = ({ file, onClose, getFileIcon }) => {
             />
           ) : category === 'document' && file.file_type === 'pdf' ? (
             <iframe
-              src={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/course-files/${file.file_path}`}
+              src={file.file_url}
               className="w-full h-full rounded-lg"
               title={file.file_name}
             />

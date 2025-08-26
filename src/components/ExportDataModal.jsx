@@ -71,9 +71,9 @@ const ExportDataModal = ({ isOpen, onClose, context = 'dashboard' }) => {
       { id: 'analytics', label: 'สถิติและกราห', icon: BarChart3, description: 'กราฟ, แผนภูมิ, เมตริก' }
     ];
 
-    if (context === 'payroll') {
+    if (context === 'worktime') {
       return [
-        { id: 'payroll', label: 'ข้อมูลเงินเดือน', icon: FileText, description: 'เงินเดือน, การหักภาษี, สรุป' },
+        { id: 'worktime', label: 'ข้อมูลเวลาทำงาน', icon: FileText, description: 'ชั่วโมงทำงาน, บริษัทที่ทำงาน, สรุป' },
         { id: 'timesheet', label: 'บันทึกเวลา', icon: Calendar, description: 'ชั่วโมงทำงาน, การเข้างาน' }
       ];
     }

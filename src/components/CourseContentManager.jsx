@@ -59,7 +59,6 @@ const CourseContentManager = ({
       }
       setContents(data || []);
     } catch (error) {
-      console.error('Error loading contents:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถโหลดเนื้อหาได้",
@@ -134,7 +133,6 @@ const CourseContentManager = ({
       }
 
     } catch (error) {
-      console.error('Error adding content:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: error.message || 'ไม่สามารถเพิ่มเนื้อหาได้',
@@ -166,7 +164,6 @@ const CourseContentManager = ({
       }
 
     } catch (error) {
-      console.error('Error updating content:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: error.message || 'ไม่สามารถอัปเดตเนื้อหาได้',
@@ -201,7 +198,6 @@ const CourseContentManager = ({
       }
 
     } catch (error) {
-      console.error('Error deleting content:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: error.message || 'ไม่สามารถลบเนื้อหาได้',

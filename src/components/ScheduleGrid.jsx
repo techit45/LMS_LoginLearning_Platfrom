@@ -46,7 +46,6 @@ const getShortCompanyName = (fullName) => {
     'Meta Tech Academy': 'Meta',
     'Meta': 'Meta',
     'EdTech Solutions': 'EdTech',
-    'Innovation Technology Lab': 'Innotech',
     'Industrial Research & Engineering': 'IRE'
   }
   
@@ -128,8 +127,7 @@ const ScheduleItem = memo(({
       try {
         await onResize(schedule.id, newDuration)
       } catch (error) {
-        console.error('Resize failed:', error)
-      }
+        }
     }
   }, [isResizing, resizeStartY, originalDuration, schedule, onResize])
 
@@ -154,7 +152,6 @@ const ScheduleItem = memo(({
       >
         <GripVertical className={`${zoomLevel <= 75 ? 'w-3 h-3' : 'w-4 h-4'} text-white drop-shadow-lg`} />
       </div>
-
 
       {/* Content */}
       <div className={`${zoomLevel >= 100 ? 'p-4 pt-12 pr-12' : zoomLevel >= 75 ? 'p-3 pt-8 pr-10' : 'p-2 pt-6 pr-8'} text-white h-full flex flex-col justify-center`}>
@@ -303,7 +300,6 @@ const DropZone = memo(({
   )
 })
 
-
 // ===================================================================  
 // DAY SELECTOR COMPONENT
 // ===================================================================
@@ -404,6 +400,7 @@ const InstructorDropZone = memo(({
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: [ItemTypes.SCHEDULE, ItemTypes.COURSE, ItemTypes.INSTRUCTOR], 
     drop: (item) => {
+      console.log('🎯 InstructorDropZone: Drop received:', { item, dayOfWeek, timeSlotIndex, instructorId })
       if (item.type === ItemTypes.INSTRUCTOR) {
         // Redirect instructor drops to handleInstructorDrop for adding new row
         return { redirectToInstructorDrop: true, item }
@@ -411,16 +408,6 @@ const InstructorDropZone = memo(({
       // สำหรับ course: ใช้ drop target instructor และ position เสมอ
       if (item.type === ItemTypes.COURSE) {
         const courseInstructorId = item.course?.created_by || item.instructor?.id || item.instructor?.user_id
-        
-        // console.log('📚 Course drop - using drop target position:', {
-        //   courseInstructorId,
-        //   dropTargetInstructorId: instructorId,
-        //   finalInstructorId: instructorId,
-        //   courseName: item.course?.name,
-        //   dayOfWeek,
-        //   timeSlotIndex,
-        //   note: 'วิชาจะไปที่ตำแหน่งที่ลาก ไม่ใช่ตำแหน่งเดิม'
-        // })
         
         return onDrop(item, dayOfWeek, timeSlotIndex, instructorId)
       }
@@ -710,7 +697,6 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
       onDateChange(currentDate.toISOString().split('T')[0])
     }
   }
-  
 
   // State for bulk selection
   const [selectedInstructors, setSelectedInstructors] = useState(new Set())
@@ -736,15 +722,13 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
           const newValue = e.newValue ? JSON.parse(e.newValue) : {}
           setRemovedInstructors(newValue)
         } catch (error) {
-          console.error('Error parsing removedInstructorsByDay from storage event:', error)
-        }
+          }
       }
     }
 
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
-  
 
   // Load all instructors
   useEffect(() => {
@@ -787,11 +771,7 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
         )
         
         setAllInstructors(filteredInstructors)
-        console.log('📚 Loaded instructors:', instructorList.length, 'total,', filteredInstructors.length, 'after filtering removed')
-        console.log('📅 Selected day:', selectedDayName, 'Removed for day:', removedForDay)
-        console.log('🗂️ Full removedInstructors state:', removedInstructors)
-      } catch (error) {
-        console.error('Error loading instructors:', error)
+        } catch (error) {
         toast({
           title: "Error loading instructors",
           description: error.message,
@@ -816,7 +796,6 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
       name: `ช่องว่าง ${newSlotNumber}`
     }
     
-    console.log('➕ Adding new instructor slot:', newInstructor)
     setAllInstructors(prev => [...prev, newInstructor])
   }, [allInstructors])
 
@@ -894,8 +873,6 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
       }
 
       // Delete all schedules for this instructor
-      console.log(`🗑️ Deleting ${instructorSchedules.length} schedules for instructor:`, instructorName)
-      
       // Show progress toast for immediate feedback
       toast({
         title: "กำลังลบตารางสอน...",
@@ -931,17 +908,14 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
         description: `ลบ ${instructorName} และตารางสอน ${instructorSchedules.length} รายการออกจากตารางแล้ว (ลากจากช่องจัดการผู้สอนเพื่อเพิ่มกลับ)`
       })
 
-      console.log('✅ Successfully removed instructor and all schedules')
-
-    } catch (error) {
-      console.error('❌ Error removing instructor from schedule:', error)
+      } catch (error) {
       toast({
         title: "❌ เกิดข้อผิดพลาด",
         description: `ไม่สามารถลบ ${instructorName} ได้: ${error.message}`,
         variant: "destructive"
       })
     }
-  }, [schedules, deleteSchedule, removeInstructorSlot, toast, DAYS, TIME_SLOTS])
+  }, [schedules, deleteSchedule, removeInstructorSlot, toast, DAYS, TIME_SLOTS, selectedDay, removedInstructors, setRemovedInstructors])
 
   // Bulk delete selected instructors
   const bulkDeleteInstructors = useCallback(async () => {
@@ -997,7 +971,6 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
       })
 
     } catch (error) {
-      console.error('❌ Error bulk deleting instructors:', error)
       toast({
         title: "❌ เกิดข้อผิดพลาด",
         description: `ไม่สามารถลบผู้สอนได้: ${error.message}`,
@@ -1005,6 +978,109 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
       })
     }
   }, [selectedInstructors, allInstructors, schedules, deleteSchedule, toast])
+
+  // Handle drop events (courses, schedules, instructors)
+  const onDrop = useCallback(async (item, dayOfWeek, timeSlotIndex, instructorId) => {
+    try {
+      console.log('🎯 onDrop called:', { item, dayOfWeek, timeSlotIndex, instructorId })
+      
+      if (item.type === ItemTypes.COURSE) {
+        // Dropping a course to create new schedule
+        const course = item.course
+        if (!course) {
+          toast({
+            title: "❌ ไม่พบข้อมูลวิชา",
+            description: "ไม่สามารถสร้างตารางสอนได้",
+            variant: "destructive"
+          })
+          return
+        }
+
+        // Use the course's default instructor or the target instructor
+        const targetInstructorId = instructorId || course.created_by
+        if (!targetInstructorId) {
+          toast({
+            title: "❌ ไม่พบผู้สอน",
+            description: "กรุณาระบุผู้สอนสำหรับวิชานี้",
+            variant: "destructive"
+          })
+          return
+        }
+
+        // Check if slot is already occupied
+        const existingSchedule = getScheduleAt(dayOfWeek, timeSlotIndex, targetInstructorId)
+        if (existingSchedule) {
+          toast({
+            title: "❌ ช่วงเวลานี้ไม่ว่าง",
+            description: "มีตารางสอนอยู่แล้วในช่วงเวลานี้",
+            variant: "destructive"
+          })
+          return
+        }
+
+        // Create new schedule
+        const newSchedule = {
+          course_id: course.id,
+          instructor_id: targetInstructorId,
+          day_of_week: dayOfWeek,
+          time_slot_index: timeSlotIndex,
+          duration: course.duration_hours || 1,
+          schedule_type: dayOfWeek >= 1 && dayOfWeek <= 5 ? 'weekdays' : 'weekends'
+        }
+
+        console.log('📝 Creating schedule with data:', newSchedule)
+        await createSchedule(newSchedule)
+        
+        toast({
+          title: "✅ เพิ่มตารางสอนสำเร็จ",
+          description: `เพิ่ม "${course.name}" ในช่วงเวลา ${TIME_SLOTS[timeSlotIndex]?.label || ''}`
+        })
+
+      } else if (item.type === ItemTypes.SCHEDULE) {
+        // Moving existing schedule
+        const schedule = item.schedule
+        if (!schedule) return
+
+        // Check if moving to different position
+        if (schedule.day_of_week === dayOfWeek && 
+            schedule.time_slot_index === timeSlotIndex && 
+            schedule.instructor_id === instructorId) {
+          return // Same position, no change needed
+        }
+
+        // Check if target slot is occupied
+        const existingSchedule = getScheduleAt(dayOfWeek, timeSlotIndex, instructorId)
+        if (existingSchedule && existingSchedule.id !== schedule.id) {
+          toast({
+            title: "❌ ช่วงเวลานี้ไม่ว่าง",
+            description: "มีตารางสอนอยู่แล้วในช่วงเวลานี้",
+            variant: "destructive"
+          })
+          return
+        }
+
+        // Move schedule
+        await moveSchedule(schedule.id, {
+          day_of_week: dayOfWeek,
+          time_slot_index: timeSlotIndex,
+          instructor_id: instructorId
+        })
+
+        toast({
+          title: "✅ ย้ายตารางสอนสำเร็จ",
+          description: `ย้าย "${schedule.course_title || 'ไม่ระบุ'}" ไปยังตำแหน่งใหม่`
+        })
+      }
+
+    } catch (error) {
+      console.error('❌ onDrop error:', error)
+      toast({
+        title: "❌ เกิดข้อผิดพลาด",
+        description: error.message || "ไม่สามารถดำเนินการได้",
+        variant: "destructive"
+      })
+    }
+  }, [createSchedule, moveSchedule, getScheduleAt, TIME_SLOTS, toast])
 
   // Toggle instructor selection
   const toggleInstructorSelection = useCallback((instructorId) => {
@@ -1059,7 +1135,6 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
         .single()
       
       if (error) {
-        console.error('Error fetching instructor:', error)
         return
       }
 
@@ -1077,8 +1152,6 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
 
   // Handle instructor drop on instructor row (replace instructor)
   const handleInstructorDrop = useCallback(async (draggedItem, targetInstructorId) => {
-    console.log('👤 Instructor drop - adding new row:', draggedItem.instructor?.full_name)
-    
     const { instructor: draggedInstructor } = draggedItem
     
     try {
@@ -1121,10 +1194,7 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
         description: `เพิ่ม ${newInstructor.name} เข้าตารางแล้ว`
       })
       
-      console.log('✅ Added new instructor row:', newInstructor)
-      
-    } catch (error) {
-      console.error('❌ Error adding instructor:', error)
+      } catch (error) {
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถเพิ่มผู้สอนได้",
@@ -1133,21 +1203,11 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
     }
   }, [allInstructors, toast])
 
-
   // Handle drop operations - updated to include instructor
   const handleDrop = useCallback(async (item, dayOfWeek, timeSlotIndex, instructorId = null) => {
-    console.log('📦 ScheduleGrid: Drop operation started:', {
-      itemType: item.type,
-      dayOfWeek,
-      timeSlotIndex,
-      instructorId,
-      item
-    })
-    
     try {
       if (item.type === ItemTypes.SCHEDULE) {
         // Move existing schedule
-        console.log('🔄 Moving existing schedule')
         const { schedule } = item
         const timeSlot = `${String(8 + timeSlotIndex).padStart(2, '0')}:00`
         const updates = {
@@ -1162,17 +1222,13 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
           updates.instructor_id = instructorId
         }
         
-        console.log('📝 About to update schedule:', schedule.id, 'with updates:', updates)
         const result = await updateSchedule(schedule.id, updates)
-        console.log('✅ Schedule moved successfully:', result)
-      } else if (item.type === ItemTypes.INSTRUCTOR) {
+        } else if (item.type === ItemTypes.INSTRUCTOR) {
         // Handle instructor drop - add new row
-        console.log('👤 Instructor dropped on time slot, adding new row:', item.instructor?.full_name)
         await handleInstructorDrop(item, null) // null target means add new row
         return
       } else if (item.type === ItemTypes.COURSE) {
         // Create new schedule from course
-        console.log('➕ Creating new schedule from course:', item.course?.name)
         const { course, instructor } = item
         
         let finalInstructorId = instructor?.id || instructor?.user_id
@@ -1188,7 +1244,6 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
             finalInstructorName = specificInstructor.name
           } else {
             // Instructor ถูกลบออกไปแล้ว - ต้องเพิ่มกลับมา
-            console.log('⚠️ Target instructor was removed, adding back to table:', instructorId)
             shouldAddInstructorBack = true
             finalInstructorId = instructorId
             
@@ -1215,16 +1270,10 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
           duration: course.duration_hours || 1
         }
         
-        console.log('📝 Schedule data to create:', scheduleData)
-        
         // Create schedule with optimistic UI (hook already handles instant update)
         await createSchedule(scheduleData)
-        console.log('✅ Schedule created successfully - UI already updated optimistically')
-        
         // หาก instructor ถูกลบไปแล้ว ให้เพิ่มกลับมา
         if (shouldAddInstructorBack) {
-          console.log('🔄 Adding instructor back to table after creating schedule')
-          
           // หาข้อมูลผู้สอนจาก database เพื่อเพิ่มกลับมา
           try {
             const { data: instructorData, error: instructorError } = await supabase
@@ -1242,36 +1291,27 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
                 is_active: instructorData.is_active
               }
               
-              console.log('👤 Adding instructor back to table:', instructorToAdd)
-              
               // เพิ่มผู้สอนกลับเข้าไปใน allInstructors
               setAllInstructors(prev => {
                 const exists = prev.find(i => i.id === instructorToAdd.id)
                 if (exists) {
-                  console.log('👤 Instructor already in table:', instructorToAdd.id)
                   return prev
                 }
-                console.log('👤 Adding instructor to table UI:', instructorToAdd.name)
                 return [...prev, instructorToAdd]
               })
             }
           } catch (error) {
-            console.error('❌ Failed to fetch instructor data for re-adding:', error)
-          }
+            }
         }
       } else {
-        console.warn('⚠️ Unknown item type:', item.type)
-      }
+        }
     } catch (error) {
-      console.error('❌ Drop operation failed:', error)
       // Don't show user error toast here - let the hook handle constraint violations properly
       if (error.code === '23505') {
-        console.log('🔄 Constraint violation caught in ScheduleGrid, hook should handle this')
         // The hook will handle the constraint violation and show appropriate toast
       } else {
         // Show error toast for other types of errors
-        console.error('💥 Non-constraint error:', error.message)
-      }
+        }
     }
   }, [createSchedule, updateSchedule, getInstructorsForDay, handleInstructorDrop, removedInstructors, setAllInstructors])
   
@@ -1287,18 +1327,15 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
     
     // Only log if debugging is needed (uncomment when troubleshooting)
     // if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
-    //   console.log('🔍 Schedule search:', { dayOfWeek, timeSlotIndex, instructorId, found: !!found })
-    // }
+    //   // }
     
     return found
   }, [schedules])
-
 
   // Universal drop zone for instructor drops - MOVED BEFORE EARLY RETURNS
   const [{ isOverUniversal, canDropUniversal }, universalDrop] = useDrop({
     accept: [ItemTypes.INSTRUCTOR],
     drop: (item) => {
-      console.log('🌍 Universal drop detected:', item.instructor?.full_name)
       handleInstructorDrop(item, null)
     },
     collect: (monitor) => ({
@@ -1313,8 +1350,7 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
       try {
         await deleteSchedule(scheduleId)
       } catch (error) {
-        console.error('Delete failed:', error)
-      }
+        }
     }
   }, [deleteSchedule])
 
@@ -1323,8 +1359,7 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
     try {
       await resizeSchedule(scheduleId, newDuration)
     } catch (error) {
-      console.error('Resize failed:', error)
-    }
+      }
   }, [resizeSchedule])
 
   // Get instructors for the selected day (with final deduplication) - MOVED BEFORE EARLY RETURNS
@@ -1441,7 +1476,6 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
               </div>
             </div>
 
-            
             {/* Bulk Selection Controls */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1644,8 +1678,7 @@ const ScheduleGrid = ({ currentWeek, selectedDate, onDateChange, company = 'logi
                         <Plus className="w-3 h-3" />
                         <span className="text-xs font-medium">เพิ่มผู้สอน</span>
                       </button>
-                      
-                      
+
                     </div>
                   </td>
                   {TIME_SLOTS.map((timeSlot) => (

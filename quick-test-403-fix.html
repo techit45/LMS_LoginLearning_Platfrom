@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick 403 Fix Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h2>🔧 Quick 403 Fix Test - Version 43</h2>
+    <p>Testing the exact URL that was causing 403 errors...</p>
+    
+    <button onclick="testProblemURL()">Test Problematic URL</button>
+    <button onclick="testHealthCheck()">Test Health Check</button>
+    
+    <div id="result"></div>
+
+    <script>
+        const PROBLEM_URL = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive/list?folderId=0AAMvBF62LaLyUk9PVA&pageSize=50&isSharedDrive=true';
+        const HEALTH_URL = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive/health';
+        
+        function showResult(html, className = 'info') {
+            document.getElementById('result').innerHTML = `<div class="result ${className}">${html}</div>`;
+        }
+        
+        async function testProblemURL() {
+            showResult('Testing... 🧪', 'info');
+            
+            try {
+                const response = await fetch(PROBLEM_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer mock-token-for-testing'
+                    }
+                });
+                
+                const status = response.status;
+                const text = await response.text();
+                
+                let resultHTML = `
+                    <strong>URL:</strong> ${PROBLEM_URL}<br>
+                    <strong>Status:</strong> ${status}<br>
+                    <strong>Response:</strong><br>
+                    <pre style="background: #f8f9fa; padding: 10px; margin: 10px 0; overflow: auto;">${text}</pre>
+                `;
+                
+                if (status === 403) {
+                    showResult(`❌ 403 ERROR STILL EXISTS!<br>${resultHTML}`, 'error');
+                } else if (status === 401) {
+                    showResult(`✅ SUCCESS! 403 Fixed - Now getting proper 401 auth requirement<br>${resultHTML}`, 'success');
+                } else {
+                    showResult(`⚠️ Different Status: ${status}<br>${resultHTML}`, 'warning');
+                }
+            } catch (error) {
+                showResult(`❌ Network Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testHealthCheck() {
+            showResult('Checking health... 🏥', 'info');
+            
+            try {
+                const response = await fetch(HEALTH_URL);
+                const data = await response.json();
+                
+                showResult(`
+                    ✅ Health Check: ${data.status}<br>
+                    <strong>Version:</strong> ${data.version}<br>
+                    <strong>Timestamp:</strong> ${data.timestamp}
+                `, 'success');
+            } catch (error) {
+                showResult(`❌ Health Check Failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-test on load
+        window.onload = () => {
+            setTimeout(() => {
+                testHealthCheck();
+                setTimeout(() => testProblemURL(), 1000);
+            }, 500);
+        };
+    </script>
+</body>
+</html>

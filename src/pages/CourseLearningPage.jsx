@@ -54,20 +54,16 @@ const CourseLearningPage = () => {
         // Load course content
         const { data: contentData, error: contentError } = await getCourseContent(courseId);
         if (contentError) {
-          console.error('Error loading content:', contentError);
           // Don't set error for content, just show empty state
         } else {
           // Sort content by order_index to ensure proper ordering
-          console.log('🔢 Raw content data:', contentData);
           const sortedContent = (contentData || []).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
-          console.log('📋 Sorted content by order_index:', sortedContent);
           setContents(sortedContent);
         }
         
       } catch (err) {
         setError('ไม่สามารถโหลดข้อมูลคอร์สได้');
-        console.error('Error loading course data:', err);
-      } finally {
+        } finally {
         setLoading(false);
       }
     };

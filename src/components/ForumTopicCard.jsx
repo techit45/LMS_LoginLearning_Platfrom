@@ -54,8 +54,7 @@ const ForumTopicCard = ({
       setIsLiked(!isLiked);
       setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
     } catch (error) {
-      console.error('Error liking topic:', error);
-    }
+      }
   };
 
   const handlePin = async (e) => {
@@ -63,8 +62,7 @@ const ForumTopicCard = ({
     try {
       await onPin(topic.id, !topic.is_pinned);
     } catch (error) {
-      console.error('Error pinning topic:', error);
-    }
+      }
   };
 
   const handleLock = async (e) => {
@@ -72,8 +70,7 @@ const ForumTopicCard = ({
     try {
       await onLock(topic.id, !topic.is_locked);
     } catch (error) {
-      console.error('Error locking topic:', error);
-    }
+      }
   };
 
   const handleEdit = (e) => {
@@ -87,8 +84,7 @@ const ForumTopicCard = ({
       try {
         await onDelete(topic.id);
       } catch (error) {
-        console.error('Error deleting topic:', error);
-      }
+        }
     }
   };
 

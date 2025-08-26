@@ -502,7 +502,6 @@ const TimesheetView = ({
                         {/* View Details Button - Always Show */}
                         <button
                           onClick={() => {
-                            console.log('Eye button clicked for entry:', entry);
                             setSelectedEntry(entry);
                           }}
                           className="text-blue-600 hover:text-blue-900 transition-colors"
@@ -723,7 +722,6 @@ const TimesheetView = ({
         entry={selectedEntry}
         isOpen={!!selectedEntry}
         onClose={() => {
-          console.log('Closing modal');
           setSelectedEntry(null);
         }}
       />

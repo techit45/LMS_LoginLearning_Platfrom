@@ -35,20 +35,15 @@ class HybridSchedulingService {
    */
   async initialize() {
     try {
-      console.log('🚀 Initializing Hybrid Scheduling Service...');
-      
       // Test Cal.com connection
       const calcomTest = await calcomService.testConnection();
       this.calcomEnabled = calcomTest.success;
       
       if (this.calcomEnabled) {
-        console.log('✅ Cal.com integration active');
-        
         // Initialize event types for existing courses
         await this.initializeEventTypesFromCourses();
       } else {
-        console.warn('⚠️ Cal.com unavailable, using internal scheduling only');
-      }
+        }
       
       return {
         success: true,
@@ -56,7 +51,6 @@ class HybridSchedulingService {
         internalEnabled: true
       };
     } catch (error) {
-      console.error('❌ Hybrid scheduling initialization failed:', error);
       return {
         success: false,
         error: error.message,
@@ -78,21 +72,15 @@ class HybridSchedulingService {
         .order('name');
 
       if (error) {
-        console.warn('Could not fetch courses for Cal.com event types:', error);
         return;
       }
 
       if (!courses?.length) {
-        console.log('No teaching courses found for Cal.com initialization');
         return;
       }
 
-      console.log(`📚 Initializing ${courses.length} event types in Cal.com...`);
-      
       // Create event types using existing Cal.com service
       const results = await calcomService.initializeTeachingEventTypes(courses);
-      
-      console.log('📊 Event type creation results:', results);
       
       // Cache successful event types
       results.forEach(result => {
@@ -106,7 +94,6 @@ class HybridSchedulingService {
       
       return results;
     } catch (error) {
-      console.error('Error initializing Cal.com event types:', error);
       return [];
     }
   }
@@ -119,8 +106,6 @@ class HybridSchedulingService {
    * Create schedule with hybrid approach (Cal.com + Supabase)
    */
   async createSchedule(weekStartDate, dayIndex, timeIndex, scheduleData, company = 'login') {
-    console.log('📅 Creating hybrid schedule:', { dayIndex, timeIndex, scheduleData });
-    
     try {
       // 1. Create in internal Supabase system first (for UI responsiveness)
       const internalResult = await realtimeScheduleService.upsertSchedule(
@@ -132,8 +117,7 @@ class HybridSchedulingService {
       );
 
       if (internalResult.error) {
-        console.warn('⚠️ Internal schedule creation failed:', internalResult.error);
-      }
+        }
 
       // 2. Create in Cal.com if enabled
       let calcomResult = null;
@@ -150,8 +134,6 @@ class HybridSchedulingService {
           calcomResult = await calcomService.createSchedule(calcomScheduleData);
           
           if (calcomResult.success) {
-            console.log('✅ Cal.com schedule created successfully');
-            
             // Update internal record with external ID
             if (internalResult.data?.id) {
               await this.updateInternalWithExternalId(
@@ -161,11 +143,9 @@ class HybridSchedulingService {
               );
             }
           } else {
-            console.warn('⚠️ Cal.com schedule creation failed:', calcomResult.error);
-          }
+            }
         } catch (calcomError) {
-          console.error('💥 Cal.com creation error:', calcomError);
-        }
+          }
       }
 
       // 3. Return combined result
@@ -180,7 +160,6 @@ class HybridSchedulingService {
       };
 
     } catch (error) {
-      console.error('💥 Hybrid schedule creation failed:', error);
       return {
         success: false,
         error: error.message,
@@ -194,8 +173,6 @@ class HybridSchedulingService {
    */
   async updateSchedule(scheduleId, updateData, provider = 'internal') {
     try {
-      console.log('📝 Updating hybrid schedule:', { scheduleId, provider });
-      
       let internalResult = null;
       let externalResult = null;
       
@@ -222,7 +199,6 @@ class HybridSchedulingService {
         error: internalResult?.error || externalResult?.error
       };
     } catch (error) {
-      console.error('💥 Hybrid schedule update failed:', error);
       return { success: false, error: error.message };
     }
   }
@@ -232,8 +208,6 @@ class HybridSchedulingService {
    */
   async deleteSchedule(weekStartDate, dayIndex, timeIndex, company = 'login') {
     try {
-      console.log('🗑️ Deleting hybrid schedule:', { dayIndex, timeIndex });
-      
       // Get existing schedule to find external ID
       const existingSchedule = await this.getScheduleFromInternal(
         weekStartDate, 
@@ -261,8 +235,7 @@ class HybridSchedulingService {
             'Schedule removed via teaching schedule system'
           );
         } catch (calcomError) {
-          console.warn('⚠️ Cal.com deletion failed:', calcomError);
-        }
+          }
       }
       
       return {
@@ -274,7 +247,6 @@ class HybridSchedulingService {
         error: internalResult?.error
       };
     } catch (error) {
-      console.error('💥 Hybrid schedule deletion failed:', error);
       return { success: false, error: error.message };
     }
   }
@@ -284,14 +256,11 @@ class HybridSchedulingService {
    */
   async loadWeekSchedules(weekStartDate, company = 'login') {
     try {
-      console.log('📊 Loading hybrid week schedules...');
-      
       // Primary source: internal Supabase data
       const internalResult = await realtimeScheduleService.loadWeekSchedules(weekStartDate, company);
       
       if (internalResult.error) {
-        console.warn('⚠️ Internal schedule loading failed:', internalResult.error);
-      }
+        }
       
       let hybridData = internalResult.data || {};
       
@@ -300,8 +269,7 @@ class HybridSchedulingService {
         try {
           await this.syncWithCalcom(weekStartDate, company);
         } catch (syncError) {
-          console.warn('⚠️ Cal.com sync failed:', syncError);
-        }
+          }
       }
       
       return {
@@ -314,7 +282,6 @@ class HybridSchedulingService {
         }
       };
     } catch (error) {
-      console.error('💥 Hybrid schedule loading failed:', error);
       return { data: {}, error: error.message };
     }
   }
@@ -328,19 +295,15 @@ class HybridSchedulingService {
    */
   async syncWithCalcom(weekStartDate, company = 'login') {
     if (this.syncInProgress) {
-      console.log('⏳ Sync already in progress, skipping...');
       return;
     }
     
     try {
       this.syncInProgress = true;
-      console.log('🔄 Syncing with Cal.com for week:', weekStartDate);
-      
       // Get Cal.com bookings for this week
       const calcomSchedules = await calcomService.getWeekSchedules(weekStartDate, company);
       
       if (calcomSchedules.error) {
-        console.warn('⚠️ Could not fetch Cal.com schedules:', calcomSchedules.error);
         return;
       }
       
@@ -352,12 +315,9 @@ class HybridSchedulingService {
       );
       
       this.lastSyncTime = new Date().toISOString();
-      console.log('✅ Cal.com sync completed:', syncResults);
-      
       return syncResults;
     } catch (error) {
-      console.error('💥 Cal.com sync failed:', error);
-    } finally {
+      } finally {
       this.syncInProgress = false;
     }
   }
@@ -403,14 +363,9 @@ class HybridSchedulingService {
           // Handle conflicts (Cal.com vs internal differences)
           if (this.hasScheduleConflict(internalSchedule, calcomSchedule)) {
             reconcileResults.conflicts++;
-            console.warn('⚠️ Schedule conflict detected:', {
-              internal: internalSchedule,
-              calcom: calcomSchedule
-            });
-          }
+            }
         }
       } catch (error) {
-        console.error('💥 Reconciliation error for schedule:', scheduleKey, error);
         reconcileResults.errors++;
       }
     }
@@ -523,7 +478,6 @@ class HybridSchedulingService {
     try {
       return await calcomService.getEventTypeId(courseId);
     } catch (error) {
-      console.warn('Could not get event type ID for course:', courseId);
       return null;
     }
   }
@@ -543,11 +497,9 @@ class HybridSchedulingService {
         .eq('id', internalId);
       
       if (error) {
-        console.warn('Could not update internal record with external ID:', error);
-      }
+        }
     } catch (error) {
-      console.error('Error updating internal record:', error);
-    }
+      }
   }
 
   /**
@@ -563,7 +515,6 @@ class HybridSchedulingService {
       
       return data?.external_id || null;
     } catch (error) {
-      console.error('Error getting external ID:', error);
       return null;
     }
   }
@@ -577,7 +528,6 @@ class HybridSchedulingService {
       const scheduleKey = `${dayIndex}-${timeIndex}`;
       return schedules.data?.[scheduleKey] || null;
     } catch (error) {
-      console.error('Error getting internal schedule:', error);
       return null;
     }
   }

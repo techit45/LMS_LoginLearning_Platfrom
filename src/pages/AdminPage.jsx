@@ -78,7 +78,6 @@ const AdminPage = () => {
         // Load dashboard statistics
         const { data: stats, error: statsError } = await getDashboardStats();
         if (statsError) {
-          console.error('Error loading dashboard stats:', statsError);
           toast({
             title: "เกิดข้อผิดพลาด",
             description: "ไม่สามารถโหลดข้อมูลแดชบอร์ดได้",
@@ -107,7 +106,6 @@ const AdminPage = () => {
         }
 
       } catch (error) {
-        console.error('Error loading dashboard:', error);
         toast({
           title: "เกิดข้อผิดพลาด",
           description: "ไม่สามารถโหลดข้อมูลแดชบอร์ดได้",
@@ -158,8 +156,7 @@ const AdminPage = () => {
       }));
 
     } catch (error) {
-      console.error('Error loading real chart data:', error);
-    }
+      }
   };
 
   // Generate chart data for analytics

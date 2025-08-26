@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Clock, 
   Users, 
+  User,
   Calendar, 
   Settings,
   CheckCircle,
@@ -22,9 +23,7 @@ import {
   FileText,
   MapPin,
   Edit2,
-  Trash2,
-  DollarSign,
-  Calculator
+  Trash2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCompany } from '../contexts/CompanyContext';
@@ -33,18 +32,18 @@ import SimpleModal from './SimpleModal';
 import TestModal from './TestModal';
 import * as timeTrackingService from '../lib/timeTrackingService';
 import TimesheetView from './TimesheetView';
-import TimeClockWidget from './TimeClockWidget';
 import AttendanceCalendar from './AttendanceCalendar';
 import WorkSummaryReport from './WorkSummaryReport';
-import PayrollReport from './PayrollReport';
-import PayrollSettings from './PayrollSettings';
+import TeachingHoursSummary from './TeachingHoursSummary';
+import TimeEntryManagementTool from './TimeEntryManagementTool';
+import WorkTimeReport from './PayrollReport';
 
 const AdminTimeManagement = () => {
   const { user } = useAuth();
   const { currentCompany } = useCompany();
   
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview'); // overview, timesheets, leaves, approved, reports, payroll, settings
+  const [activeTab, setActiveTab] = useState('overview'); // overview, timesheets, leaves, approved, reports, settings, management
   const [teamAttendance, setTeamAttendance] = useState([]);
   const [pendingTimeEntries, setPendingTimeEntries] = useState([]);
   const [pendingLeaveRequests, setPendingLeaveRequests] = useState([]);
@@ -81,10 +80,8 @@ const AdminTimeManagement = () => {
   
   // Debug state changes
   useEffect(() => {
-    console.log('🔄 selectedEntryForDetail changed:', selectedEntryForDetail);
     if (selectedEntryForDetail) {
-      console.log('🚨 MODAL SHOULD BE VISIBLE NOW!');
-    }
+      }
   }, [selectedEntryForDetail]);
   const [selectedLeaveRequest, setSelectedLeaveRequest] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null); // { type: 'time_entry' | 'leave_request', item: data }
@@ -102,18 +99,10 @@ const AdminTimeManagement = () => {
   useEffect(() => {
     if (activeTab === 'overview') {
       loadTeamAttendance();
-    } else if (activeTab === 'timesheets') {
-      loadPendingTimeEntries();
     } else if (activeTab === 'leaves') {
       loadPendingLeaveRequests();
-    } else if (activeTab === 'approved') {
-      loadApprovedData();
     } else if (activeTab === 'reports') {
       // Reports tab loads its own data
-    } else if (activeTab === 'payroll') {
-      // Payroll tab loads its own data
-    } else if (activeTab === 'payroll-settings') {
-      // Payroll settings tab loads its own data
     } else if (activeTab === 'settings') {
       loadTimePolicy();
     }
@@ -149,9 +138,7 @@ const AdminTimeManagement = () => {
       );
       
       if (error) {
-        console.error('Error loading team attendance:', error);
-      } else {
-        console.log('Loaded team time entries:', data);
+        } else {
         // Transform time entries to look like team attendance
         // Group by user_id and get the latest entry for each user
         const userEntriesMap = new Map();
@@ -180,27 +167,22 @@ const AdminTimeManagement = () => {
         setTeamAttendance(attendanceData);
       }
     } catch (err) {
-      console.error('Error loading team attendance:', err);
-    }
+      }
   };
 
   const loadPendingTimeEntries = async () => {
     try {
-      console.log('Loading pending time entries for company:', currentCompany?.id || 'login');
       const { data, error } = await timeTrackingService.getTimeEntriesForReview(
         currentCompany?.id || 'login',
         'pending'
       );
       
       if (error) {
-        console.error('Error loading pending time entries:', error);
-      } else {
-        console.log('Loaded time entries:', data);
+        } else {
         setPendingTimeEntries(data || []);
       }
     } catch (err) {
-      console.error('Error loading pending time entries:', err);
-    }
+      }
   };
 
   const loadPendingLeaveRequests = async () => {
@@ -211,45 +193,11 @@ const AdminTimeManagement = () => {
       );
       
       if (error) {
-        console.error('Error loading pending leave requests:', error);
-      } else {
+        } else {
         setPendingLeaveRequests(data || []);
       }
     } catch (err) {
-      console.error('Error loading pending leave requests:', err);
-    }
-  };
-
-  const loadApprovedData = async () => {
-    try {
-      // Load approved time entries
-      const { data: timeData, error: timeError } = await timeTrackingService.getApprovedTimeEntries(
-        currentCompany?.id || 'login',
-        dateRange.start,
-        dateRange.end
-      );
-      
-      if (timeError) {
-        console.error('Error loading approved time entries:', timeError);
-      } else {
-        setApprovedTimeEntries(timeData || []);
       }
-      
-      // Load approved leave requests
-      const { data: leaveData, error: leaveError } = await timeTrackingService.getApprovedLeaveRequests(
-        currentCompany?.id || 'login',
-        dateRange.start,
-        dateRange.end
-      );
-      
-      if (leaveError) {
-        console.error('Error loading approved leave requests:', leaveError);
-      } else {
-        setApprovedLeaveRequests(leaveData || []);
-      }
-    } catch (err) {
-      console.error('Error loading approved data:', err);
-    }
   };
 
   const loadTimePolicy = async () => {
@@ -267,8 +215,7 @@ const AdminTimeManagement = () => {
       
       setTimePolicy(mockTimePolicy);
     } catch (err) {
-      console.error('Error loading time policy:', err);
-    }
+      }
   };
 
   const calculateStats = () => {
@@ -421,6 +368,7 @@ const AdminTimeManagement = () => {
         setError(`เกิดข้อผิดพลาดในการอนุมัติหลายรายการ: ${error}`);
       } else {
         await loadPendingLeaveRequests();
+        await loadApprovedData(); // โหลดข้อมูลที่อนุมัติแล้วด้วย
         calculateStats();
         setSelectedLeaveRequestIds([]);
         setShowBulkActions(false);
@@ -432,19 +380,9 @@ const AdminTimeManagement = () => {
   };
 
   const handleApproveTimeEntry = async (entryId) => {
-    try {
-      const { error } = await timeTrackingService.approveTimeEntry(entryId);
-      
-      if (error) {
-        setError(error);
-      } else {
-        // Reload data
-        loadPendingTimeEntries();
-        calculateStats();
-      }
-    } catch (err) {
-      setError(`เกิดข้อผิดพลาด: ${err.message}`);
-    }
+    // Approval system disabled - auto-reload data
+    loadPendingTimeEntries();
+    calculateStats();
   };
 
   const handleReviewLeaveRequest = async (requestId, action, comments = null) => {
@@ -464,19 +402,9 @@ const AdminTimeManagement = () => {
   };
 
   const handleRejectTimeEntry = async (entryId) => {
-    try {
-      const { error } = await timeTrackingService.rejectTimeEntry(entryId);
-      
-      if (error) {
-        setError(error);
-      } else {
-        // Reload data
-        loadPendingTimeEntries();
-        calculateStats();
-      }
-    } catch (err) {
-      setError(`เกิดข้อผิดพลาด: ${err.message}`);
-    }
+    // Approval system disabled - auto-reload data
+    loadPendingTimeEntries();
+    calculateStats();
   };
 
   const handleApproveLeaveRequest = async (requestId) => {
@@ -487,7 +415,8 @@ const AdminTimeManagement = () => {
         setError(error);
       } else {
         // Reload data
-        loadPendingLeaveRequests();
+        await loadPendingLeaveRequests();
+        await loadApprovedData(); // โหลดข้อมูลที่อนุมัติแล้วด้วย
         calculateStats();
       }
     } catch (err) {
@@ -503,7 +432,8 @@ const AdminTimeManagement = () => {
         setError(error);
       } else {
         // Reload data
-        loadPendingLeaveRequests();
+        await loadPendingLeaveRequests();
+        await loadApprovedData(); // โหลดข้อมูลที่อนุมัติ/ปฏิเสธแล้วด้วย
         calculateStats();
       }
     } catch (err) {
@@ -556,8 +486,7 @@ const AdminTimeManagement = () => {
 
   const exportData = (type) => {
     // Implementation for exporting data
-    console.log(`Exporting ${type} data...`);
-  };
+    };
 
   const renderOverviewTab = () => (
     <div className="space-y-6">
@@ -694,179 +623,59 @@ const AdminTimeManagement = () => {
     </div>
   );
 
-  const renderTimesheetsTab = () => (
+  const renderLeavesTab = () => (
     <div className="space-y-6">
-      {/* Pending Approvals */}
-      <div className="bg-white rounded-lg shadow border">
-        <div className="p-6 border-b border-gray-200">
+      {/* Leave Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">
-              รายการรอการอนุมัติ ({pendingTimeEntries.length})
-            </h3>
-            <button
-              onClick={() => exportData('timesheets')}
-              className="flex items-center space-x-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
-            >
-              <Download className="w-4 h-4" />
-              <span>ส่งออก</span>
-            </button>
+            <div>
+              <p className="text-sm text-yellow-600">รออนุมัติ</p>
+              <p className="text-2xl font-bold text-yellow-900">{pendingLeaveRequests.length}</p>
+            </div>
+            <AlertCircle className="w-8 h-8 text-yellow-500" />
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          {pendingTimeEntries.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <Clock className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p>ไม่มีรายการรอการอนุมัติ</p>
+        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-green-600">อนุมัติแล้ว</p>
+              <p className="text-2xl font-bold text-green-900">{approvedLeaveRequests.length}</p>
             </div>
-          ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    <input
-                      type="checkbox"
-                      checked={selectedTimeEntryIds.length === pendingTimeEntries.length && pendingTimeEntries.length > 0}
-                      onChange={(e) => handleSelectAllTimeEntries(e.target.checked)}
-                      className="rounded border-gray-300"
-                    />
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    พนักงาน
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    วันที่
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    เวลา
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    ชั่วโมง
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    ประเภท
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    การดำเนินการ
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {pendingTimeEntries.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={selectedTimeEntryIds.includes(entry.id)}
-                        onChange={(e) => handleSelectTimeEntry(entry.id, e.target.checked)}
-                        className="rounded border-gray-300"
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {entry.user?.full_name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {entry.user?.email}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(entry.entry_date).toLocaleDateString('th-TH')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatTime(entry.check_in_time)} - {formatTime(entry.check_out_time)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {parseFloat(entry.total_hours || 0).toFixed(1)} ชม.
-                      </div>
-                      {entry.overtime_hours > 0 && (
-                        <div className="text-xs text-orange-600">
-                          + {parseFloat(entry.overtime_hours).toFixed(1)} ล่วงเวลา
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-1">
-                        {entry.entry_type === 'teaching' && <BookOpen className="w-4 h-4 text-blue-500" />}
-                        {entry.entry_type === 'meeting' && <Users className="w-4 h-4 text-purple-500" />}
-                        {entry.entry_type === 'prep' && <Coffee className="w-4 h-4 text-orange-500" />}
-                        {entry.entry_type === 'admin' && <Settings className="w-4 h-4 text-gray-500" />}
-                        <span className="text-sm text-gray-600">
-                          {entry.entry_type === 'teaching' ? 'สอน' :
-                           entry.entry_type === 'meeting' ? 'ประชุม' :
-                           entry.entry_type === 'prep' ? 'เตรียมการสอน' :
-                           entry.entry_type === 'admin' ? 'งานธุรการ' :
-                           'งานทั่วไป'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-1">
-                        <input
-                          type="checkbox"
-                          checked={selectedTimeEntryIds.includes(entry.id)}
-                          onChange={(e) => handleSelectTimeEntry(entry.id, e.target.checked)}
-                          className="rounded border-gray-300 mr-2"
-                        />
-                        <button
-                          onClick={() => handleApproveTimeEntry(entry.id)}
-                          className="text-green-600 hover:text-green-800"
-                          title="อนุมัติ"
-                          disabled={actionLoading}
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleRejectTimeEntry(entry.id)}
-                          className="text-red-600 hover:text-red-800"
-                          title="ปฏิเสธ"
-                          disabled={actionLoading}
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleEditTimeEntry(entry)}
-                          className="text-blue-600 hover:text-blue-800"
-                          title="แก้ไข"
-                          disabled={actionLoading}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTimeEntry(entry)}
-                          className="text-red-700 hover:text-red-900"
-                          title="ลบ"
-                          disabled={actionLoading}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            console.log('Eye button clicked for entry:', entry);
-                            console.log('Setting selectedEntryForDetail to:', entry);
-                            setSelectedEntryForDetail(entry);
-                            console.log('After setState - selectedEntryForDetail should be:', entry);
-                          }}
-                          className="text-indigo-600 hover:text-indigo-800"
-                          title="ดูรายละเอียด"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+            <CheckCircle className="w-8 h-8 text-green-500" />
+          </div>
+        </div>
+
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-blue-600">วันลาที่ใช้เดือนนี้</p>
+              <p className="text-2xl font-bold text-blue-900">
+                {approvedLeaveRequests
+                  .filter(req => new Date(req.start_date).getMonth() === new Date().getMonth())
+                  .reduce((sum, req) => sum + (req.total_days || 0), 0)}
+              </p>
+            </div>
+            <Calendar className="w-8 h-8 text-blue-500" />
+          </div>
+        </div>
+
+        <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-purple-600">ลาที่จะมาถึง</p>
+              <p className="text-2xl font-bold text-purple-900">
+                {approvedLeaveRequests
+                  .filter(req => new Date(req.start_date) > new Date())
+                  .length}
+              </p>
+            </div>
+            <TrendingUp className="w-8 h-8 text-purple-500" />
+          </div>
         </div>
       </div>
-    </div>
-  );
 
-  const renderLeavesTab = () => (
-    <div className="space-y-6">
       {/* Pending Leave Requests */}
       <div className="bg-white rounded-lg shadow border">
         <div className="p-6 border-b border-gray-200">
@@ -1003,11 +812,8 @@ const AdminTimeManagement = () => {
                         </button>
                         <button
                           onClick={() => {
-                            console.log('Eye button clicked for request:', request);
-                            console.log('Setting selectedEntryForDetail to:', request);
                             setSelectedEntryForDetail(request);
-                            console.log('After setState - selectedEntryForDetail should be:', request);
-                          }}
+                            }}
                           className="text-indigo-600 hover:text-indigo-800"
                           title="ดูรายละเอียด"
                         >
@@ -1019,6 +825,178 @@ const AdminTimeManagement = () => {
                 ))}
               </tbody>
             </table>
+          )}
+        </div>
+      </div>
+
+      {/* Leave History Section */}
+      <div className="bg-white rounded-lg shadow border">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">
+              ประวัติการลา ({approvedLeaveRequests.length + pendingLeaveRequests.filter(req => req.status === 'rejected').length})
+            </h3>
+            <div className="flex items-center space-x-3">
+              <select 
+                value={filters.status}
+                onChange={(e) => setFilters({...filters, status: e.target.value})}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">ทุกสถานะ</option>
+                <option value="approved">อนุมัติแล้ว</option>
+                <option value="rejected">ปฏิเสธ</option>
+                <option value="pending">รออนุมัติ</option>
+              </select>
+              <input
+                type="text"
+                placeholder="ค้นหาพนักงาน..."
+                value={filters.searchTerm}
+                onChange={(e) => setFilters({...filters, searchTerm: e.target.value})}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm w-48"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  พนักงาน
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  ประเภท
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  วันที่ลา
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  วัน
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  สถานะ
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  ผู้อนุมัติ
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  วันที่อนุมัติ
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  การดำเนินการ
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {[...approvedLeaveRequests, ...pendingLeaveRequests.filter(req => req.status === 'rejected')]
+                .filter(req => {
+                  const matchesStatus = filters.status === 'all' || req.status === filters.status;
+                  const matchesSearch = !filters.searchTerm || 
+                    req.user?.full_name?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                    req.user?.email?.toLowerCase().includes(filters.searchTerm.toLowerCase());
+                  return matchesStatus && matchesSearch;
+                })
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                .map((request) => (
+                <tr key={`history-${request.id}`} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-8 w-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <Users className="w-4 h-4 text-indigo-600" />
+                      </div>
+                      <div className="ml-3">
+                        <div className="text-sm font-medium text-gray-900">
+                          {request.user?.full_name || 'ไม่ระบุ'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {request.user?.email}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      request.leave_type === 'vacation' ? 'bg-blue-100 text-blue-800' :
+                      request.leave_type === 'sick' ? 'bg-red-100 text-red-800' :
+                      request.leave_type === 'personal' ? 'bg-yellow-100 text-yellow-800' :
+                      request.leave_type === 'emergency' ? 'bg-purple-100 text-purple-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {request.leave_type === 'vacation' ? 'ลาพักร้อน' :
+                       request.leave_type === 'sick' ? 'ลาป่วย' :
+                       request.leave_type === 'personal' ? 'ลากิจ' :
+                       request.leave_type === 'emergency' ? 'ลาฉุกเฉิน' :
+                       request.leave_type}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div>
+                      <div className="font-medium">
+                        {new Date(request.start_date).toLocaleDateString('th-TH', {
+                          year: 'numeric',
+                          month: 'short', 
+                          day: 'numeric'
+                        })}
+                      </div>
+                      <div className="text-gray-500">
+                        ถึง {new Date(request.end_date).toLocaleDateString('th-TH', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {request.total_days} วัน
+                    {request.is_half_day && <span className="text-xs text-gray-500 block">(ครึ่งวัน)</span>}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                      request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {request.status === 'approved' ? '✅ อนุมัติแล้ว' :
+                       request.status === 'rejected' ? '❌ ปฏิเสธ' :
+                       '⏳ รออนุมัติ'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {request.reviewer ? request.reviewer.full_name : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {request.reviewed_at ? 
+                      new Date(request.reviewed_at).toLocaleDateString('th-TH', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      }) : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => {
+                        setSelectedEntryForDetail(request);
+                      }}
+                      className="text-indigo-600 hover:text-indigo-800"
+                      title="ดูรายละเอียด"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          
+          {/* Empty State for History */}
+          {[...approvedLeaveRequests, ...pendingLeaveRequests.filter(req => req.status === 'rejected')].length === 0 && (
+            <div className="p-8 text-center text-gray-500">
+              <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-lg font-medium text-gray-900 mb-1">ยังไม่มีประวัติการลา</p>
+              <p className="text-sm text-gray-500">ประวัติคำขอลาที่อนุมัติหรือปฏิเสธจะแสดงที่นี่</p>
+            </div>
           )}
         </div>
       </div>
@@ -1142,270 +1120,25 @@ const AdminTimeManagement = () => {
       )}
     </div>
   );
-
-  // Render approved data tab
-  const renderApprovedTab = () => (
-    <div className="space-y-6">
-      {/* Approved Time Entries */}
-      <div className="bg-white rounded-lg shadow border">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">
-              ข้อมูลลงเวลาที่อนุมัติแล้ว ({approvedTimeEntries.length})
-            </h3>
-            <div className="flex items-center space-x-2">
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                className="px-3 py-1 border border-gray-300 rounded text-sm"
-              />
-              <span className="text-gray-500">ถึง</span>
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                className="px-3 py-1 border border-gray-300 rounded text-sm"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          {approvedTimeEntries.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p>ไม่มีข้อมูลลงเวลาที่อนุมัติ</p>
-            </div>
-          ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    พนักงาน
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    วันที่
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    เวลา
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    ชั่วโมง
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    อนุมัติโดย
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    การดำเนินการ
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {approvedTimeEntries.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {entry.user?.full_name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {entry.user?.email}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(entry.entry_date).toLocaleDateString('th-TH')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatTime(entry.check_in_time)} - {formatTime(entry.check_out_time)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {parseFloat(entry.total_hours || 0).toFixed(1)} ชม.
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {entry.user?.full_name}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(entry.approved_at).toLocaleDateString('th-TH')}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleDeleteTimeEntry(entry)}
-                          className="text-red-600 hover:text-red-800"
-                          title="ลบ"
-                          disabled={actionLoading}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            console.log('Eye button clicked for entry:', entry);
-                            console.log('Setting selectedEntryForDetail to:', entry);
-                            setSelectedEntryForDetail(entry);
-                            console.log('After setState - selectedEntryForDetail should be:', entry);
-                          }}
-                          className="text-indigo-600 hover:text-indigo-800"
-                          title="ดูรายละเอียด"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      {/* Approved Leave Requests */}
-      <div className="bg-white rounded-lg shadow border">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">
-            คำขอลาที่อนุมัติแล้ว ({approvedLeaveRequests.length})
-          </h3>
-        </div>
-
-        <div className="overflow-x-auto">
-          {approvedLeaveRequests.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p>ไม่มีคำขอลาที่อนุมัติ</p>
-            </div>
-          ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    พนักงาน
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    ประเภทการลา
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    วันที่
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    จำนวนวัน
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    อนุมัติโดย
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    การดำเนินการ
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {approvedLeaveRequests.map((request) => (
-                  <tr key={request.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {request.user?.full_name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {request.user?.department}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {request.leave_type === 'vacation' ? 'ลาพักร้อน' :
-                       request.leave_type === 'sick' ? 'ลาป่วย' :
-                       request.leave_type === 'personal' ? 'ลากิจ' :
-                       request.leave_type === 'emergency' ? 'ลาฉุกเฉิน' :
-                       request.leave_type}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(request.start_date).toLocaleDateString('th-TH')} - 
-                      {new Date(request.end_date).toLocaleDateString('th-TH')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {request.total_days} วัน
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {request.user?.full_name}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(request.approved_at).toLocaleDateString('th-TH')}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleDeleteLeaveRequest(request)}
-                          className="text-red-600 hover:text-red-800"
-                          title="ลบ"
-                          disabled={actionLoading}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            console.log('Eye button clicked for request:', request);
-                            console.log('Setting selectedEntryForDetail to:', request);
-                            setSelectedEntryForDetail(request);
-                            console.log('After setState - selectedEntryForDetail should be:', request);
-                          }}
-                          className="text-indigo-600 hover:text-indigo-800"
-                          title="ดูรายละเอียด"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
   const renderReportsTab = () => (
     <div className="space-y-6">
       <WorkSummaryReport showExport={true} />
+      <WorkTimeReport />
     </div>
   );
 
-  const renderPayrollTab = () => (
-    <div className="space-y-6">
-      <PayrollReport showDetails={true} />
-    </div>
-  );
-
-  const renderPayrollSettingsTab = () => (
-    <div className="space-y-6">
-      <PayrollSettings />
-    </div>
-  );
 
   const tabs = [
     { id: 'overview', name: 'ภาพรวม', icon: BarChart3 },
-    { id: 'timesheets', name: 'ใบลงเวลา', icon: Clock },
+    { id: 'teaching-summary', name: 'สรุปชั่วโมงสอน', icon: BookOpen },
     { id: 'leaves', name: 'การลา', icon: Calendar },
-    { id: 'approved', name: 'อนุมัติแล้ว', icon: CheckCircle },
     { id: 'reports', name: 'รายงานสรุป', icon: FileText },
-    { id: 'payroll', name: 'เงินเดือน/ภาษี', icon: DollarSign },
-    { id: 'payroll-settings', name: 'ตั้งค่าเงินเดือน', icon: Calculator },
+    { id: 'management', name: 'จัดการข้อมูล', icon: Edit3 },
     { id: 'settings', name: 'ตั้งค่า', icon: Settings }
   ];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">จัดการระบบเวลาการทำงาน</h1>
-          <p className="text-gray-600">ระบบจัดการเวลาการทำงานสำหรับสถาบันการศึกษา</p>
-        </div>
-      </div>
 
       {/* Error Message */}
       {error && (
@@ -1449,12 +1182,10 @@ const AdminTimeManagement = () => {
       ) : (
         <>
           {activeTab === 'overview' && renderOverviewTab()}
-          {activeTab === 'timesheets' && renderTimesheetsTab()}
+          {activeTab === 'teaching-summary' && <TeachingHoursSummary />}
           {activeTab === 'leaves' && renderLeavesTab()}
-          {activeTab === 'approved' && renderApprovedTab()}
           {activeTab === 'reports' && renderReportsTab()}
-          {activeTab === 'payroll' && renderPayrollTab()}
-          {activeTab === 'payroll-settings' && renderPayrollSettingsTab()}
+          {activeTab === 'management' && <TimeEntryManagementTool />}
           {activeTab === 'settings' && renderSettingsTab()}
         </>
       )}
@@ -1596,7 +1327,6 @@ const AdminTimeManagement = () => {
         entry={selectedEntryForDetail}
         isOpen={!!selectedEntryForDetail}
         onClose={() => {
-          console.log('Closing time entry detail modal');
           setSelectedEntryForDetail(null);
         }}
       />
@@ -1612,7 +1342,7 @@ const EditTimeEntryModal = ({ entry, onClose, onSave }) => {
     entry_date: entry.entry_date || '',
     entry_type: entry.entry_type || 'teaching',
     break_duration_minutes: entry.break_duration_minutes || 0,
-    work_description: entry.work_description || '',
+    employee_notes: entry.employee_notes || '',
     manager_notes: entry.manager_notes || ''
   });
 
@@ -1710,13 +1440,13 @@ const EditTimeEntryModal = ({ entry, onClose, onSave }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">รายละเอียดงาน</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">หมายเหตุพนักงาน</label>
             <textarea
-              value={formData.work_description}
-              onChange={(e) => setFormData({ ...formData, work_description: e.target.value })}
+              value={formData.employee_notes}
+              onChange={(e) => setFormData({ ...formData, employee_notes: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
               rows="3"
-              placeholder="อธิบายลักษณะงานที่ทำ..."
+              placeholder="หมายเหตุหรือรายละเอียดเพิ่มเติม..."
             />
           </div>
 

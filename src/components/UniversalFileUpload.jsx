@@ -17,13 +17,15 @@ import {
 import { Button } from '../components/ui/button';
 import { useToast } from "../hooks/use-toast.jsx"
 import { uploadAttachmentFile } from '../lib/attachmentService';
+import { supabase } from '../lib/supabaseClient';
+import { getCourseFolderForUpload } from '../lib/courseFolderService';
 
 const UniversalFileUpload = ({ 
   contentId, 
   existingFiles = [], 
   onFilesChange, 
   maxFiles = 10,
-  maxFileSize = 50 * 1024 * 1024, // 50MB default
+  maxFileSize = 500 * 1024 * 1024, // 500MB default (with chunked upload support)
   allowedTypes = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'mp3', 'zip', 'rar', 'txt'],
   uploadMode = 'admin', // 'admin' or 'student'
   className = ''
@@ -227,8 +229,160 @@ const UniversalFileUpload = ({
     onFilesChange?.(updatedFiles);
   };
 
-  // Real upload function
+  // Chunked upload function for large files
+  const uploadLargeFile = async (fileData, uploadOrder = 1) => {
+    const CHUNK_SIZE = 256 * 1024; // 256KB chunks
+    const LARGE_FILE_THRESHOLD = 100 * 1024 * 1024; // 100MB
+
+    // Update file status to uploading
+    setFiles(prev => prev.map(f => 
+      f.id === fileData.id 
+        ? { ...f, isUploading: true, progress: 0 }
+        : f
+    ));
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
+      // Get the correct course folder ID
+      const { data: contentData } = await supabase
+        .from('course_content')
+        .select('course_id')
+        .eq('id', contentId)
+        .single();
+
+      if (!contentData?.course_id) {
+        throw new Error('Course information not found');
+      }
+
+      const targetFolderId = await getCourseFolderForUpload(contentData.course_id);
+      if (!targetFolderId) {
+        throw new Error('Unable to get course folder for upload');
+      }
+
+      // Step 1: Initiate chunked upload
+      const initResponse = await fetch('https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive/initiate-chunked-upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          fileName: fileData.name,
+          fileSize: fileData.file.size,
+          folderId: targetFolderId,
+          mimeType: fileData.mimeType
+        })
+      });
+
+      if (!initResponse.ok) {
+        throw new Error('Failed to initialize chunked upload');
+      }
+
+      const { uploadUrl, chunkSize } = await initResponse.json();
+      
+      // Step 2: Upload chunks
+      const totalChunks = Math.ceil(fileData.file.size / CHUNK_SIZE);
+      let uploadedBytes = 0;
+
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        const start = chunkIndex * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, fileData.file.size);
+        const chunk = fileData.file.slice(start, end);
+
+        const chunkResponse = await fetch(`https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive/upload-chunk?uploadUrl=${encodeURIComponent(uploadUrl)}&start=${start}&end=${end}&totalSize=${fileData.file.size}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: chunk
+        });
+
+        if (!chunkResponse.ok) {
+          throw new Error(`Failed to upload chunk ${chunkIndex + 1}`);
+        }
+
+        const chunkResult = await chunkResponse.json();
+        uploadedBytes = end;
+
+        // Update progress
+        const progress = Math.round((uploadedBytes / fileData.file.size) * 100);
+        setFiles(prev => prev.map(f => 
+          f.id === fileData.id 
+            ? { ...f, progress }
+            : f
+        ));
+
+        // Check if upload is complete
+        if (chunkResult.completed) {
+          // Upload complete - save to Supabase
+          const { data, error } = await uploadAttachmentFile(fileData.file, contentId, uploadOrder, {
+            googleDriveFileId: chunkResult.fileId,
+            googleDriveUrl: chunkResult.webViewLink
+          });
+          
+          if (error) throw error;
+
+          // Mark as uploaded
+          setFiles(prev => prev.map(f => 
+            f.id === fileData.id 
+              ? { 
+                  ...f, 
+                  isUploading: false, 
+                  isUploaded: true, 
+                  progress: 100,
+                  url: data.url,
+                  path: data.file_path,
+                  attachmentId: data.id
+                }
+              : f
+          ));
+
+          return { success: true, data };
+        }
+      }
+
+      // If we reach here, all chunks were uploaded but no completion signal
+      throw new Error('ไฟล์ถูกอัปโหลดครบแล้วแต่ไม่ได้รับสัญญาณยืนยันจาก Google Drive');
+
+    } catch (error) {
+      const errorMessage = error?.message || 'ไม่สามารถอัปโหลดไฟล์ขนาดใหญ่ได้';
+      
+      // Mark as failed
+      setFiles(prev => prev.map(f => 
+        f.id === fileData.id 
+          ? { 
+              ...f, 
+              isUploading: false, 
+              isUploaded: false, 
+              progress: 0,
+              error: errorMessage
+            }
+          : f
+      ));
+
+      toast({
+        title: "ไม่สามารถอัปโหลดไฟล์ขนาดใหญ่ได้",
+        description: errorMessage,
+        variant: "destructive"
+      });
+
+      throw error;
+    }
+  };
+
+  // Standard upload function for smaller files
   const uploadFile = async (fileData, uploadOrder = 1) => {
+    const LARGE_FILE_THRESHOLD = 100 * 1024 * 1024; // 100MB
+
+    // Use chunked upload for large files
+    if (fileData.file.size > LARGE_FILE_THRESHOLD) {
+      return uploadLargeFile(fileData, uploadOrder);
+    }
+
     // Update file status to uploading
     setFiles(prev => prev.map(f => 
       f.id === fileData.id 
@@ -272,8 +426,6 @@ const UniversalFileUpload = ({
 
       return { success: true, data };
     } catch (error) {
-      console.error('Upload error details:', error);
-      
       const errorMessage = error?.error?.message || error?.message || 'ไม่สามารถอัปโหลดไฟล์ได้';
       
       // Mark as failed
@@ -420,6 +572,9 @@ const UniversalFileUpload = ({
             ขนาดสูงสุด: {formatFileSize(maxFileSize)} | 
             จำนวนสูงสุด: {maxFiles} ไฟล์
           </p>
+          <p className="text-xs text-blue-400 mt-1">
+            ✨ รองรับไฟล์ขนาดใหญ่ด้วยระบบ Chunked Upload
+          </p>
         </div>
       </div>
 
@@ -479,6 +634,9 @@ const UniversalFileUpload = ({
                     </div>
                     <p className="text-xs text-slate-400">
                       {formatFileSize(file.size)}
+                      {file.file?.size > 100 * 1024 * 1024 && (
+                        <span className="ml-2 text-blue-400">📦 Chunked</span>
+                      )}
                     </p>
                     
                     {/* Progress Bar */}

@@ -1,68 +1,43 @@
-// Environment Variables Validation
+import environmentConfig from '../lib/environmentConfig.js';
+
+// Environment Variables Validation (now uses secure config)
 export const validateEnvVariables = () => {
-  const requiredVars = {
-    VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
-    VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
-  };
-
-  const missing = [];
-  const invalid = [];
-
-  Object.entries(requiredVars).forEach(([key, value]) => {
-    if (!value) {
-      missing.push(key);
-    } else {
-      // Validate format
-      if (key === 'VITE_SUPABASE_URL') {
-        try {
-          new URL(value);
-          if (!value.includes('supabase.co')) {
-            invalid.push(`${key}: ไม่ใช่ Supabase URL ที่ถูกต้อง`);
-          }
-        } catch {
-          invalid.push(`${key}: รูปแบบ URL ไม่ถูกต้อง`);
-        }
-      }
-      
-      if (key === 'VITE_SUPABASE_ANON_KEY') {
-        if (!value.startsWith('eyJ')) {
-          invalid.push(`${key}: ไม่ใช่ JWT token ที่ถูกต้อง`);
-        }
-      }
-    }
-  });
-
-  if (missing.length > 0 || invalid.length > 0) {
-    const errors = [];
+  try {
+    // The environmentConfig constructor already validates required variables
+    // and throws detailed error messages, so we just need to ensure it initialized
+    const supabaseConfig = environmentConfig.getSupabaseConfig();
     
-    if (missing.length > 0) {
-      errors.push(`Environment variables ที่ขาดหายไป: ${missing.join(', ')}`);
+    if (!supabaseConfig.url || !supabaseConfig.anonKey) {
+      throw new Error('Supabase configuration is incomplete');
     }
     
-    if (invalid.length > 0) {
-      errors.push(`Environment variables ที่ไม่ถูกต้อง: ${invalid.join(', ')}`);
-    }
-    
-    throw new Error(`Environment Configuration Error:\n${errors.join('\n')}`);
+    return true;
+  } catch (error) {
+    // Re-throw with localized message
+    throw new Error(`Environment Configuration Error: ${error.message}`);
   }
-
-  return true;
 };
 
 // Security check for production
 export const validateProductionSecurity = () => {
-  if (import.meta.env.PROD) {
+  if (environmentConfig.isProduction()) {
     const warnings = [];
+    const supabaseConfig = environmentConfig.getSupabaseConfig();
     
     // Check if using localhost URLs in production
-    if (import.meta.env.VITE_SUPABASE_URL?.includes('localhost')) {
+    if (supabaseConfig.url?.includes('localhost')) {
       warnings.push('❌ กำลังใช้ localhost URL ใน production');
     }
     
     // Check for dev keys
-    if (import.meta.env.VITE_SUPABASE_ANON_KEY?.includes('dev') || 
-        import.meta.env.VITE_SUPABASE_ANON_KEY?.includes('test')) {
+    if (supabaseConfig.anonKey?.includes('dev') || 
+        supabaseConfig.anonKey?.includes('test')) {
       warnings.push('❌ อาจกำลังใช้ development keys ใน production');
+    }
+    
+    // Check for secure HTTPS
+    if (!supabaseConfig.url?.startsWith('https://')) {
+      warnings.push('❌ Supabase URL ไม่ใช้ HTTPS');
     }
     
     if (warnings.length > 0) {
@@ -77,22 +52,26 @@ export const initializeApp = () => {
   try {
     validateEnvVariables();
     validateProductionSecurity();
-    console.log('✅ Environment validation passed');
+    
+    if (environmentConfig.isDevelopment()) {
+      console.log('✅ Environment validation passed');
+    }
+    
     return true;
   } catch (error) {
     console.error('❌ Environment validation failed:', error.message);
     
     // In development, show alert
-    if (import.meta.env.DEV) {
+    if (environmentConfig.isDevelopment()) {
       alert(`Configuration Error:\n${error.message}\n\nกรุณาตรวจสอบไฟล์ .env`);
       return false;
     }
     
     // In production, show warning but allow app to continue with fallback
-    // This prevents the error page from showing when env vars aren't set on Netlify yet
-    console.warn('🚨 Production: Using fallback configuration. Please set environment variables in Netlify.');
+    // This prevents the error page from showing when env vars aren't set on deployment platform
+    console.warn('🚨 Production: Environment configuration error detected.');
     console.warn('📋 Required variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
-    console.warn('🔗 Setup guide: Check NETLIFY_ENV_SETUP.md');
+    console.warn('🔗 Setup guide: Check SECURITY.md and .env.example');
     
     // Return true to allow app to load (will show connection errors in UI instead)
     return true;

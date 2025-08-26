@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deployment Status Check</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .status-card { 
+            margin: 20px 0; 
+            padding: 20px; 
+            border-radius: 10px; 
+            border-left: 5px solid #007bff;
+            background: #f8f9fa;
+        }
+        .success { border-left-color: #28a745; background: #d4f6d4; }
+        .warning { border-left-color: #ffc107; background: #fff3cd; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .info { border-left-color: #17a2b8; background: #d1ecf1; }
+        
+        h1 { 
+            text-align: center; 
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 18px;
+        }
+        
+        button { 
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            margin: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        button:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.4);
+        }
+        
+        .deployment-url {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        
+        .checklist {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .checklist li {
+            margin: 8px 0;
+            padding-left: 5px;
+        }
+        
+        .step-number {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 25px;
+            font-weight: bold;
+            margin-right: 10px;
+            font-size: 12px;
+        }
+        
+        .env-code {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Deployment Status</h1>
+        <p class="subtitle">ตรวจสอบสถานะการ deploy และการแก้ไขปัญหา Student Access</p>
+
+        <div id="deployment-info" class="status-card info">
+            <h3><span class="step-number">1</span>Deployment Information</h3>
+            <p><strong>Latest Commit:</strong> 7f19875 - Comprehensive Vercel environment setup guide</p>
+            <p><strong>Status:</strong> 🔄 Deploying to Vercel...</p>
+            <p><strong>Expected URL:</strong></p>
+            <div class="deployment-url">https://login-learning-platform-[hash]-techity-3442s-projects.vercel.app</div>
+        </div>
+
+        <div id="environment-status" class="status-card warning">
+            <h3><span class="step-number">2</span>Environment Variables Status</h3>
+            <p>⚠️ <strong>Action Required:</strong> ต้องตั้งค่า Environment Variables ใน Vercel Dashboard</p>
+            
+            <div class="checklist">
+                <h4>📋 Environment Variables ที่ต้องเพิ่ม:</h4>
+                <div class="env-code">
+VITE_SUPABASE_URL = https://vuitwzisazvikrhtfthh.supabase.co
+VITE_SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE
+                </div>
+            </div>
+        </div>
+
+        <div id="next-steps" class="status-card info">
+            <h3><span class="step-number">3</span>Next Steps</h3>
+            <ol>
+                <li>รอให้ Vercel deployment เสร็จ (ประมาณ 2-3 นาที)</li>
+                <li>เข้า Vercel Dashboard → Project Settings → Environment Variables</li>
+                <li>เพิ่ม VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY</li>
+                <li>Redeploy หรือ push commit ใหม่</li>
+                <li>ทดสอบ Student access บนไซต์ที่ deploy แล้ว</li>
+            </ol>
+        </div>
+
+        <div id="testing-section" class="status-card">
+            <h3><span class="step-number">4</span>Testing Tools</h3>
+            <button onclick="testCurrentDeployment()">🧪 Test Current Deployment</button>
+            <button onclick="openVercelDashboard()">⚙️ Open Vercel Dashboard</button>
+            <button onclick="showDetailedInstructions()">📖 Show Detailed Instructions</button>
+            
+            <div id="test-results"></div>
+        </div>
+
+        <div id="database-status" class="status-card success">
+            <h3><span class="step-number">✅</span>Database Status</h3>
+            <p><strong>✅ Supabase Database:</strong> Working correctly</p>
+            <p><strong>✅ RLS Policies:</strong> Allowing anonymous access</p>
+            <p><strong>✅ Projects Available:</strong> 10 approved projects</p>
+            <p><strong>✅ Courses Available:</strong> 1 active course</p>
+            <p><em>ฐานข้อมูลทำงานปกติ - ปัญหาอยู่ที่ Environment Variables ใน Vercel เท่านั้น</em></p>
+        </div>
+    </div>
+
+    <script>
+        function testCurrentDeployment() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = `
+                <div style="margin-top: 20px; padding: 15px; background: #d1ecf1; border-radius: 8px;">
+                    <h4>🧪 Testing Deployment</h4>
+                    <p>กำลังทดสอบการเชื่อมต่อกับ Supabase...</p>
+                    <div id="connection-test">🔄 Testing...</div>
+                </div>
+            `;
+
+            // Test direct API connection
+            fetch('https://vuitwzisazvikrhtfthh.supabase.co/rest/v1/projects?select=id,title&is_approved=eq.true&limit=1', {
+                headers: {
+                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('connection-test').innerHTML = `
+                    ✅ <strong>Database Connection: SUCCESS</strong><br>
+                    📊 Found ${data.length} projects<br>
+                    🎯 <strong>Next:</strong> ตั้งค่า Environment Variables ใน Vercel
+                `;
+            })
+            .catch(error => {
+                document.getElementById('connection-test').innerHTML = `
+                    ❌ <strong>Connection Error:</strong> ${error.message}
+                `;
+            });
+        }
+
+        function openVercelDashboard() {
+            window.open('https://vercel.com/dashboard', '_blank');
+        }
+
+        function showDetailedInstructions() {
+            alert(`📖 Detailed Instructions:
+
+1. Go to: https://vercel.com/dashboard
+2. Select your Login Learning project
+3. Go to Settings → Environment Variables
+4. Add:
+   - Name: VITE_SUPABASE_URL
+   - Value: https://vuitwzisazvikrhtfthh.supabase.co
+   - Environments: All (Production, Preview, Development)
+
+5. Add:
+   - Name: VITE_SUPABASE_ANON_KEY  
+   - Value: [the long JWT token from the code above]
+   - Environments: All
+
+6. Click "Redeploy" or push a new commit
+
+7. Test the deployed site - students should now be able to access projects!`);
+        }
+
+        // Auto-test on page load
+        setTimeout(() => {
+            console.log('🚀 Deployment status page loaded');
+            console.log('📋 Database confirmed working - need to set Vercel environment variables');
+        }, 1000);
+    </script>
+</body>
+</html>

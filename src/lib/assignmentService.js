@@ -10,8 +10,6 @@ import NotificationIntegrations from './notificationIntegrations';
  */
 export const getAssignmentByContentId = async (contentId) => {
   try {
-    console.log('Using course_id approach for assignment lookup to avoid schema issues');
-    
     // Get the course_id and title from content
     const { data: content, error: contentError } = await supabase
       .from('course_content')
@@ -33,7 +31,6 @@ export const getAssignmentByContentId = async (contentId) => {
       .limit(1);
     
     if (result.error) {
-      console.error('Error fetching assignments by course_id:', result.error);
       return { data: null, error: null };
     }
     
@@ -41,7 +38,6 @@ export const getAssignmentByContentId = async (contentId) => {
     const assignments = result.data || [];
     return { data: assignments.length > 0 ? assignments[0] : null, error: null };
   } catch (error) {
-    console.error('Error fetching assignment:', error);
     return { data: null, error: null }; // Return null error to prevent UI crashes
   }
 };
@@ -68,7 +64,6 @@ export const getUserSubmissions = async (assignmentId) => {
 
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error fetching user submissions:', error);
     return { data: [], error };
   }
 };
@@ -122,16 +117,13 @@ export const createSubmission = async (assignmentId, submissionData) => {
             instructor_id: data.assignments.courses.instructor_id
           }
         );
-        console.log('Assignment submission notification sent');
-      }
+        }
     } catch (notificationError) {
-      console.error('Error sending assignment submission notification:', notificationError);
       // Don't fail the submission if notification fails
     }
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error creating submission:', error);
     return { data: null, error };
   }
 };
@@ -161,7 +153,6 @@ export const updateSubmission = async (submissionId, submissionData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating submission:', error);
     return { data: null, error };
   }
 };
@@ -191,7 +182,6 @@ export const submitFinalSubmission = async (submissionId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error submitting final submission:', error);
     return { data: null, error };
   }
 };
@@ -240,7 +230,6 @@ export const uploadAssignmentFile = async (file, assignmentId) => {
       error: null
     };
   } catch (error) {
-    console.error('Error uploading file:', error);
     return { data: null, error };
   }
 };
@@ -258,7 +247,6 @@ export const deleteAssignmentFile = async (filePath) => {
 
     return { error: null };
   } catch (error) {
-    console.error('Error deleting file:', error);
     return { error };
   }
 };
@@ -313,7 +301,6 @@ export const createAssignment = async (assignmentData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error creating assignment:', error);
     return { data: null, error };
   }
 };
@@ -357,8 +344,6 @@ export const createAssignmentForContent = async (contentId, courseId, assignment
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.log('content_id column not found, using course_id fallback');
-      
       // Fallback: use course_id instead
       delete assignment.content_id;
       assignment.course_id = courseId;
@@ -373,7 +358,6 @@ export const createAssignmentForContent = async (contentId, courseId, assignment
       return { data, error: null };
     }
   } catch (error) {
-    console.error('Error creating assignment for content:', error);
     return { data: null, error };
   }
 };
@@ -394,7 +378,6 @@ export const updateAssignment = async (assignmentId, assignmentData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating assignment:', error);
     return { data: null, error };
   }
 };
@@ -417,7 +400,6 @@ export const getAllSubmissions = async (assignmentId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching all submissions:', error);
     return { data: null, error };
   }
 };
@@ -450,7 +432,6 @@ export const gradeSubmission = async (submissionId, gradeData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error grading submission:', error);
     return { data: null, error };
   }
 };
@@ -470,7 +451,6 @@ export const getAssignmentById = async (assignmentId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching assignment:', error);
     return { data: null, error };
   }
 };
@@ -493,7 +473,6 @@ export const getAssignmentSubmissions = async (assignmentId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching assignment submissions:', error);
     return { data: null, error };
   }
 };
@@ -526,7 +505,6 @@ export const updateSubmissionGrade = async (submissionId, gradeData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating submission grade:', error);
     return { data: null, error };
   }
 };
@@ -578,7 +556,6 @@ export const getAssignmentStats = async (assignmentId) => {
 
     return { data: stats, error: null };
   } catch (error) {
-    console.error('Error fetching assignment stats:', error);
     return { data: null, error };
   }
 };

@@ -48,7 +48,6 @@ export const getScheduledClassForCheckIn = async (instructorId, checkInTime = ne
       .eq('day_of_week', dayOfWeek);
     
     if (error) {
-      console.error('Error fetching scheduled classes:', error);
       return null;
     }
     
@@ -77,7 +76,6 @@ export const getScheduledClassForCheckIn = async (instructorId, checkInTime = ne
     
     return null;
   } catch (error) {
-    console.error('Error in getScheduledClassForCheckIn:', error);
     return null;
   }
 };
@@ -106,13 +104,11 @@ export const getInstructorScheduleForDate = async (instructorId, date = new Date
       .order('start_time', { ascending: true });
     
     if (error) {
-      console.error('Error fetching instructor schedule:', error);
       return [];
     }
     
     return data || [];
   } catch (error) {
-    console.error('Error in getInstructorScheduleForDate:', error);
     return [];
   }
 };
@@ -191,7 +187,6 @@ export const checkInWithSchedule = async (checkInData, autoDetectSchedule = true
       } : null
     };
   } catch (error) {
-    console.error('Error in checkInWithSchedule:', error);
     return { data: null, error: error.message };
   }
 };
@@ -274,7 +269,6 @@ export const getTeachingHoursSummary = async (instructorId, startDate, endDate) 
     
     return { data: summary, error: null };
   } catch (error) {
-    console.error('Error in getTeachingHoursSummary:', error);
     return { data: null, error: error.message };
   }
 };
@@ -323,7 +317,6 @@ export const checkInAsSubstitute = async (checkInData, originalInstructorId, wee
     // Perform check-in
     return await timeTrackingService.checkIn(substituteCheckInData);
   } catch (error) {
-    console.error('Error in checkInAsSubstitute:', error);
     return { data: null, error: error.message };
   }
 };
@@ -388,7 +381,6 @@ export const validateTeachingCheckIn = async (instructorId, checkInData) => {
     
     return validations;
   } catch (error) {
-    console.error('Error in validateTeachingCheckIn:', error);
     return {
       isValid: false,
       errors: ['เกิดข้อผิดพลาดในการตรวจสอบ']
@@ -436,7 +428,6 @@ export const handleEmergencyDuringTeaching = async (timeEntryId, emergencyType, 
 
     return { success: true, data: result.data };
   } catch (error) {
-    console.error('Emergency handling error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -462,7 +453,6 @@ export const handleNoStudents = async (timeEntryId, action = 'wait') => {
 
     return result;
   } catch (error) {
-    console.error('No students handling error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -501,7 +491,6 @@ export const handleLowAttendance = async (timeEntryId, actualCount, expectedCoun
 
     return result;
   } catch (error) {
-    console.error('Low attendance handling error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -527,7 +516,6 @@ export const handleInfrastructureFailure = async (timeEntryId, failureType, acti
 
     return result;
   } catch (error) {
-    console.error('Infrastructure failure handling error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -560,7 +548,6 @@ export const pauseTeachingForBreak = async (timeEntryId, breakType = 'meal', dur
 
     return { success: true, data: result.data };
   } catch (error) {
-    console.error('Break handling error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -594,7 +581,6 @@ export const resolveAnomalies = async (timeEntryId, anomalyType, resolution) => 
 
     return { success: true, data: result.data };
   } catch (error) {
-    console.error('Anomaly resolution error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -681,7 +667,6 @@ export const updateTeachingProgress = async (scheduleId, progressData) => {
     const result = await timeTrackingService.updateScheduleLiveData(scheduleId, liveData);
     return result;
   } catch (error) {
-    console.error('Progress update error:', error);
     return { success: false, error: error.message };
   }
 };

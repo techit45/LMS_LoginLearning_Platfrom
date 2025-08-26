@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบ Company Mapping</title>
+    <style>
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px;
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        pre { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 5px; 
+            overflow: auto; 
+            max-height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 ทดสอบ Company Mapping จาก Course String</h1>
+        
+        <div class="test-section">
+            <h2>1. ทดสอบ Company Mapping</h2>
+            <p>ทดสอบการแปลงชื่อบริษัทจาก string ไป folder name</p>
+            
+            <button onclick="testCompanyMapping()">ทดสอบ Company Mapping</button>
+            <pre id="mappingResults"></pre>
+        </div>
+
+        <div class="test-section">
+            <h2>2. ทดสอบการสร้างโฟลเดอร์ LOGIN</h2>
+            <p>สร้างโฟลเดอร์สำหรับ courses ที่มี company = "login"</p>
+            
+            <button onclick="testLoginFolderCreation()">สร้างโฟลเดอร์ LOGIN</button>
+            <pre id="loginResults"></pre>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+        const AUTH_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+
+        function log(element, message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('th-TH');
+            const color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'blue';
+            
+            element.innerHTML += `<span style="color: ${color};">[${timestamp}] ${message}</span>\n`;
+            console.log(message);
+        }
+
+        function testCompanyMapping() {
+            const results = document.getElementById('mappingResults');
+            results.innerHTML = '';
+            
+            // Test company mapping logic
+            const companyMap = {
+                'login': 'LOGIN',
+                'w2d': 'W2D', 
+                'meta': 'Meta',
+                'med': 'Med',
+                'edtech': 'Edtech'
+            };
+
+            log(results, '🗺️ Testing company mapping...', 'info');
+            
+            Object.entries(companyMap).forEach(([key, value]) => {
+                log(results, `"${key}" → "${value}"`, 'success');
+            });
+            
+            // Test edge cases
+            const testCases = ['LOGIN', 'Login', 'w2D', 'META', 'unknown'];
+            log(results, '\n📋 Testing edge cases:', 'info');
+            
+            testCases.forEach(testCase => {
+                const mapped = companyMap[testCase.toLowerCase()] || testCase.toUpperCase();
+                log(results, `"${testCase}" → "${mapped}"`, mapped === testCase.toUpperCase() ? 'error' : 'success');
+            });
+        }
+
+        async function testLoginFolderCreation() {
+            const results = document.getElementById('loginResults');
+            results.innerHTML = '';
+            
+            try {
+                log(results, '🏢 Creating LOGIN company folder...', 'info');
+                
+                const companyResponse = await fetch(`${API_BASE}/create-topic-folder`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        parentFolderId: '0AAMvBF62LaLyUk9PVA', // Shared Drive root
+                        topicName: 'LOGIN',
+                        topicType: 'company'
+                    })
+                });
+
+                const companyResult = await companyResponse.json();
+                
+                if (companyResult.success) {
+                    log(results, `✅ Company folder: ${companyResult.folderName} (${companyResult.isExisting ? 'existing' : 'new'})`, 'success');
+                    log(results, `📁 Folder ID: ${companyResult.topicFolderId}`, 'info');
+                    
+                    // Create course category folder
+                    log(results, '\n📚 Creating คอร์สเรียน folder...', 'info');
+                    
+                    const categoryResponse = await fetch(`${API_BASE}/create-topic-folder`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${AUTH_TOKEN}`
+                        },
+                        body: JSON.stringify({
+                            parentFolderId: companyResult.topicFolderId,
+                            topicName: 'คอร์สเรียน',
+                            topicType: 'course_category'
+                        })
+                    });
+
+                    const categoryResult = await categoryResponse.json();
+                    
+                    if (categoryResult.success) {
+                        log(results, `✅ Category folder: ${categoryResult.folderName} (${categoryResult.isExisting ? 'existing' : 'new'})`, 'success');
+                        log(results, `📁 Folder ID: ${categoryResult.topicFolderId}`, 'info');
+                        
+                        log(results, '\n🎯 Full structure created:', 'success');
+                        log(results, '📁 [Shared Drive] → 🏢 LOGIN → 📚 คอร์สเรียน', 'success');
+                    } else {
+                        log(results, `❌ Category folder failed: ${categoryResult.error}`, 'error');
+                    }
+                } else {
+                    log(results, `❌ Company folder failed: ${companyResult.error}`, 'error');
+                }
+                
+            } catch (error) {
+                log(results, `🚨 Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto test on load
+        window.onload = function() {
+            testCompanyMapping();
+        };
+    </script>
+</body>
+</html>

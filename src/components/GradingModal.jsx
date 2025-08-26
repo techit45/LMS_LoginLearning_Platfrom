@@ -63,8 +63,7 @@ const GradingModal = ({ submission, assignment, onSave, onClose }) => {
         graded_by: 'admin' // หรือ user ID ของ admin
       });
     } catch (error) {
-      console.error('Grading error:', error);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -86,7 +85,6 @@ const GradingModal = ({ submission, assignment, onSave, onClose }) => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Download error:', error);
       toast({
         title: "ไม่สามารถดาวน์โหลดไฟล์ได้",
         variant: "destructive"

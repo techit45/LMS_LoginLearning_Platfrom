@@ -1,0 +1,14 @@
+ไฟล์ทดสอบสำหรับบริษัท LOGIN
+หลักสูตร Time Management
+
+📁 [LOGIN Platform (Shared Drive)]
+├── 🏢 LOGIN
+│   └── 📚 คอร์สเรียน
+│       └── 📖 หลักสูตร Time Management
+│           └── 📄 ไฟล์นี้
+├── 🏢 W2D
+├── 🏢 Meta
+├── 🏢 Med
+└── 🏢 Edtech
+
+โครงสร้างใหม่ที่ถูกต้อง - แต่ละบริษัทมีโฟลเดอร์แยกกัน

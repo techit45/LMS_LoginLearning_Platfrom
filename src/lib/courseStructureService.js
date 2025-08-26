@@ -12,8 +12,6 @@ import { supabase } from './supabaseClient';
  */
 export const createCourseStructure = async (courseData, chapters = []) => {
   try {
-    console.log('🎓 Creating course structure for:', courseData.title);
-
     // Generate course slug from title
     const courseSlug = courseData.title
       .toLowerCase()
@@ -31,15 +29,18 @@ export const createCourseStructure = async (courseData, chapters = []) => {
       }))
     };
 
-    console.log('📋 Structure data:', structureData);
+    // 🔒 SECURE: Get dynamic auth token for course structure creation
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.access_token) {
+      throw new Error('Authentication required for course structure creation');
+    }
 
-    // Call Supabase Edge Function to create Google Drive structure
     const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
     const response = await fetch(`${API_BASE}/create-course-structure`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+        'Authorization': `Bearer ${session.access_token}`, // 🔒 Dynamic token
       },
       body: JSON.stringify(structureData)
     });
@@ -50,8 +51,6 @@ export const createCourseStructure = async (courseData, chapters = []) => {
     }
 
     const result = await response.json();
-    console.log('✅ Course structure created:', result);
-
     return {
       success: true,
       courseFolderId: result.courseFolderId,
@@ -64,7 +63,6 @@ export const createCourseStructure = async (courseData, chapters = []) => {
     };
 
   } catch (error) {
-    console.error('❌ Error creating course structure:', error);
     return {
       success: false,
       courseFolderId: null,
@@ -86,13 +84,17 @@ export const createCourseStructure = async (courseData, chapters = []) => {
  */
 export const addChapterFolder = async (chapterTitle, parentFolderId) => {
   try {
-    console.log('📚 Adding chapter folder:', chapterTitle);
+    // 🔒 SECURE: Get dynamic auth token
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.access_token) {
+      throw new Error('Authentication required for chapter folder creation');
+    }
 
     const response = await fetch('https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive/create-chapter-folder', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+        'Authorization': `Bearer ${session.access_token}`, // 🔒 Dynamic token
       },
       body: JSON.stringify({
         chapterTitle,
@@ -106,8 +108,6 @@ export const addChapterFolder = async (chapterTitle, parentFolderId) => {
     }
 
     const result = await response.json();
-    console.log('✅ Chapter folder created:', result);
-
     return {
       success: true,
       chapter: result.chapter,
@@ -115,7 +115,6 @@ export const addChapterFolder = async (chapterTitle, parentFolderId) => {
     };
 
   } catch (error) {
-    console.error('❌ Error creating chapter folder:', error);
     return {
       success: false,
       chapter: null,
@@ -132,8 +131,6 @@ export const addChapterFolder = async (chapterTitle, parentFolderId) => {
  */
 export const updateCourseWithFolders = async (courseId, folderData) => {
   try {
-    console.log('📝 Updating course with folder data:', courseId);
-
     const updateData = {
       google_drive_folder_id: folderData.mainFolderId,
       updated_at: new Date().toISOString()
@@ -147,15 +144,12 @@ export const updateCourseWithFolders = async (courseId, folderData) => {
       .single();
 
     if (error) {
-      console.error('Database error updating course:', error);
       throw error;
     }
 
-    console.log('✅ Course updated with folder information');
     return { success: true, data, error: null };
 
   } catch (error) {
-    console.error('❌ Error updating course with folders:', error);
     return {
       success: false,
       data: null,
@@ -171,8 +165,6 @@ export const updateCourseWithFolders = async (courseId, folderData) => {
  */
 export const getCourseStructure = async (courseId) => {
   try {
-    console.log('📖 Getting course structure for:', courseId);
-
     // Get course with Google Drive information
     const { data: course, error: courseError } = await supabase
       .from('courses')
@@ -201,8 +193,7 @@ export const getCourseStructure = async (courseId) => {
       .order('order_index', { ascending: true });
 
     if (chaptersError) {
-      console.warn('Could not fetch chapters:', chaptersError);
-    }
+      }
 
     return {
       success: true,
@@ -215,7 +206,6 @@ export const getCourseStructure = async (courseId) => {
     };
 
   } catch (error) {
-    console.error('❌ Error getting course structure:', error);
     return {
       success: false,
       course: null,

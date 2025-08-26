@@ -186,6 +186,7 @@ logger.error = (msg, options) => {
 export default defineConfig({
 	customLogger: logger,
 	base: '/',
+	root: '.',
 	define: {
 		// Environment variables are now properly handled by Vite
 		// Remove hardcoded credentials for security
@@ -200,7 +201,8 @@ export default defineConfig({
 	server: {
 		cors: true,
 		headers: {
-			'Cross-Origin-Embedder-Policy': 'credentialless',
+			// Remove COEP for development to allow YouTube embeds
+			// 'Cross-Origin-Embedder-Policy': 'credentialless',
 		},
 		allowedHosts: true,
 	},
@@ -248,6 +250,9 @@ export default defineConfig({
 			polyfill: false
 		},
 		rollupOptions: {
+			input: {
+				main: path.resolve(__dirname, 'index.html')
+			},
 			onwarn(warning, warn) {
 				// Suppress warnings about disjoint.js and other d3 modules
 				if (warning.code === 'CIRCULAR_DEPENDENCY' || 

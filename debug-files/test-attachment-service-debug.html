@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Attachment Service - Debug Mode</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background: #0f0f23; 
+            color: #cccccc; 
+        }
+        .container { 
+            background: #1a1a2e; 
+            border-radius: 12px; 
+            padding: 30px; 
+            border: 1px solid #16213e; 
+        }
+        .section { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px solid #334; 
+            border-radius: 8px; 
+        }
+        button { 
+            background: #0066cc; 
+            color: white; 
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin: 5px; 
+        }
+        button:hover { background: #0052a3; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        input[type="file"] { 
+            padding: 10px; 
+            border: 2px dashed #555; 
+            border-radius: 6px; 
+            background: #222; 
+            color: #ccc; 
+            width: 100%; 
+        }
+        .log { 
+            background: #111; 
+            border: 1px solid #333; 
+            border-radius: 4px; 
+            padding: 15px; 
+            margin-top: 15px; 
+            font-family: 'Consolas', 'Monaco', monospace; 
+            white-space: pre-wrap; 
+            max-height: 400px; 
+            overflow-y: auto; 
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .info { color: #2196F3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Attachment Service - Debug Mode</h1>
+        
+        <div class="section">
+            <h3>📋 System Status</h3>
+            <div id="system-status">ตรวจสอบระบบ...</div>
+        </div>
+
+        <div class="section">
+            <h3>🔐 Authentication</h3>
+            <button id="login-btn" onclick="loginUser()">เข้าสู่ระบบ (Demo)</button>
+            <div id="auth-status">ยังไม่ได้เข้าสู่ระบบ</div>
+        </div>
+
+        <div class="section">
+            <h3>📤 File Upload Test</h3>
+            <input type="file" id="file-input" accept=".pdf,.jpg,.png,.doc,.docx">
+            <br><br>
+            <label for="content-id">Content ID:</label>
+            <input type="text" id="content-id" placeholder="ใส่ Content ID (หรือใช้ test-content-123)" value="test-content-123" style="background: #222; color: #ccc; border: 1px solid #555; padding: 8px; border-radius: 4px; margin-left: 10px;">
+            <br><br>
+            <button id="upload-btn" onclick="testUpload()" disabled>อัปโหลดไฟล์ (Debug)</button>
+        </div>
+
+        <div class="section">
+            <h3>🔍 Debug Log</h3>
+            <button onclick="clearLog()">Clear Log</button>
+            <div id="log" class="log">พร้อมเริ่มทดสอบ...\n</div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Initialize Supabase
+        const { createClient } = supabase;
+        const supabaseUrl = 'https://vuitwzisazvikrhtfthh.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+        
+        const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+        window.supabase = supabaseClient;
+
+        // Logging functions
+        window.log = function(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('log');
+            const className = type;
+            logElement.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        };
+
+        window.clearLog = function() {
+            document.getElementById('log').innerHTML = 'Log cleared...\n';
+        };
+
+        // System Status Check
+        async function checkSystemStatus() {
+            try {
+                log('🔍 Checking system status...', 'info');
+                
+                // Check Supabase connection
+                const { data, error } = await supabaseClient.from('courses').select('count').limit(1);
+                if (error) throw error;
+                log('✅ Supabase connection: OK', 'success');
+                
+                // Check environment variables
+                log('🌍 Environment check:', 'info');
+                log(`   SUPABASE_URL: ${supabaseUrl}`, 'info');
+                log(`   ANON_KEY: ${supabaseAnonKey.substring(0, 20)}...`, 'info');
+                
+                document.getElementById('system-status').innerHTML = '<span class="success">✅ ระบบพร้อมใช้งาน</span>';
+                
+            } catch (error) {
+                log('❌ System check failed: ' + error.message, 'error');
+                document.getElementById('system-status').innerHTML = '<span class="error">❌ ระบบมีปัญหา: ' + error.message + '</span>';
+            }
+        }
+
+        // Login function
+        window.loginUser = async function() {
+            try {
+                log('🔐 Attempting login...', 'info');
+                
+                // For testing, we'll use the current session if available
+                const { data: { user }, error } = await supabaseClient.auth.getUser();
+                
+                if (error) {
+                    log('❌ Auth error: ' + error.message, 'error');
+                    return;
+                }
+                
+                if (user) {
+                    log('✅ User already authenticated: ' + user.email, 'success');
+                    document.getElementById('auth-status').innerHTML = '<span class="success">✅ เข้าสู่ระบบแล้ว: ' + user.email + '</span>';
+                    document.getElementById('upload-btn').disabled = false;
+                    return;
+                }
+                
+                // If no user, show instructions
+                log('ℹ️ No user session found', 'warning');
+                log('ℹ️ Please login through the main application first', 'warning');
+                document.getElementById('auth-status').innerHTML = '<span class="warning">⚠️ กรุณาเข้าสู่ระบบผ่านแอปพลิเคชันหลักก่อน</span>';
+                
+            } catch (error) {
+                log('❌ Login failed: ' + error.message, 'error');
+                document.getElementById('auth-status').innerHTML = '<span class="error">❌ เข้าสู่ระบบล้มเหลว</span>';
+            }
+        };
+
+        // Upload test function
+        window.testUpload = async function() {
+            const fileInput = document.getElementById('file-input');
+            const contentId = document.getElementById('content-id').value;
+            
+            if (!fileInput.files[0]) {
+                log('❌ Please select a file first', 'error');
+                return;
+            }
+            
+            if (!contentId) {
+                log('❌ Please enter a Content ID', 'error');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            log('📤 Starting upload test...', 'info');
+            log(`📄 File: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'info');
+            log(`🆔 Content ID: ${contentId}`, 'info');
+            
+            try {
+                // Test the upload function with detailed logging
+                const result = await testUploadAttachmentFile(file, contentId);
+                
+                if (result.error) {
+                    log('❌ Upload failed: ' + JSON.stringify(result.error, null, 2), 'error');
+                } else {
+                    log('✅ Upload successful!', 'success');
+                    log('📋 Result: ' + JSON.stringify(result.data, null, 2), 'success');
+                }
+                
+            } catch (error) {
+                log('❌ Upload error: ' + error.message, 'error');
+                log('🔍 Error details: ' + JSON.stringify(error, null, 2), 'error');
+            }
+        };
+
+        // Test upload function with debugging
+        async function testUploadAttachmentFile(file, contentId, uploadOrder = 1) {
+            try {
+                // Define API_BASE and get auth token
+                const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+                const SUPABASE_ANON_KEY = supabaseAnonKey;
+                
+                log('🔧 Configuration:', 'info');
+                log(`   API_BASE: ${API_BASE}`, 'info');
+                log(`   SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY.substring(0, 20)}...`, 'info');
+                
+                // Check if user is authenticated
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                
+                if (userError) {
+                    throw new Error(`Authentication error: ${userError.message}`);
+                }
+                
+                if (!user) {
+                    throw new Error('User not authenticated - please login first');
+                }
+
+                log('🔐 User authenticated: ' + user.email, 'success');
+
+                // Validate file
+                if (!file) {
+                    throw new Error('No file provided');
+                }
+
+                if (!contentId) {
+                    throw new Error('Content ID is required');
+                }
+
+                // Get course info to determine Google Drive folder
+                log('🔍 Fetching course content data...', 'info');
+                const { data: contentData } = await supabaseClient
+                    .from('course_content')
+                    .select('course_id, title, courses(title, google_drive_folder_id)')
+                    .eq('id', contentId)
+                    .single();
+                    
+                if (!contentData?.courses?.google_drive_folder_id) {
+                    log('⚠️ No course data found for content ID: ' + contentId, 'warning');
+                    log('ℹ️ Using default folder for testing...', 'info');
+                    // Use a default folder for testing
+                    contentData = {
+                        courses: {
+                            title: 'Test Course',
+                            google_drive_folder_id: '0AAMvBF62LaLyUk9PVA' // Default shared drive root
+                        },
+                        course_id: 'test-course-id',
+                        title: 'Test Content'
+                    };
+                }
+
+                log('📋 Content data: ' + JSON.stringify(contentData, null, 2), 'info');
+
+                // Create hierarchical folder structure
+                let targetFolderId = contentData.courses.google_drive_folder_id;
+                
+                try {
+                    // Get company information from user profile
+                    log('📋 Fetching user profile...', 'info');
+                    const { data: profileData, error: profileError } = await supabaseClient
+                        .from('user_profiles')
+                        .select('company_id, companies(name)')
+                        .eq('user_id', user.id)
+                        .single();
+
+                    if (profileError) {
+                        log('⚠️ Could not fetch user profile: ' + profileError.message, 'warning');
+                        log('📁 Continuing with existing folder: ' + targetFolderId, 'info');
+                    } else {
+                        log('📋 User profile loaded: ' + JSON.stringify(profileData, null, 2), 'info');
+
+                        if (profileData?.companies?.name) {
+                            log('🏢 Creating company folder hierarchy...', 'info');
+                            
+                            // Step 1: Create/Find Company folder
+                            const companyFolderName = profileData.companies.name;
+                            log('📁 Creating company folder: ' + companyFolderName, 'info');
+                            
+                            const companyFolderResponse = await fetch(`${API_BASE}/create-topic-folder`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                                },
+                                body: JSON.stringify({
+                                    parentFolderId: '0AAMvBF62LaLyUk9PVA',
+                                    topicName: companyFolderName,
+                                    topicType: 'company'
+                                })
+                            });
+
+                            if (companyFolderResponse.ok) {
+                                const companyResult = await companyFolderResponse.json();
+                                log('✅ Company folder result: ' + JSON.stringify(companyResult, null, 2), 'success');
+                                
+                                if (companyResult.success && companyResult.topicFolderId) {
+                                    targetFolderId = companyResult.topicFolderId;
+                                    log('📁 Updated target folder ID: ' + targetFolderId, 'success');
+                                }
+                            } else {
+                                const errorText = await companyFolderResponse.text();
+                                log('❌ Company folder creation failed: ' + errorText, 'error');
+                            }
+                        }
+                    }
+                } catch (hierarchyError) {
+                    log('⚠️ Could not create folder hierarchy: ' + hierarchyError.message, 'warning');
+                    log('📁 Continuing with existing folder: ' + targetFolderId, 'info');
+                }
+                
+                // Upload to Google Drive
+                const uploadFormData = new FormData();
+                uploadFormData.append('file', file);
+                uploadFormData.append('folderId', targetFolderId);
+                
+                log('📤 Uploading to Google Drive folder: ' + targetFolderId, 'info');
+                log('📄 File: ' + file.name + ' (' + (file.size / 1024 / 1024).toFixed(2) + ' MB)', 'info');
+                
+                const response = await fetch(`${API_BASE}/simple-upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    },
+                    body: uploadFormData,
+                });
+
+                log('📨 Upload response status: ' + response.status, 'info');
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    log('❌ Google Drive upload failed: ' + errorData, 'error');
+                    throw new Error(`Google Drive upload failed: ${errorData}`);
+                }
+
+                const result = await response.json();
+                log('✅ Google Drive upload success: ' + JSON.stringify(result, null, 2), 'success');
+                
+                const googleDriveId = result.fileId || result.id;
+                const googleDriveUrl = result.webViewLink || `https://drive.google.com/file/d/${googleDriveId}/view`;
+                
+                if (!googleDriveUrl) {
+                    throw new Error('Google Drive upload succeeded but no URL returned');
+                }
+                
+                log('🔗 Google Drive URL: ' + googleDriveUrl, 'success');
+                
+                return {
+                    data: {
+                        url: googleDriveUrl,
+                        file_path: `google-drive/${googleDriveId}`,
+                        google_drive_url: googleDriveUrl,
+                        google_drive_id: googleDriveId,
+                        filename: file.name,
+                        file_size: file.size
+                    },
+                    error: null
+                };
+                
+            } catch (error) {
+                log('❌ Upload failed: ' + error.message, 'error');
+                return { 
+                    data: null, 
+                    error: {
+                        message: error.message,
+                        details: error
+                    }
+                };
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('load', function() {
+            checkSystemStatus();
+            loginUser();
+        });
+    </script>
+</body>
+</html>

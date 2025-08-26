@@ -118,7 +118,6 @@ export const uploadFile = async (file, targetType, targetId) => {
 
     return { data: attachment, error: null };
   } catch (error) {
-    console.error('Error uploading file:', error);
     return { data: null, error };
   }
 };
@@ -151,7 +150,6 @@ export const uploadMultipleFiles = async (files, targetType, targetId) => {
       error: failed.length > 0 ? `${failed.length} ไฟล์อัปโหลดไม่สำเร็จ` : null
     };
   } catch (error) {
-    console.error('Error uploading multiple files:', error);
     return { data: null, error };
   }
 };
@@ -199,7 +197,6 @@ export const getAttachments = async (targetType, targetId) => {
 
     return { data: enrichedAttachments, error: null };
   } catch (error) {
-    console.error('Error getting attachments:', error);
     return { data: [], error };
   }
 };
@@ -215,7 +212,6 @@ export const getFileUrl = async (filePath) => {
 
     return data.publicUrl;
   } catch (error) {
-    console.error('Error getting file URL:', error);
     return null;
   }
 };
@@ -256,7 +252,6 @@ export const downloadFile = async (attachmentId) => {
 
     return { error: null };
   } catch (error) {
-    console.error('Error downloading file:', error);
     return { error };
   }
 };
@@ -287,7 +282,6 @@ export const deleteAttachment = async (attachmentId) => {
       .remove([attachment.file_url]);
 
     if (storageError) {
-      console.warn('Error deleting from storage:', storageError);
       // Continue with database deletion even if storage fails
     }
 
@@ -301,7 +295,6 @@ export const deleteAttachment = async (attachmentId) => {
 
     return { error: null };
   } catch (error) {
-    console.error('Error deleting attachment:', error);
     return { error };
   }
 };
@@ -387,7 +380,6 @@ export const getAttachmentStats = async (targetType, targetId) => {
       error: null
     };
   } catch (error) {
-    console.error('Error getting attachment stats:', error);
     return { data: null, error };
   }
 };

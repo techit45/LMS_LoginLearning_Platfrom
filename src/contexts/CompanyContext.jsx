@@ -41,15 +41,6 @@ export const COMPANIES = {
     logo: '/assets/logos/edtech-logo.png',
     domains: ['edtech-innovation.org']
   },
-  innotech: {
-    id: 'innotech',
-    name: 'InnoTech Labs',
-    fullName: 'Innovation Technology Laboratories',
-    description: 'ห้องปฏิบัติการวิจัยและพัฒนาเทคโนโลยี',
-    color: 'orange',
-    logo: '/assets/logos/innotech-logo.png',
-    domains: ['innotech-labs.com']
-  },
   w2d: {
     id: 'w2d',
     name: 'W2D Studio',
@@ -110,7 +101,6 @@ export const CompanyProvider = ({ children }) => {
   // Switch company function
   const switchCompany = (companyId, redirectTo = '/') => {
     if (!COMPANIES[companyId]) {
-      console.error(`Company ${companyId} not found`);
       return;
     }
 

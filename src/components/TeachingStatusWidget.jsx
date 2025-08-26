@@ -3,16 +3,9 @@ import {
   BookOpen, 
   Clock, 
   Users, 
-  MapPin, 
-  Pause, 
-  Play, 
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Coffee,
-  MoreHorizontal
+  MapPin,
+  CheckCircle
 } from 'lucide-react';
-import SpecialCaseDialog from './SpecialCaseDialog';
 
 const TeachingStatusWidget = ({ 
   activeEntry, 
@@ -22,7 +15,6 @@ const TeachingStatusWidget = ({
   onSpecialCase,
   teachingMode = false
 }) => {
-  const [specialCaseDialog, setSpecialCaseDialog] = useState({ isOpen: false, type: null });
 
   if (!teachingMode && !teachingDetection) return null;
 
@@ -43,21 +35,6 @@ const TeachingStatusWidget = ({
     if (Math.abs(minutes) <= 5) return 'text-green-600';
     if (Math.abs(minutes) <= 15) return 'text-yellow-600';
     return 'text-red-600';
-  };
-
-  const handleSpecialCaseClick = (caseType) => {
-    if (caseType === 'pause' || caseType === 'resume') {
-      // Direct actions for pause/resume
-      onSpecialCase(caseType);
-    } else {
-      // Open dialog for complex cases
-      setSpecialCaseDialog({ isOpen: true, type: caseType });
-    }
-  };
-
-  const handleSpecialCaseConfirm = async (caseData) => {
-    await onSpecialCase(caseData.type, caseData);
-    setSpecialCaseDialog({ isOpen: false, type: null });
   };
 
   return (
@@ -165,67 +142,7 @@ const TeachingStatusWidget = ({
         </div>
       )}
 
-      {/* Quick Actions */}
-      {activeEntry && activeEntry.entry_type === 'teaching' && (
-        <div className="flex flex-wrap gap-2">
-          {/* Pause/Resume */}
-          <button
-            onClick={() => handleSpecialCaseClick(activeEntry.session_paused ? 'resume' : 'pause')}
-            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
-              activeEntry.session_paused 
-                ? 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100'
-                : 'text-yellow-700 bg-yellow-50 border-yellow-200 hover:bg-yellow-100'
-            }`}
-          >
-            {activeEntry.session_paused ? (
-              <>
-                <Play className="w-3 h-3 mr-1" />
-                กลับมาสอน
-              </>
-            ) : (
-              <>
-                <Pause className="w-3 h-3 mr-1" />
-                พักสอน
-              </>
-            )}
-          </button>
-
-          {/* Emergency Stop */}
-          <button
-            onClick={() => handleSpecialCaseClick('emergency')}
-            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-red-700 bg-red-50 border border-red-200 hover:bg-red-100"
-          >
-            <AlertTriangle className="w-3 h-3 mr-1" />
-            ฉุกเฉิน
-          </button>
-
-          {/* Special Cases */}
-          <button
-            onClick={() => handleSpecialCaseClick('no_students')}
-            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100"
-          >
-            <XCircle className="w-3 h-3 mr-1" />
-            ไม่มีนักเรียน
-          </button>
-
-          <button
-            onClick={() => handleSpecialCaseClick('infrastructure')}
-            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 hover:bg-orange-100"
-          >
-            <AlertTriangle className="w-3 h-3 mr-1" />
-            ปัญหาอุปกรณ์
-          </button>
-
-          {/* More Options */}
-          <button
-            onClick={() => setSpecialCaseDialog({ isOpen: true, type: 'more' })}
-            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100"
-          >
-            <MoreHorizontal className="w-3 h-3 mr-1" />
-            อื่นๆ
-          </button>
-        </div>
-      )}
+      {/* Special case buttons removed per user request */}
 
       {/* Schedule Progress Bar */}
       {activeEntry && teachingDetection && (
@@ -245,14 +162,6 @@ const TeachingStatusWidget = ({
         </div>
       )}
 
-      {/* Special Case Dialog */}
-      <SpecialCaseDialog
-        isOpen={specialCaseDialog.isOpen}
-        caseType={specialCaseDialog.type}
-        activeEntry={activeEntry}
-        onClose={() => setSpecialCaseDialog({ isOpen: false, type: null })}
-        onConfirm={handleSpecialCaseConfirm}
-      />
     </div>
   );
 };

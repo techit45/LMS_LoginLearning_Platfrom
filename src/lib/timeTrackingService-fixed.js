@@ -32,8 +32,7 @@ export const getTimeEntriesForReview = async (company = null, status = 'pending'
         .in('user_id', userIds);
 
       if (usersError) {
-        console.error('Error fetching user profiles:', usersError);
-      } else if (users) {
+        } else if (users) {
         // Map users to entries
         const userMap = users.reduce((map, user) => {
           map[user.user_id] = user;
@@ -84,8 +83,7 @@ export const getLeaveRequestsForReview = async (company = null, status = 'pendin
         .in('user_id', allUserIds);
 
       if (usersError) {
-        console.error('Error fetching user profiles:', usersError);
-      } else if (users) {
+        } else if (users) {
         // Map users to requests
         const userMap = users.reduce((map, user) => {
           map[user.user_id] = user;

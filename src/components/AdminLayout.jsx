@@ -22,7 +22,8 @@ import {
   Calendar,
   Cloud,
   Clock,
-  MapPin
+  MapPin,
+  DollarSign
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../contexts/AuthContext';
@@ -139,11 +140,9 @@ const AdminLayout = () => {
       const { error } = await signOut();
       
       if (error) {
-        console.error('Logout error:', error);
         // Still proceed with logout since local state is cleared
       }
     } catch (error) {
-      console.error('Exception during logout:', error);
       // Local state is still cleared even on exception
     }
   };

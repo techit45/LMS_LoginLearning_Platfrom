@@ -77,14 +77,12 @@ const ProjectsPage = () => {
       const { data, error } = await getAllProjects();
 
       if (error) {
-        console.error("Error loading projects:", error);
         // Use emergency data instead of showing error
         const emergencyData = getEmergencyData();
         const filteredProjects = filterProjectsByCompany(
           emergencyData.projects
         );
         setProjects(filteredProjects);
-        console.log("🚑 Using emergency projects data");
         toast({
           title: "โหลดข้อมูลสำรอง",
           description: "ใช้ข้อมูลสำรองเนื่องจากเซิร์ฟเวอร์ช้า",
@@ -95,12 +93,10 @@ const ProjectsPage = () => {
         setProjects(filteredProjects);
       }
     } catch (error) {
-      console.error("Error loading projects:", error);
       // Use emergency data on any error
       const emergencyData = getEmergencyData();
       const filteredProjects = filterProjectsByCompany(emergencyData.projects);
       setProjects(filteredProjects);
-      console.log("🚑 Using emergency projects data after error");
       toast({
         title: "โหลดข้อมูลสำรอง",
         description: "ใช้ข้อมูลสำรองเนื่องจากไม่สามารถเชื่อมต่อได้",
@@ -118,27 +114,23 @@ const ProjectsPage = () => {
       const { data, error } = await getFeaturedProjects();
 
       if (error) {
-        console.error("Error loading featured projects:", error);
         // Use emergency data instead of showing error
         const emergencyData = getEmergencyData();
         const filteredFeaturedProjects = filterProjectsByCompany(
           emergencyData.projects.filter((p) => p.is_featured)
         );
         setFeaturedProjects(filteredFeaturedProjects);
-        console.log("🚑 Using emergency featured projects data");
-      } else {
+        } else {
         const filteredFeaturedProjects = filterProjectsByCompany(data || []);
         setFeaturedProjects(filteredFeaturedProjects);
       }
     } catch (error) {
-      console.error("Error loading featured projects:", error);
       // Use emergency data on any error
       const emergencyData = getEmergencyData();
       const filteredFeaturedProjects = filterProjectsByCompany(
         emergencyData.projects.filter((p) => p.is_featured)
       );
       setFeaturedProjects(filteredFeaturedProjects);
-      console.log("🚑 Using emergency featured projects data after error");
       toast({
         title: "โหลดข้อมูลสำรอง",
         description: "ใช้ข้อมูลสำรองเนื่องจากไม่สามารถเชื่อมต่อได้",

@@ -91,7 +91,6 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
           setImagePreview(data.cover_image_url);
         }
       } catch (error) {
-        console.error("Error loading project:", error);
         toast({
           title: "เกิดข้อผิดพลาด",
           description: "ไม่สามารถโหลดข้อมูลโครงงานได้",
@@ -273,7 +272,6 @@ const EditProjectForm = ({ isOpen, onClose, onSuccess, projectId }) => {
       onSuccess && onSuccess(data);
       onClose();
     } catch (error) {
-      console.error("Error updating project:", error);
       toast({
         title: "ไม่สามารถแก้ไขโครงงานได้",
         description: error.message,

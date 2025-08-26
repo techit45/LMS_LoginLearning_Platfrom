@@ -51,10 +51,11 @@ if (typeof window !== 'undefined') {
   window.ReactDOM = React;
 }
 
-// Debug logging
-console.log('React compatibility layer loaded:', {
-  version: React.version,
-  hasUseState: !!React.useState,
-  hasForwardRef: !!React.forwardRef,
-  reactKeys: Object.keys(React)
-});
+// Debug logging (development only)
+if (import.meta.env.DEV) {
+  console.log('React compatibility layer loaded:', {
+    version: React.version,
+    hasUseState: !!React.useState,
+    hasForwardRef: !!React.forwardRef
+  });
+}

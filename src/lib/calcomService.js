@@ -18,8 +18,7 @@ class CalComAPI {
     this.baseURL = CALCOM_API_URL;
     
     if (!this.apiKey) {
-      console.warn('⚠️ Cal.com API key not found. Please set VITE_CALCOM_API_KEY in environment variables.');
-    }
+      }
   }
 
   /**
@@ -34,8 +33,6 @@ class CalComAPI {
     };
 
     try {
-      console.log(`🔗 Cal.com API Request: ${options.method || 'GET'} ${url}`);
-      
       const response = await fetch(url, {
         ...options,
         headers
@@ -47,11 +44,8 @@ class CalComAPI {
       }
 
       const data = await response.json();
-      console.log('✅ Cal.com API Response:', data);
-      
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Cal.com API Error:', error);
       return { data: null, error: error.message };
     }
   }
@@ -213,18 +207,14 @@ class CalComSchedulingService {
    */
   async testConnection() {
     try {
-      console.log('🧪 Testing Cal.com API connection...');
       const { data, error } = await this.api.getMe();
       
       if (error) {
-        console.error('❌ Cal.com connection failed:', error);
         return { success: false, error };
       }
       
-      console.log('✅ Cal.com connection successful!', data);
       return { success: true, data };
     } catch (error) {
-      console.error('💥 Cal.com connection test failed:', error);
       return { success: false, error: error.message };
     }
   }
@@ -249,14 +239,12 @@ class CalComSchedulingService {
         const { data, error } = await this.api.createEventType(eventTypeData);
         
         if (error) {
-          console.error(`❌ Failed to create event type for ${course.name}:`, error);
           results.push({ course: course.name, success: false, error });
         } else {
           this.eventTypeCache.set(course.id, data.eventType);
           results.push({ course: course.name, success: true, eventType: data.eventType });
         }
       } catch (error) {
-        console.error(`💥 Exception creating event type for ${course.name}:`, error);
         results.push({ course: course.name, success: false, error: error.message });
       }
     }
@@ -273,8 +261,6 @@ class CalComSchedulingService {
    */
   async createSchedule(scheduleData) {
     try {
-      console.log('📅 Creating Cal.com schedule:', scheduleData);
-
       const bookingData = {
         eventTypeId: scheduleData.eventTypeId || await this.getEventTypeId(scheduleData.courseId),
         startTime: scheduleData.startTime,
@@ -291,11 +277,9 @@ class CalComSchedulingService {
       const { data, error } = await this.api.createBooking(bookingData);
       
       if (error) {
-        console.error('❌ Failed to create schedule:', error);
         return { success: false, error };
       }
 
-      console.log('✅ Schedule created successfully:', data);
       return { 
         success: true, 
         data: {
@@ -306,7 +290,6 @@ class CalComSchedulingService {
         }
       };
     } catch (error) {
-      console.error('💥 Exception creating schedule:', error);
       return { success: false, error: error.message };
     }
   }

@@ -92,7 +92,6 @@ const ContactPage = () => {
       setSubject("");
       setMessage("");
     } catch (error) {
-      console.error("Error sending message:", error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description:

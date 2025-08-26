@@ -42,7 +42,6 @@ const SubmissionCard = ({ submission, assignment, onGrade }) => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Download error:', error);
       alert('ไม่สามารถดาวน์โหลดไฟล์ได้');
     }
   };

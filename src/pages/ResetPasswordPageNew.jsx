@@ -38,8 +38,6 @@ const ResetPasswordPageNew = () => {
 
   // ✅ SIMPLE SESSION CHECK - NO COMPLEX LISTENERS
   useEffect(() => {
-    console.log('🔄 Starting simple session validation...');
-    
     const checkSession = async () => {
       try {
         // Use React Router location instead of window.location for better HashRouter support
@@ -47,12 +45,6 @@ const ResetPasswordPageNew = () => {
         const searchParams = location.search || window.location.search;
         const hashParams = location.hash || window.location.hash;
         const stateParams = location.state?.params || '';
-        
-        console.log('Current URL:', fullUrl);
-        console.log('React Router location:', location);
-        console.log('Search params:', searchParams);
-        console.log('Hash params:', hashParams);
-        console.log('Location state:', location.state);
         
         // Check multiple sources for recovery tokens
         const hasRecoveryTokens = (
@@ -68,16 +60,13 @@ const ResetPasswordPageNew = () => {
         );
         
         if (hasRecoveryTokens) {
-          console.log('✅ Recovery tokens found in URL - session is valid');
           setIsValidSession(true);
         } else {
-          console.log('❌ No recovery tokens found');
           setIsValidSession(false);
         }
         
         setCheckingSession(false);
       } catch (error) {
-        console.error('Session check error:', error);
         setIsValidSession(false);
         setCheckingSession(false);
       }
@@ -127,30 +116,24 @@ const ResetPasswordPageNew = () => {
     setLoading(true);
 
     try {
-      console.log('🚀 Starting simple password update...');
-      
       // ✅ Extract tokens from multiple sources - comprehensive approach
       let urlParams;
       let accessToken = null;
       let refreshToken = null;
-      
-      console.log('🔍 Extracting tokens from multiple sources...');
       
       // Method 1: React Router location search
       if (location.search) {
         urlParams = new URLSearchParams(location.search);
         accessToken = urlParams.get('access_token');
         refreshToken = urlParams.get('refresh_token');
-        console.log('Method 1 - React Router search:', { accessToken: !!accessToken, refreshToken: !!refreshToken });
-      }
+        }
       
       // Method 2: Window location search (fallback)
       if (!accessToken && window.location.search) {
         urlParams = new URLSearchParams(window.location.search);
         accessToken = urlParams.get('access_token');
         refreshToken = urlParams.get('refresh_token');
-        console.log('Method 2 - Window search:', { accessToken: !!accessToken, refreshToken: !!refreshToken });
-      }
+        }
       
       // Method 3: Hash parameters
       if (!accessToken && (location.hash || window.location.hash)) {
@@ -158,33 +141,25 @@ const ResetPasswordPageNew = () => {
         urlParams = new URLSearchParams(hashStr.substring(1));
         accessToken = urlParams.get('access_token');
         refreshToken = urlParams.get('refresh_token');
-        console.log('Method 3 - Hash params:', { accessToken: !!accessToken, refreshToken: !!refreshToken });
-      }
+        }
       
       // Method 4: Extract from full URL (last resort)
       if (!accessToken) {
         const fullUrl = window.location.href;
-        console.log('Method 4 - Parsing full URL:', fullUrl);
-        
         const accessMatch = fullUrl.match(/access_token=([^&]+)/);
         const refreshMatch = fullUrl.match(/refresh_token=([^&]+)/);
         
         if (accessMatch && refreshMatch) {
           accessToken = accessMatch[1];
           refreshToken = refreshMatch[1];
-          console.log('Method 4 - Regex extraction successful:', { accessToken: !!accessToken, refreshToken: !!refreshToken });
-        }
+          }
       }
       
       if (!accessToken || !refreshToken) {
         throw new Error('Missing recovery tokens in URL');
       }
       
-      console.log('✅ Tokens extracted successfully');
-      
       // ✅ DIRECT API CALL - NO SESSION COMPLEXITY
-      console.log('📞 Making direct API call to update password...');
-      
       // Use Supabase's REST API directly with the token
       const response = await fetch(`${supabase.supabaseUrl}/auth/v1/user`, {
         method: 'PUT',
@@ -199,15 +174,11 @@ const ResetPasswordPageNew = () => {
       });
       
       const result = await response.json();
-      console.log('📝 API Response:', result);
-      
       if (!response.ok) {
         throw new Error(result.error_description || result.msg || 'Password update failed');
       }
       
       if (result.id && result.email) {
-        console.log('✅ Password updated successfully!');
-        
         toast({
           title: "🎉 เปลี่ยนรหัสผ่านสำเร็จ!",
           description: "รหัสผ่านของคุณถูกเปลี่ยนเรียบร้อยแล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่",
@@ -215,7 +186,6 @@ const ResetPasswordPageNew = () => {
         });
 
         // Sign out any existing session and redirect
-        console.log('🔄 Signing out and redirecting to login...');
         await supabase.auth.signOut();
         
         setTimeout(() => {
@@ -231,8 +201,6 @@ const ResetPasswordPageNew = () => {
       }
 
     } catch (error) {
-      console.error('❌ Password reset error:', error);
-      
       let errorMessage = "เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน กรุณาลองอีกครั้ง";
       
       if (error.message.includes('same_password')) {

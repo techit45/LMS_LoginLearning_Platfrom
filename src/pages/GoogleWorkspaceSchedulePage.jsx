@@ -677,8 +677,7 @@ const GoogleWorkspaceSchedulePage = () => {
           variant: "default"
         });
       } catch (error) {
-        console.error('Failed to add schedule:', error);
-      } finally {
+        } finally {
         setLoading(false);
       }
     }
@@ -686,7 +685,6 @@ const GoogleWorkspaceSchedulePage = () => {
 
   // Handle edit
   const handleEdit = useCallback((schedule) => {
-    console.log('Edit schedule:', schedule);
     toast({
       title: "🔧 แก้ไขตาราง",
       description: `แก้ไข ${schedule.course?.name || 'ตารางสอน'}`,

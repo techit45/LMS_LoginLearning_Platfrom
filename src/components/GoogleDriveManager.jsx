@@ -17,6 +17,7 @@ import {
   Clock
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { supabase } from '../lib/supabaseClient';
 
 const GoogleDriveManager = ({ 
   compact = false, 
@@ -33,11 +34,16 @@ const GoogleDriveManager = ({
   const loadFiles = async (folderId = currentFolder) => {
     setLoading(true);
     try {
-      // Use Supabase Edge Function
+      // 🔒 SECURE: Use dynamic auth token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        throw new Error('Authentication required for Google Drive access');
+      }
+
       const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
       const response = await fetch(`${API_BASE}/list?folderId=${folderId}`, {
         headers: {
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+          'Authorization': `Bearer ${session.access_token}`, // 🔒 Dynamic token
         },
       });
       if (!response.ok) throw new Error('Failed to load files');
@@ -55,8 +61,7 @@ const GoogleDriveManager = ({
       
       setFiles(fileList);
     } catch (error) {
-      console.error('Error loading files:', error);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -98,8 +103,7 @@ const GoogleDriveManager = ({
         await navigator.clipboard.writeText(file.webViewLink);
         alert('คัดลอกลิงก์แล้ว!');
       } catch (error) {
-        console.error('Failed to copy link:', error);
-      }
+        }
     }
   };
 

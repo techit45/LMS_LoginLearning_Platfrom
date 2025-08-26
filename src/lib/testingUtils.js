@@ -18,11 +18,8 @@ export const testStudentAccess = async () => {
     },
   };
 
-  console.log("🔍 Starting Student Access Tests...");
-
   try {
     // Test 1: ทดสอบการเข้าถึงคอร์สเรียน
-    console.log("Testing course access...");
     try {
       const { data: courses, error: coursesError } = await supabase
         .from("courses")
@@ -51,7 +48,6 @@ export const testStudentAccess = async () => {
     }
 
     // Test 2: ทดสอบการเข้าถึงโปรเจค
-    console.log("Testing project access...");
     try {
       const { data: projects, error: projectsError } = await supabase
         .from("projects")
@@ -80,7 +76,6 @@ export const testStudentAccess = async () => {
     }
 
     // Test 3: ทดสอบการเข้าถึงเนื้อหาคอร์ส
-    console.log("Testing course content access...");
     try {
       const { data: content, error: contentError } = await supabase
         .from("course_content")
@@ -108,7 +103,6 @@ export const testStudentAccess = async () => {
     }
 
     // Test 4: ทดสอบการเข้าถึงข้อมูลผู้ใช้
-    console.log("Testing user profile access...");
     try {
       const {
         data: { user },
@@ -159,7 +153,6 @@ export const testStudentAccess = async () => {
     results.summary.failed++;
   }
 
-  console.log("🎯 Student Access Tests Complete");
   return results;
 };
 
@@ -176,11 +169,8 @@ export const adminTestRLSPolicies = async () => {
     },
   };
 
-  console.log("🔐 Starting Admin RLS Policy Tests...");
-
   try {
     // Test 1: ทดสอบการเข้าถึงข้อมูลผู้ใช้ทั้งหมด (Admin only)
-    console.log("Testing admin user access...");
     try {
       const { data: users, error: usersError } = await supabase
         .from("user_profiles")
@@ -208,7 +198,6 @@ export const adminTestRLSPolicies = async () => {
     }
 
     // Test 2: ทดสอบการเข้าถึงคอร์สที่ไม่ active (Admin only)
-    console.log("Testing admin inactive course access...");
     try {
       const { data: inactiveCourses, error: inactiveCoursesError } =
         await supabase
@@ -238,7 +227,6 @@ export const adminTestRLSPolicies = async () => {
     }
 
     // Test 3: ทดสอบการเข้าถึงข้อมูลการลงทะเบียน
-    console.log("Testing admin enrollment access...");
     try {
       const { data: enrollments, error: enrollmentsError } = await supabase
         .from("enrollments")
@@ -266,7 +254,6 @@ export const adminTestRLSPolicies = async () => {
     }
 
     // Test 4: ทดสอบการเข้าถึงโปรเจคที่ยังไม่อนุมัติ
-    console.log("Testing admin unapproved project access...");
     try {
       const { data: unapprovedProjects, error: unapprovedError } =
         await supabase
@@ -303,7 +290,6 @@ export const adminTestRLSPolicies = async () => {
     results.summary.failed++;
   }
 
-  console.log("🔐 Admin RLS Policy Tests Complete");
   return results;
 };
 
@@ -311,38 +297,20 @@ export const adminTestRLSPolicies = async () => {
  * ฟังก์ชันแสดงผลการทดสอบ
  */
 export const displayTestResults = (results) => {
-  console.log("\n=== 📊 TEST RESULTS ===");
-  console.log(`Total Tests: ${results.tests.length}`);
-  console.log(`✅ Passed: ${results.summary.passed}`);
-  console.log(`❌ Failed: ${results.summary.failed}`);
-  console.log(`⚠️ Warnings: ${results.summary.warnings}`);
-  console.log("\n=== 📋 DETAILED RESULTS ===");
-
   results.tests.forEach((test, index) => {
     const statusIcon =
       test.status === "passed" ? "✅" : test.status === "failed" ? "❌" : "⚠️";
-    console.log(`${index + 1}. ${statusIcon} ${test.name}`);
-    console.log(`   Details: ${test.details}`);
     if (test.data !== undefined) {
-      console.log(`   Data Count: ${test.data}`);
-    }
+      }
     if (test.hasProfile !== undefined) {
-      console.log(`   Has Profile: ${test.hasProfile}`);
-    }
+      }
     if (test.role) {
-      console.log(`   User Role: ${test.role}`);
-    }
-    console.log("");
-  });
+      }
+    });
 
   // Recommendations
   if (results.summary.failed > 0) {
-    console.log("\n=== 🔧 RECOMMENDATIONS ===");
-    console.log("1. Check Supabase configuration and RLS policies");
-    console.log("2. Verify environment variables are set correctly");
-    console.log("3. Ensure database tables exist and have proper structure");
-    console.log("4. Check user authentication and permissions");
-  }
+    }
 
   return results;
 };
@@ -497,11 +465,8 @@ export const testStorageAccess = async () => {
     },
   };
 
-  console.log("💾 Starting Storage Access Tests...");
-
   try {
     // Test 1: ทดสอบการเข้าถึง Storage Buckets
-    console.log("Testing storage bucket access...");
     try {
       const { data: buckets, error: bucketsError } =
         await supabase.storage.listBuckets();
@@ -527,7 +492,6 @@ export const testStorageAccess = async () => {
     }
 
     // Test 2: ทดสอบการเข้าถึง course-files bucket
-    console.log("Testing course-files bucket...");
     try {
       const { data: files, error: filesError } = await supabase.storage
         .from("course-files")
@@ -561,7 +525,6 @@ export const testStorageAccess = async () => {
     results.summary.failed++;
   }
 
-  console.log("💾 Storage Access Tests Complete");
   return results;
 };
 
@@ -578,11 +541,8 @@ export const testAuthenticationFlow = async () => {
     },
   };
 
-  console.log("🔐 Starting Authentication Flow Tests...");
-
   try {
     // Test 1: ทดสอบการดึงข้อมูลผู้ใช้ปัจจุบัน
-    console.log("Testing current user session...");
     try {
       const {
         data: { user },
@@ -614,7 +574,6 @@ export const testAuthenticationFlow = async () => {
     }
 
     // Test 2: ทดสอบการดึงข้อมูล Session
-    console.log("Testing session data...");
     try {
       const {
         data: { session },
@@ -653,7 +612,6 @@ export const testAuthenticationFlow = async () => {
     results.summary.failed++;
   }
 
-  console.log("🔐 Authentication Flow Tests Complete");
   return results;
 };
 
@@ -661,8 +619,6 @@ export const testAuthenticationFlow = async () => {
  * ฟังก์ชันรวมทดสอบทั้งหมด
  */
 export const runAllTests = async () => {
-  console.log("🚀 Starting Comprehensive System Tests...");
-
   const allResults = {
     timestamp: new Date().toISOString(),
     tests: {
@@ -694,11 +650,6 @@ export const runAllTests = async () => {
       }
     });
 
-    console.log("\n🎯 COMPREHENSIVE TEST RESULTS");
-    console.log("================================");
-    console.log(`✅ Total Passed: ${allResults.summary.totalPassed}`);
-    console.log(`❌ Total Failed: ${allResults.summary.totalFailed}`);
-    console.log(`⚠️ Total Warnings: ${allResults.summary.totalWarnings}`);
     console.log(
       `📊 Success Rate: ${Math.round(
         (allResults.summary.totalPassed /
@@ -709,8 +660,7 @@ export const runAllTests = async () => {
       )}%`
     );
   } catch (error) {
-    console.error("Error running comprehensive tests:", error);
-  }
+    }
 
   return allResults;
 };

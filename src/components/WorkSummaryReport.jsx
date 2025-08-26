@@ -80,8 +80,7 @@ const WorkSummaryReport = ({ userId = null, showExport = true }) => {
       await loadMonthlyTrend(targetUserId);
 
     } catch (error) {
-      console.error('Error loading summary:', error);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -232,8 +231,7 @@ const WorkSummaryReport = ({ userId = null, showExport = true }) => {
 
       setSummaryData(prev => ({ ...prev, monthlyTrend: trendData }));
     } catch (error) {
-      console.error('Error loading monthly trend:', error);
-    }
+      }
   };
 
   const getTypeIcon = (type) => {
@@ -264,7 +262,6 @@ const WorkSummaryReport = ({ userId = null, showExport = true }) => {
       meta: 'bg-blue-500',
       med: 'bg-green-500',
       edtech: 'bg-purple-500',
-      innotech: 'bg-orange-500',
       w2d: 'bg-red-500'
     };
     return colors[company] || 'bg-gray-500';
@@ -282,7 +279,7 @@ const WorkSummaryReport = ({ userId = null, showExport = true }) => {
           getTypeName(entry.entry_type),
           entry.hours.toFixed(1),
           (entry.overtime_hours || 0).toFixed(1),
-          entry.work_description || '-'
+          entry.employee_notes || '-'
         ]);
       });
     });
@@ -639,7 +636,7 @@ const WorkSummaryReport = ({ userId = null, showExport = true }) => {
                             )}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
-                            {entry.work_description || '-'}
+                            {entry.employee_notes || '-'}
                           </td>
                         </tr>
                       ))}

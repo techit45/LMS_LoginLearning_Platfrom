@@ -135,7 +135,7 @@ const ErrorDisplay = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => console.error("Original Error:", error)}
+                onClick={() => }
               >
                 Log Error
               </Button>

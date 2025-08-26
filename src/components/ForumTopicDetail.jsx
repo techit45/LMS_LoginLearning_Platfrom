@@ -67,7 +67,6 @@ const ForumTopicDetail = ({
       setTopic(data);
       setReplies(data.replies || []);
     } catch (error) {
-      console.error('Error loading topic:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถโหลดข้อมูลหัวข้อได้",
@@ -107,7 +106,6 @@ const ForumTopicDetail = ({
         description: "ความคิดเห็นของคุณถูกเพิ่มแล้ว"
       });
     } catch (error) {
-      console.error('Error creating reply:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถส่งความคิดเห็นได้",
@@ -141,8 +139,7 @@ const ForumTopicDetail = ({
         ));
       }
     } catch (error) {
-      console.error('Error toggling like:', error);
-    }
+      }
   };
 
   const handleMarkBestAnswer = async (replyId) => {
@@ -166,7 +163,6 @@ const ForumTopicDetail = ({
         description: "หัวข้อนี้ถูกทำเครื่องหมายว่าแก้ไขแล้ว"
       });
     } catch (error) {
-      console.error('Error marking best answer:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถเลือกคำตอบที่ดีที่สุดได้",
@@ -193,8 +189,7 @@ const ForumTopicDetail = ({
         });
       }
     } catch (error) {
-      console.error('Error toggling subscription:', error);
-    }
+      }
   };
 
   if (loading) {

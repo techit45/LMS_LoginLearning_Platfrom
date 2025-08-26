@@ -61,8 +61,7 @@ const ProgressPage = () => {
       
       setProgressData(data);
     } catch (error) {
-      console.error('Error loading progress data:', error);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -73,7 +72,6 @@ const ProgressPage = () => {
 
   const handleExport = () => {
     // Export progress data to CSV/Excel
-    console.log('Exporting progress data...');
     // Implementation for export functionality
   };
 

@@ -49,21 +49,15 @@ class CalComSchedulingService {
    */
   async initialize() {
     try {
-      console.log('🚀 Initializing Cal.com Pure Scheduling Service...');
-      
       // Development mode - skip Cal.com connection for UI testing
       const isDevelopment = import.meta.env.DEV;
       
       if (isDevelopment) {
-        console.log('🔧 Development mode: Skipping Cal.com API connection test');
-        
         // Initialize courses without Cal.com connection
         await this.initializeCourses();
         
         this.isInitialized = true;
         this.lastSyncTime = new Date().toISOString();
-        
-        console.log('✅ Cal.com Pure Scheduling Service initialized in development mode');
         
         return {
           success: true,
@@ -90,8 +84,6 @@ class CalComSchedulingService {
       this.isInitialized = true;
       this.lastSyncTime = new Date().toISOString();
 
-      console.log('✅ Cal.com Pure Scheduling Service initialized successfully');
-      
       return {
         success: true,
         data: {
@@ -102,7 +94,6 @@ class CalComSchedulingService {
       };
 
     } catch (error) {
-      console.error('❌ Cal.com scheduling initialization failed:', error);
       return {
         success: false,
         error: error.message,
@@ -123,8 +114,6 @@ class CalComSchedulingService {
    */
   async syncEventTypes() {
     try {
-      console.log('📡 Syncing event types from Cal.com...');
-      
       // Log sync start
       const syncId = await this.logSyncOperation('fetch_event_types', 'start');
       const startTime = Date.now();
@@ -138,8 +127,6 @@ class CalComSchedulingService {
       }
 
       const eventTypes = data?.eventTypes || [];
-      console.log(`📊 Found ${eventTypes.length} event types in Cal.com`);
-
       // Save to our database
       const savedEventTypes = [];
       for (const eventType of eventTypes) {
@@ -165,13 +152,11 @@ class CalComSchedulingService {
             .single();
 
           if (saveError) {
-            console.warn('⚠️ Failed to save event type:', eventType.title, saveError);
-          } else {
+            } else {
             savedEventTypes.push(saved);
           }
         } catch (saveError) {
-          console.warn('⚠️ Exception saving event type:', eventType.title, saveError);
-        }
+          }
       }
 
       // Log successful sync
@@ -182,11 +167,9 @@ class CalComSchedulingService {
         null, duration
       );
 
-      console.log(`✅ Synced ${savedEventTypes.length}/${eventTypes.length} event types`);
       return { success: true, data: savedEventTypes };
 
     } catch (error) {
-      console.error('💥 Event types sync failed:', error);
       return { success: false, error: error.message };
     }
   }
@@ -196,8 +179,6 @@ class CalComSchedulingService {
    */
   async createEventTypeForCourse(courseData) {
     try {
-      console.log('📅 Creating Cal.com event type for course:', courseData.name);
-
       // Log operation
       const syncId = await this.logSyncOperation('create_event_type', 'start');
       const startTime = Date.now();
@@ -245,8 +226,7 @@ class CalComSchedulingService {
         .single();
 
       if (saveError) {
-        console.warn('⚠️ Failed to save event type to database:', saveError);
-      }
+        }
 
       // Update course with event type ID
       if (courseData.id && !saveError) {
@@ -262,11 +242,9 @@ class CalComSchedulingService {
       const duration = Date.now() - startTime;
       await this.logSyncOperation('create_event_type', 'success', syncId, data.eventType.id, eventTypeData, data, null, duration);
 
-      console.log('✅ Event type created successfully:', data.eventType.id);
       return { success: true, data: { eventType: data.eventType, saved: savedEventType } };
 
     } catch (error) {
-      console.error('💥 Event type creation failed:', error);
       return { success: false, error: error.message };
     }
   }
@@ -280,8 +258,6 @@ class CalComSchedulingService {
    */
   async initializeCourses() {
     try {
-      console.log('📚 Initializing courses for Cal.com scheduling...');
-      
       // Check if we have courses already
       const { data: existingCourses } = await supabase
         .from('calcom_courses')
@@ -289,7 +265,6 @@ class CalComSchedulingService {
         .eq('is_active', true);
 
       if (existingCourses && existingCourses.length > 0) {
-        console.log(`ℹ️ Found ${existingCourses.length} existing courses, skipping initialization`);
         return { success: true, data: existingCourses };
       }
 
@@ -303,16 +278,13 @@ class CalComSchedulingService {
         if (!course.calcom_event_type_id) {
           const result = await this.createEventTypeForCourse(course);
           if (!result.success) {
-            console.warn(`⚠️ Failed to create event type for ${course.name}:`, result.error);
-          }
+            }
         }
       }
 
-      console.log('✅ Courses initialization completed');
       return { success: true, data: courses };
 
     } catch (error) {
-      console.error('💥 Courses initialization failed:', error);
       return { success: false, error: error.message };
     }
   }
@@ -340,7 +312,6 @@ class CalComSchedulingService {
       
       return { success: true, data: data || [] };
     } catch (error) {
-      console.error('Error fetching Cal.com courses:', error);
       return { success: false, error: error.message, data: [] };
     }
   }
@@ -360,7 +331,6 @@ class CalComSchedulingService {
       
       return { success: true, data: data || [] };
     } catch (error) {
-      console.error('Error fetching instructors:', error);
       return { success: false, error: error.message, data: [] };
     }
   }
@@ -370,8 +340,6 @@ class CalComSchedulingService {
    */
   async createInstructor(instructorData) {
     try {
-      console.log('🆕 Creating new instructor:', instructorData.name);
-
       const { data: user } = await supabase.auth.getUser();
 
       const instructorRecord = {
@@ -397,7 +365,6 @@ class CalComSchedulingService {
 
       return { success: true, data: newInstructor };
     } catch (error) {
-      console.error('Error creating instructor:', error);
       return { success: false, error: error.message };
     }
   }
@@ -407,8 +374,6 @@ class CalComSchedulingService {
    */
   async createCourse(courseData) {
     try {
-      console.log('🆕 Creating new Cal.com course:', courseData.name);
-
       const { data: user } = await supabase.auth.getUser();
 
       // Create course in database (skip user ID in dev mode if auth fails)
@@ -438,12 +403,10 @@ class CalComSchedulingService {
       const eventTypeResult = await this.createEventTypeForCourse(newCourse);
       
       if (!eventTypeResult.success) {
-        console.warn('⚠️ Course created but event type creation failed:', eventTypeResult.error);
-      }
+        }
 
       return { success: true, data: newCourse };
     } catch (error) {
-      console.error('Error creating Cal.com course:', error);
       return { success: false, error: error.message };
     }
   }
@@ -457,8 +420,6 @@ class CalComSchedulingService {
    */
   async createBooking(scheduleData) {
     try {
-      console.log('📅 Creating Cal.com booking:', scheduleData);
-
       const syncId = await this.logSyncOperation('create_booking', 'start');
       const startTime = Date.now();
 
@@ -522,14 +483,11 @@ class CalComSchedulingService {
         .single();
 
       if (saveError) {
-        console.warn('⚠️ Booking created in Cal.com but failed to save locally:', saveError);
-      }
+        }
 
       const duration = Date.now() - startTime;
       await this.logSyncOperation('create_booking', 'success', syncId, data.id, bookingData, data, null, duration);
 
-      console.log('✅ Booking created successfully:', data.id);
-      
       // The database trigger will automatically create the schedule view entry
       return { 
         success: true, 
@@ -540,7 +498,6 @@ class CalComSchedulingService {
       };
 
     } catch (error) {
-      console.error('💥 Booking creation failed:', error);
       return { success: false, error: error.message };
     }
   }
@@ -550,8 +507,6 @@ class CalComSchedulingService {
    */
   async deleteBooking(bookingId, reason = 'Schedule removed') {
     try {
-      console.log('🗑️ Deleting Cal.com booking:', bookingId);
-
       // Get local booking data
       const { data: localBooking, error: fetchError } = await supabase
         .from('calcom_bookings')
@@ -560,15 +515,13 @@ class CalComSchedulingService {
         .single();
 
       if (fetchError) {
-        console.warn('⚠️ Could not find local booking:', fetchError);
-      }
+        }
 
       // Delete from Cal.com if we have the ID
       if (localBooking?.calcom_booking_id) {
         const { error: calcomError } = await calcomService.deleteSchedule(localBooking.calcom_booking_id, reason);
         if (calcomError) {
-          console.warn('⚠️ Failed to delete from Cal.com:', calcomError);
-        }
+          }
       }
 
       // Delete from local database (will cascade to schedule_view via trigger)
@@ -579,11 +532,9 @@ class CalComSchedulingService {
 
       if (deleteError) throw deleteError;
 
-      console.log('✅ Booking deleted successfully');
       return { success: true };
 
     } catch (error) {
-      console.error('💥 Booking deletion failed:', error);
       return { success: false, error: error.message };
     }
   }
@@ -597,17 +548,11 @@ class CalComSchedulingService {
    */
   async getWeekSchedules(weekStartDate, company = null) {
     try {
-      console.log('📊 Fetching week schedules:', { weekStartDate, company });
-
       const isDevelopment = import.meta.env.DEV;
       
       if (isDevelopment) {
-        console.log('🔧 Development mode: Returning empty schedule grid for testing');
-        
         // Return empty schedule grid for development testing
         const scheduleGrid = {};
-        
-        console.log('📋 Development mode: Empty schedule grid returned');
         
         return {
           success: true,
@@ -666,7 +611,6 @@ class CalComSchedulingService {
       };
 
     } catch (error) {
-      console.error('💥 Failed to fetch week schedules:', error);
       return { success: false, error: error.message, data: {} };
     }
   }
@@ -676,13 +620,9 @@ class CalComSchedulingService {
    */
   async addSchedule(dayIndex, timeIndex, scheduleData, weekStartDate) {
     try {
-      console.log('➕ Adding new schedule:', { dayIndex, timeIndex, scheduleData });
-
       const isDevelopment = import.meta.env.DEV;
       
       if (isDevelopment) {
-        console.log('🔧 Development mode: Simulating schedule creation');
-        
         // Simulate creation delay
         await new Promise(resolve => setTimeout(resolve, 500));
         
@@ -695,7 +635,6 @@ class CalComSchedulingService {
           }
         };
         
-        console.log('✅ Development mode: Schedule creation simulated');
         return mockResult;
       }
 
@@ -770,7 +709,6 @@ class CalComSchedulingService {
       return bookingResult;
 
     } catch (error) {
-      console.error('💥 Failed to add schedule:', error);
       return { success: false, error: error.message };
     }
   }
@@ -780,17 +718,12 @@ class CalComSchedulingService {
    */
   async updateScheduleDuration(scheduleId, newDurationMinutes) {
     try {
-      console.log('🔄 Updating schedule duration:', { scheduleId, newDurationMinutes });
-
       const isDevelopment = import.meta.env.DEV;
       
       if (isDevelopment) {
-        console.log('🔧 Development mode: Simulating schedule resize');
-        
         // Simulate resize delay
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        console.log('✅ Development mode: Schedule resize simulated');
         return { 
           success: true, 
           data: { 
@@ -825,7 +758,6 @@ class CalComSchedulingService {
         });
         
         if (calcomError) {
-          console.warn('⚠️ Failed to update Cal.com booking:', calcomError);
           // Continue with local update even if Cal.com fails
         }
       }
@@ -841,7 +773,6 @@ class CalComSchedulingService {
 
       if (updateError) throw updateError;
 
-      console.log('✅ Schedule duration updated successfully');
       return { 
         success: true, 
         data: { 
@@ -852,7 +783,6 @@ class CalComSchedulingService {
       };
 
     } catch (error) {
-      console.error('💥 Schedule resize failed:', error);
       return { success: false, error: error.message };
     }
   }
@@ -862,17 +792,12 @@ class CalComSchedulingService {
    */
   async removeSchedule(dayIndex, timeIndex, weekStartDate) {
     try {
-      console.log('🗑️ Removing schedule:', { dayIndex, timeIndex, weekStartDate });
-
       const isDevelopment = import.meta.env.DEV;
       
       if (isDevelopment) {
-        console.log('🔧 Development mode: Simulating schedule removal');
-        
         // Simulate removal delay
         await new Promise(resolve => setTimeout(resolve, 300));
         
-        console.log('✅ Development mode: Schedule removal simulated');
         return { success: true, developmentMode: true };
       }
 
@@ -886,7 +811,6 @@ class CalComSchedulingService {
         .single();
 
       if (error || !scheduleView?.booking_id) {
-        console.warn('⚠️ Schedule not found for removal');
         return { success: true }; // Already removed
       }
 
@@ -895,7 +819,6 @@ class CalComSchedulingService {
       return result;
 
     } catch (error) {
-      console.error('💥 Failed to remove schedule:', error);
       return { success: false, error: error.message };
     }
   }
@@ -914,13 +837,9 @@ class CalComSchedulingService {
 
     try {
       this.syncInProgress = true;
-      console.log('🔄 Syncing data from Cal.com for week:', weekStartDate);
-
       const isDevelopment = import.meta.env.DEV;
       
       if (isDevelopment) {
-        console.log('🔧 Development mode: Simulating sync operation');
-        
         // Simulate sync delay
         await new Promise(resolve => setTimeout(resolve, 1000));
         
@@ -932,8 +851,6 @@ class CalComSchedulingService {
         };
         
         this.lastSyncTime = new Date().toISOString();
-        console.log('✅ Development sync completed:', syncResults);
-        
         return { success: true, data: syncResults };
       }
 
@@ -958,18 +875,14 @@ class CalComSchedulingService {
           // This will be implemented based on your specific sync requirements
           syncResults.updated++;
         } catch (error) {
-          console.error('Sync error for schedule:', scheduleKey, error);
           syncResults.errors++;
         }
       }
 
       this.lastSyncTime = new Date().toISOString();
-      console.log('✅ Sync completed:', syncResults);
-
       return { success: true, data: syncResults };
 
     } catch (error) {
-      console.error('💥 Sync failed:', error);
       return { success: false, error: error.message };
     } finally {
       this.syncInProgress = false;
@@ -1007,7 +920,6 @@ class CalComSchedulingService {
     
     // Check if date is valid
     if (isNaN(d.getTime())) {
-      console.warn('⚠️ Invalid date provided to getWeekStartDate, using current date');
       const currentDate = new Date();
       const day = currentDate.getDay();
       const diff = currentDate.getDate() - day + (day === 0 ? -6 : 1); // Monday
@@ -1045,7 +957,6 @@ class CalComSchedulingService {
 
       return data?.id;
     } catch (error) {
-      console.warn('Failed to log sync operation:', error);
       return null;
     }
   }

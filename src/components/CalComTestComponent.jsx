@@ -21,12 +21,8 @@ const CalComTestComponent = () => {
       setConnectionStatus('testing');
       setError(null);
       
-      console.log('🧪 Starting Cal.com API test...');
-      
       // Test 1: Basic connection
       const connectionResult = await calcomService.testConnection();
-      console.log('Connection result:', connectionResult);
-      
       setTestResults(prev => ({
         ...prev,
         connection: connectionResult
@@ -39,8 +35,6 @@ const CalComTestComponent = () => {
         // Test 2: Get event types
         try {
           const eventTypesResult = await calcomService.api.getEventTypes();
-          console.log('Event types result:', eventTypesResult);
-          
           setTestResults(prev => ({
             ...prev,
             eventTypes: eventTypesResult
@@ -50,7 +44,6 @@ const CalComTestComponent = () => {
             setEventTypes(eventTypesResult.data.eventTypes);
           }
         } catch (eventTypeError) {
-          console.error('Event types test failed:', eventTypeError);
           setTestResults(prev => ({
             ...prev,
             eventTypes: { error: eventTypeError.message }
@@ -62,7 +55,6 @@ const CalComTestComponent = () => {
         setError(connectionResult.error);
       }
     } catch (err) {
-      console.error('Cal.com test failed:', err);
       setConnectionStatus('failed');
       setError(err.message);
     }

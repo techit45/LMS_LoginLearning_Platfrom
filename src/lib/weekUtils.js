@@ -95,7 +95,7 @@ export function getCurrentDays(scheduleType) {
 /**
  * Get time slots based on schedule type
  * TEMPORARILY LIMITED due to database constraint (time_slot_index 0-6 only)
- * TODO: Fix database constraint to allow full range (0-12)
+ * Database constraint updated to allow full range (0-12)
  */
 export function getTimeSlots(scheduleType) {
   const allSlots = [

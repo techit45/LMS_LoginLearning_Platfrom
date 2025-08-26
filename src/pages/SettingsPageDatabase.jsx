@@ -129,7 +129,6 @@ const SettingsPageDatabase = () => {
         // (ปัญหาเดิม: toast แสดงซ้ำหลายครั้งเมื่อ component re-render)
 
       } catch (error) {
-        console.error('Error loading settings:', error);
         toast({
           title: "เกิดข้อผิดพลาด",
           description: "ไม่สามารถโหลดการตั้งค่าได้",
@@ -171,7 +170,6 @@ const SettingsPageDatabase = () => {
       await saveProfile();
 
     } catch (error) {
-      console.error('Error uploading profile image:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: error.message,
@@ -208,7 +206,6 @@ const SettingsPageDatabase = () => {
         description: "ข้อมูลโปรไฟล์ของคุณได้รับการอัพเดทแล้ว"
       });
     } catch (error) {
-      console.error('Error saving profile:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: `ไม่สามารถบันทึกข้อมูลได้: ${error.message}`,
@@ -242,7 +239,6 @@ const SettingsPageDatabase = () => {
         description: "การตั้งค่าของคุณได้รับการอัพเดทแล้ว"
       });
     } catch (error) {
-      console.error('Error saving settings:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: `ไม่สามารถบันทึกการตั้งค่าได้: ${error.message}`,
@@ -252,7 +248,6 @@ const SettingsPageDatabase = () => {
       setLoading(false);
     }
   };
-
 
   // Clear profile data
   const clearAllData = async () => {
@@ -282,7 +277,6 @@ const SettingsPageDatabase = () => {
           description: "ข้อมูลโปรไฟล์ทั้งหมดถูกลบออกจากฐานข้อมูลแล้ว"
         });
       } catch (error) {
-        console.error('Error clearing settings:', error);
         toast({
           title: "เกิดข้อผิดพลาด",
           description: `ไม่สามารถล้างข้อมูลได้: ${error.message}`,
@@ -362,7 +356,6 @@ const SettingsPageDatabase = () => {
       });
       
     } catch (error) {
-      console.error('Password change error:', error);
       toast({
         title: "ไม่สามารถเปลี่ยนรหัสผ่านได้",
         description: error.message || "เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน",

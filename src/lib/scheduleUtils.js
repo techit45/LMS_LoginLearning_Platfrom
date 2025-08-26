@@ -91,11 +91,9 @@ export const getInstructorSchedule = (schedules, instructorId) => {
 
 export const exportScheduleToPDF = (schedules, weekDates) => {
   // Future implementation for PDF export
-  console.log('Exporting schedule to PDF...', { schedules, weekDates });
-};
+  };
 
 export const saveScheduleToDatabase = async (schedules) => {
   // Future implementation for database save
-  console.log('Saving schedule to database...', schedules);
   return new Promise(resolve => setTimeout(resolve, 1000));
 };

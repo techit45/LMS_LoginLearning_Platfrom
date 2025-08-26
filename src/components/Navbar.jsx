@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, UserCircle, ShieldCheck, Home, Briefcase, Code2, Phone, LayoutDashboard, BarChart3, MapPin, Menu, X, ChevronDown } from 'lucide-react';
+import { LogOut, UserCircle, ShieldCheck, Home, Briefcase, Code2, Phone, LayoutDashboard, BarChart3, MapPin, Menu, X, ChevronDown, CalendarDays, Clock } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useToast } from "../hooks/use-toast.jsx"
 import { useAuth } from '../contexts/AuthContext';
@@ -22,7 +22,6 @@ const Navbar = () => {
       toast({ title: "ออกจากระบบสำเร็จแล้ว" });
       navigate('/');
     } catch (error) {
-      console.error('Exception during logout:', error);
       // Still show success since local logout always works
       toast({ title: "ออกจากระบบสำเร็จแล้ว" });
       navigate('/');

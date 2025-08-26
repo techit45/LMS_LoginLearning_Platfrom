@@ -19,7 +19,6 @@ const getShortCompanyName = (fullName) => {
     'Meta Tech Academy': 'Meta',
     'Meta': 'Meta',
     'EdTech Solutions': 'EdTech',
-    'Innovation Technology Lab': 'Innotech',
     'Industrial Research & Engineering': 'IRE'
   }
   

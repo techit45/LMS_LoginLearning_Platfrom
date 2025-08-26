@@ -6,8 +6,6 @@ import { supabase } from './supabaseClient';
  */
 export async function checkContentAccessibility(contentId, userId) {
   try {
-    console.log('🔒 Checking content accessibility:', { contentId, userId });
-
     // Get basic content details (only existing columns)
     const { data: content, error: contentError } = await supabase
       .from('course_content')
@@ -16,15 +14,12 @@ export async function checkContentAccessibility(contentId, userId) {
       .single();
 
     if (contentError) {
-      console.error('Error fetching content:', contentError);
       return {
         isAccessible: false,
         reason: 'Content not found',
         error: contentError
       };
     }
-
-    console.log('📄 Content details:', content);
 
     // Since lock columns don't exist, always allow access
     console.log('🔓 Content accessible (lock system disabled)');
@@ -35,7 +30,6 @@ export async function checkContentAccessibility(contentId, userId) {
     };
 
   } catch (error) {
-    console.error('Error checking content accessibility:', error);
     return {
       isAccessible: false,
       reason: 'System error',
@@ -50,8 +44,6 @@ export async function checkContentAccessibility(contentId, userId) {
  */
 export async function getCourseContentAccessibility(courseId, userId) {
   try {
-    console.log('🔒 Getting course content accessibility:', { courseId, userId });
-
     // Get all content in the course (only existing columns)
     const { data: contents, error: contentsError } = await supabase
       .from('course_content')
@@ -60,7 +52,6 @@ export async function getCourseContentAccessibility(courseId, userId) {
       .order('order_index', { ascending: true });
 
     if (contentsError) {
-      console.error('Error fetching course contents:', contentsError);
       return {
         isAccessible: false,
         reason: 'Course contents not found',
@@ -78,7 +69,6 @@ export async function getCourseContentAccessibility(courseId, userId) {
       };
     });
 
-    console.log('📄 Course accessibility map:', accessibilityMap);
     return {
       isAccessible: true,
       accessibilityMap,
@@ -86,7 +76,6 @@ export async function getCourseContentAccessibility(courseId, userId) {
     };
 
   } catch (error) {
-    console.error('Error getting course content accessibility:', error);
     return {
       isAccessible: false,
       reason: 'System error',

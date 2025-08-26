@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Course Creation UI Issue</title>
+    <style>
+        body { 
+            font-family: 'Sarabun', Arial, sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        .test-button {
+            background: #3b82f6;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .test-button:hover {
+            background: #2563eb;
+        }
+        .log-container {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { color: #059669; }
+        .error { color: #dc2626; }
+        .info { color: #2563eb; }
+    </style>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Test Course Creation UI Issue</h1>
+        
+        <div>
+            <h3>Test Actions:</h3>
+            <button class="test-button" onclick="testGetCourses()">📋 Test Get Courses</button>
+            <button class="test-button" onclick="testCreateCourse()">➕ Test Create Course</button>
+            <button class="test-button" onclick="clearLogs()">🗑️ Clear Logs</button>
+        </div>
+        
+        <div class="log-container" id="logs">
+            <div class="info">📝 Ready to test course creation UI issue...</div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://vuitwzisazvikrhtfthh.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('logs');
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${timestamp}] ${message}`;
+            logElement.appendChild(div);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '<div class="info">📝 Logs cleared...</div>';
+        }
+
+        // Test getting courses (simulating getCourses function)
+        async function testGetCourses() {
+            log('🔄 Testing getCourses function...', 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('teaching_courses')
+                    .select(`
+                        id,
+                        name,
+                        company,
+                        location,
+                        company_color,
+                        duration_hours,
+                        created_at,
+                        updated_at
+                    `)
+                    .order('name');
+
+                if (error) {
+                    log(`❌ Database error: ${error.message}`, 'error');
+                    return;
+                }
+
+                log(`✅ Retrieved ${data.length} courses from database`, 'success');
+                
+                data.forEach((course, index) => {
+                    log(`   ${index + 1}. ${course.name} (${course.company}) - ${course.location}`, 'info');
+                });
+
+                // Test transformation
+                const transformedData = data.map(course => ({
+                    id: course.id,
+                    name: course.name,
+                    title: course.name,
+                    description: course.description || '',
+                    company: course.company,
+                    instructor_name: course.instructor_name || '',
+                    duration_hours: course.duration_hours || 1,
+                    default_duration: course.duration_hours || 1,
+                    is_active: true,
+                    created_at: course.created_at,
+                    updated_at: course.updated_at,
+                    location: course.location,
+                    company_color: course.company_color
+                }));
+
+                log(`✅ Data transformation successful: ${transformedData.length} courses ready`, 'success');
+
+            } catch (exception) {
+                log(`❌ Exception in getCourses: ${exception.message}`, 'error');
+            }
+        }
+
+        // Test creating a course
+        async function testCreateCourse() {
+            log('➕ Testing course creation...', 'info');
+            
+            const testCourse = {
+                name: `Test Course ${new Date().getTime()}`,
+                company: 'Login',
+                location: 'Test Location',
+                company_color: '#3b82f6',
+                duration_hours: 2
+            };
+
+            try {
+                log(`📝 Creating course: ${testCourse.name}`, 'info');
+                
+                const { data, error } = await supabase
+                    .from('teaching_courses')
+                    .insert([{
+                        name: testCourse.name.trim(),
+                        company: testCourse.company?.trim() || null,
+                        location: testCourse.location?.trim() || null,
+                        company_color: testCourse.company_color || '#6366f1',
+                        duration_hours: testCourse.duration_hours || 1,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }])
+                    .select()
+                    .single();
+
+                if (error) {
+                    log(`❌ Course creation failed: ${error.message}`, 'error');
+                    return;
+                }
+
+                log(`✅ Course created successfully! ID: ${data.id}`, 'success');
+                log(`   📋 Course details: ${data.name} (${data.company})`, 'info');
+                
+                // Now test fetching courses again to see if UI would update
+                log('🔄 Re-fetching courses to simulate UI refresh...', 'info');
+                await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
+                await testGetCourses();
+
+            } catch (exception) {
+                log(`❌ Exception in createCourse: ${exception.message}`, 'error');
+            }
+        }
+
+        // Auto-start with getting courses
+        window.addEventListener('load', () => {
+            log('🚀 Page loaded, running initial course fetch test...', 'info');
+            testGetCourses();
+        });
+    </script>
+</body>
+</html>

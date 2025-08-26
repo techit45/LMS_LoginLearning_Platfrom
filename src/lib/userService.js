@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { sanitizeUserInput, checkRateLimit } from './inputSanitizer';
 
 // ==========================================
 // USER PROFILE OPERATIONS
@@ -49,7 +50,6 @@ export const getUserProfile = async (userId = null) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching user profile:', error);
     return { data: null, error };
   }
 };
@@ -80,7 +80,6 @@ export const upsertUserProfile = async (profileData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error upserting user profile:', error);
     return { data: null, error };
   }
 };
@@ -107,7 +106,6 @@ export const updateUserProfile = async (profileData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating user profile:', error);
     return { data: null, error };
   }
 };
@@ -160,7 +158,6 @@ export const getUserLearningStats = async (userId = null) => {
 
     return { data: stats, error: null };
   } catch (error) {
-    console.error('Error fetching user learning stats:', error);
     return { data: null, error };
   }
 };
@@ -193,7 +190,6 @@ export const getUserAchievements = async (userId = null) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching user achievements:', error);
     return { data: null, error };
   }
 };
@@ -219,7 +215,6 @@ export const awardAchievement = async (userId, achievementData) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error awarding achievement:', error);
     return { data: null, error };
   }
 };
@@ -229,15 +224,43 @@ export const awardAchievement = async (userId, achievementData) => {
 // ==========================================
 
 /**
- * Get all user profiles (Admin only)
+ * 🔒 SECURE: Get all user profiles (Admin only with proper authorization)
  */
 export const getAllUserProfiles = async () => {
   try {
-    // Just get basic user profiles without foreign key relationships
+    // 🔒 Check authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new Error('Authentication required');
+    }
+
+    // 🔒 Check admin role from database
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      throw new Error('Unable to verify user permissions');
+    }
+
+    if (!['admin', 'super_admin', 'hr_manager'].includes(profile.role)) {
+      throw new Error('Insufficient permissions. Admin access required.');
+    }
+
+    // 🔒 Rate limiting for admin operations
+    const rateLimitCheck = checkRateLimit(`admin_users_${user.id}`, 10, 60000);
+    if (!rateLimitCheck.allowed) {
+      throw new Error('Too many requests. Please wait before retrying.');
+    }
+
+    // 🔒 Only select necessary fields (not all fields with *)
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('user_id, full_name, email, role, is_active, created_at, updated_at, avatar_url, phone')
+      .order('created_at', { ascending: false })
+      .limit(100); // 🔒 Limit results to prevent data overload
 
     if (error) throw error;
 
@@ -250,7 +273,7 @@ export const getAllUserProfiles = async () => {
 
     return { data: profilesWithStats, error: null };
   } catch (error) {
-    console.error('Error fetching all user profiles:', error);
+    console.error('🔒 getAllUserProfiles error:', error.message);
     return { data: null, error };
   }
 };
@@ -299,7 +322,6 @@ export const getUserProfileDetailed = async (userId) => {
       error: null
     };
   } catch (error) {
-    console.error('Error fetching detailed user profile:', error);
     return { data: null, error };
   }
 };
@@ -375,7 +397,6 @@ export const getUserStats = async () => {
       error: null
     };
   } catch (error) {
-    console.error('Error fetching user stats:', error);
     return { data: null, error };
   }
 };
@@ -415,8 +436,6 @@ export const getProfileCompletionPercentage = (profile) => {
  */
 export const getAllUsersForAdmin = async () => {
   try {
-    console.log('🔍 getAllUsersForAdmin: Fetching user profiles...');
-    
     // Simple query without joins to avoid RLS conflicts
     const { data: profiles, error: profilesError } = await supabase
       .from('user_profiles')
@@ -424,7 +443,6 @@ export const getAllUsersForAdmin = async () => {
       .order('created_at', { ascending: false });
 
     if (profilesError) {
-      console.error('❌ Error fetching user profiles:', profilesError);
       return { data: [], error: profilesError };
     }
 
@@ -439,7 +457,6 @@ export const getAllUsersForAdmin = async () => {
 
     return { data: usersWithStats, error: null };
   } catch (error) {
-    console.error('❌ Error fetching users for admin:', error);
     return { data: [], error };
   }
 };
@@ -460,7 +477,6 @@ export const updateUserRole = async (userId, newRole) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating user role:', error);
     return { data: null, error };
   }
 };
@@ -482,7 +498,6 @@ export const getProfileSettings = async () => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error getting profile settings:', error);
     return { data: null, error };
   }
 };
@@ -500,7 +515,6 @@ export const saveProfileSettings = async (settings) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error saving profile settings:', error);
     return { data: null, error };
   }
 };
@@ -535,7 +549,6 @@ export const getDisplaySettings = async () => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error getting display settings:', error);
     return { data: null, error };
   }
 };
@@ -563,7 +576,6 @@ export const saveDisplaySettings = async (settings) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error saving display settings:', error);
     return { data: null, error };
   }
 };
@@ -605,7 +617,6 @@ export const getNotificationSettings = async () => {
       error: null
     };
   } catch (error) {
-    console.error('Error getting notification settings:', error);
     return { data: null, error };
   }
 };
@@ -633,7 +644,6 @@ export const saveNotificationSettings = async (settings) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error saving notification settings:', error);
     return { data: null, error };
   }
 };
@@ -658,7 +668,6 @@ export const saveActiveTab = async (tab) => {
     localStorage.setItem('admin_active_tab', tab);
     return { data: tab, error: null };
   } catch (error) {
-    console.error('Error saving active tab:', error);
     return { data: null, error };
   }
 };
@@ -680,7 +689,6 @@ export const deleteAllUserSettings = async () => {
 
     return { data: true, error: null };
   } catch (error) {
-    console.error('Error deleting user settings:', error);
     return { data: null, error };
   }
 };

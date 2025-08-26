@@ -1,8 +1,10 @@
 {
-  "buildCommand": "npm run build",
   "version": 2,
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite",
+  "framework": null,
+  "installCommand": "npm install",
+  "devCommand": "npm run dev",
   "rewrites": [
     {
       "source": "/(.*)",
@@ -35,15 +37,7 @@
         },
         {
           "key": "Permissions-Policy",
-          "value": "geolocation=(), microphone=(), camera=()"
-        },
-        {
-          "key": "Strict-Transport-Security",
-          "value": "max-age=63072000; includeSubDomains; preload"
-        },
-        {
-          "key": "X-DNS-Prefetch-Control",
-          "value": "on"
+          "value": "geolocation=(self), microphone=(), camera=()"
         }
       ]
     },
@@ -53,23 +47,6 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        },
-        {
-          "key": "Pragma",
-          "value": "no-cache"
-        },
-        {
-          "key": "Expires",
-          "value": "0"
         }
       ]
     }

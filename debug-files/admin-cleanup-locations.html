@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin: Cleanup Company Locations</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: linear-gradient(135deg, #dc3545 0%, #6c757d 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .admin-section { 
+            margin: 20px 0; 
+            padding: 20px; 
+            border-radius: 10px; 
+            border-left: 5px solid #dc3545;
+            background: #f8f9fa;
+        }
+        .success { border-left-color: #28a745; background: #d4f6d4; }
+        .warning { border-left-color: #ffc107; background: #fff3cd; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .info { border-left-color: #17a2b8; background: #d1ecf1; }
+        
+        h1 { 
+            text-align: center; 
+            color: #dc3545;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 18px;
+        }
+        
+        button { 
+            background: linear-gradient(45deg, #dc3545, #c82333);
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            margin: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        button:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220,53,69,0.4);
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .location-card {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .location-info {
+            flex-grow: 1;
+        }
+        
+        .location-actions button {
+            margin: 2px;
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .keep { background: #28a745; }
+        .deactivate { background: #ffc107; color: #000; }
+        .delete { background: #dc3545; }
+        
+        .auth-section {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        input[type="email"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 Admin: Cleanup Company Locations</h1>
+        <p class="subtitle">ลบบริษัทอื่น ๆ เหลือเฉพาะ ศูนย์บางพลัด</p>
+
+        <!-- Authentication Section -->
+        <div class="auth-section">
+            <h3>🔐 Admin Authentication Required</h3>
+            <input type="email" id="admin-email" placeholder="Admin Email" value="">
+            <input type="password" id="admin-password" placeholder="Admin Password" value="">
+            <button onclick="adminLogin()">🔓 Login as Admin</button>
+            <div id="auth-status"></div>
+        </div>
+
+        <!-- Current Locations -->
+        <div id="locations-section" class="admin-section info">
+            <h3>📍 Current Company Locations</h3>
+            <button onclick="loadLocations()">🔄 Refresh Locations</button>
+            <div id="locations-list"></div>
+        </div>
+
+        <!-- Cleanup Actions -->
+        <div id="cleanup-section" class="admin-section error">
+            <h3>🧹 Cleanup Actions</h3>
+            <p><strong>⚠️ Warning:</strong> การดำเนินการนี้จะลบบริษัทอื่น ๆ ทั้งหมด เหลือเฉพาะ <strong>ศูนย์บางพลัด</strong></p>
+            <button onclick="performCleanup()" id="cleanup-btn" disabled>🗑️ Keep Only ศูนย์บางพลัด</button>
+            <div id="cleanup-results"></div>
+        </div>
+
+        <!-- Results -->
+        <div id="results-section" class="admin-section">
+            <h3>📊 Results</h3>
+            <div id="results-content">
+                <p>Please login and load locations first</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase configuration
+        const supabaseUrl = 'https://vuitwzisazvikrhtfthh.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let currentUser = null;
+        let allLocations = [];
+
+        // Admin Login
+        async function adminLogin() {
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-password').value;
+            const statusDiv = document.getElementById('auth-status');
+            
+            if (!email || !password) {
+                statusDiv.innerHTML = '<div style="color: #dc3545;">กรุณาใส่ email และ password</div>';
+                return;
+            }
+            
+            try {
+                statusDiv.innerHTML = '<div style="color: #007bff;">🔄 Logging in...</div>';
+                
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) throw error;
+                
+                if (data.user) {
+                    currentUser = data.user;
+                    statusDiv.innerHTML = `
+                        <div style="color: #28a745;">
+                            ✅ Logged in as: ${data.user.email}<br>
+                            User ID: ${data.user.id}
+                        </div>
+                    `;
+                    
+                    document.getElementById('cleanup-btn').disabled = false;
+                    await loadLocations();
+                }
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div style="color: #dc3545;">❌ Login Error: ${error.message}</div>`;
+                console.error('Login Error:', error);
+            }
+        }
+
+        // Load Current Locations
+        async function loadLocations() {
+            const listDiv = document.getElementById('locations-list');
+            listDiv.innerHTML = '<div style="color: #666;">🔄 Loading locations...</div>';
+
+            try {
+                const { data: locations, error } = await supabase
+                    .from('company_locations')
+                    .select('*')
+                    .order('company')
+                    .order('location_name');
+
+                if (error) throw error;
+
+                allLocations = locations || [];
+                
+                if (locations && locations.length > 0) {
+                    const activeLocations = locations.filter(loc => loc.is_active);
+                    const inactiveLocations = locations.filter(loc => !loc.is_active);
+                    
+                    let locationCards = '';
+                    
+                    if (activeLocations.length > 0) {
+                        locationCards += '<h4 style="color: #28a745;">✅ Active Locations (' + activeLocations.length + ')</h4>';
+                        activeLocations.forEach(loc => {
+                            const isTarget = loc.location_name === 'ศูนย์บางพลัด';
+                            locationCards += `
+                                <div class="location-card" style="border-left: 5px solid ${isTarget ? '#28a745' : '#dc3545'};">
+                                    <div class="location-info">
+                                        <strong>${loc.location_name}</strong> (${loc.company})<br>
+                                        📍 ${loc.address}<br>
+                                        ${loc.is_main_office ? '🏠 Main Office' : '📍 Branch'} • 
+                                        📐 ${loc.radius_meters}m
+                                        ${isTarget ? '<br><span style="color: #28a745; font-weight: bold;">🎯 TARGET: Keep This Location</span>' : ''}
+                                    </div>
+                                    <div class="location-actions">
+                                        ${isTarget ? 
+                                            '<button class="keep">✅ KEEP</button>' : 
+                                            '<button class="deactivate" onclick="deactivateLocation(\'' + loc.id + '\')">❌ Remove</button>'
+                                        }
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    if (inactiveLocations.length > 0) {
+                        locationCards += '<h4 style="color: #6c757d; margin-top: 20px;">💤 Inactive Locations (' + inactiveLocations.length + ')</h4>';
+                        inactiveLocations.forEach(loc => {
+                            locationCards += `
+                                <div class="location-card" style="opacity: 0.6; border-left: 5px solid #6c757d;">
+                                    <div class="location-info">
+                                        <strong>${loc.location_name}</strong> (${loc.company})<br>
+                                        📍 ${loc.address}<br>
+                                        💤 Inactive
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    listDiv.innerHTML = locationCards;
+                } else {
+                    listDiv.innerHTML = '<div style="color: #ffc107;">⚠️ No locations found</div>';
+                }
+
+            } catch (error) {
+                listDiv.innerHTML = `<div style="color: #dc3545;">❌ Error: ${error.message}</div>`;
+                console.error('Load Locations Error:', error);
+            }
+        }
+
+        // Deactivate Individual Location
+        async function deactivateLocation(locationId) {
+            if (!currentUser) {
+                alert('Please login first');
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to deactivate this location?')) {
+                return;
+            }
+            
+            try {
+                const { error } = await supabase
+                    .from('company_locations')
+                    .update({ 
+                        is_active: false,
+                        updated_at: new Date().toISOString(),
+                        updated_by: currentUser.id
+                    })
+                    .eq('id', locationId);
+                
+                if (error) throw error;
+                
+                await loadLocations(); // Refresh
+                
+            } catch (error) {
+                alert('Error deactivating location: ' + error.message);
+                console.error('Deactivate Error:', error);
+            }
+        }
+
+        // Perform Complete Cleanup
+        async function performCleanup() {
+            if (!currentUser) {
+                alert('Please login as admin first');
+                return;
+            }
+            
+            const confirmText = 'CONFIRM CLEANUP';
+            const userInput = prompt(`⚠️ DANGER: This will deactivate ALL locations except ศูนย์บางพลัด\n\nType "${confirmText}" to confirm:`);
+            
+            if (userInput !== confirmText) {
+                alert('Cleanup cancelled');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('cleanup-results');
+            resultsDiv.innerHTML = '<div style="color: #007bff;">🔄 Performing cleanup...</div>';
+            
+            try {
+                // Find ศูนย์บางพลัด
+                const bangPladLocation = allLocations.find(loc => loc.location_name === 'ศูนย์บางพลัด');
+                
+                if (!bangPladLocation) {
+                    throw new Error('ไม่พบ ศูนย์บางพลัด');
+                }
+                
+                let results = [];
+                results.push('✅ Found ศูนย์บางพลัด: ' + bangPladLocation.id);
+                
+                // Update ศูนย์บางพลัด to be main office
+                const { error: updateError } = await supabase
+                    .from('company_locations')
+                    .update({
+                        is_main_office: true,
+                        is_active: true,
+                        company: 'login',
+                        description: 'ศูนย์หลักสำหรับการลงเวลา Login Learning Platform',
+                        updated_at: new Date().toISOString(),
+                        updated_by: currentUser.id
+                    })
+                    .eq('id', bangPladLocation.id);
+                
+                if (updateError) throw updateError;
+                results.push('✅ Updated ศูนย์บางพลัด to main office');
+                
+                // Deactivate all other locations
+                const locationsToDeactivate = allLocations.filter(loc => 
+                    loc.location_name !== 'ศูนย์บางพลัด' && loc.is_active
+                );
+                
+                let deactivatedCount = 0;
+                for (const location of locationsToDeactivate) {
+                    const { error } = await supabase
+                        .from('company_locations')
+                        .update({ 
+                            is_active: false,
+                            updated_at: new Date().toISOString(),
+                            updated_by: currentUser.id
+                        })
+                        .eq('id', location.id);
+                    
+                    if (error) {
+                        results.push(`❌ Failed to deactivate ${location.location_name}: ${error.message}`);
+                    } else {
+                        results.push(`✅ Deactivated ${location.location_name} (${location.company})`);
+                        deactivatedCount++;
+                    }
+                }
+                
+                results.push(`\n🎉 Cleanup completed! Deactivated ${deactivatedCount} locations`);
+                
+                resultsDiv.innerHTML = `
+                    <div style="background: #d4f6d4; padding: 15px; border-radius: 8px;">
+                        <h4>✅ Cleanup Results:</h4>
+                        <pre>${results.join('\n')}</pre>
+                    </div>
+                `;
+                
+                // Refresh locations
+                await loadLocations();
+                
+                document.getElementById('results-content').innerHTML = `
+                    <div style="background: #d4f6d4; padding: 15px; border-radius: 8px;">
+                        <h4>🎯 Final Result:</h4>
+                        <p><strong>เหลือเฉพาะ ศูนย์บางพลัด เป็น active location เดียว</strong></p>
+                        <p>Deactivated: ${deactivatedCount} other locations</p>
+                        <p>Time: ${new Date().toLocaleString('th-TH')}</p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div style="background: #f8d7da; padding: 15px; border-radius: 8px;">
+                        <h4>❌ Cleanup Error:</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                console.error('Cleanup Error:', error);
+            }
+        }
+
+        // Initialize
+        console.log('🚨 Admin Cleanup Tool Loaded');
+        console.log('⚠️ This tool will deactivate all company locations except ศูนย์บางพลัด');
+    </script>
+</body>
+</html>

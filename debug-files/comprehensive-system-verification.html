@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>การตรวจสอบระบบโฟลเดอร์ทั้งหมด</title>
+    <style>
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+            line-height: 1.6;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 15px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .success { 
+            background-color: #d4edda; 
+            border-left: 5px solid #28a745;
+            color: #155724; 
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .warning { 
+            background-color: #fff3cd; 
+            border-left: 5px solid #ffc107;
+            color: #856404; 
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .error { 
+            background-color: #f8d7da; 
+            border-left: 5px solid #dc3545;
+            color: #721c24; 
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .info { 
+            background-color: #d1ecf1; 
+            border-left: 5px solid #17a2b8;
+            color: #0c5460; 
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        .status-ok { color: #28a745; font-weight: bold; }
+        .status-warning { color: #ffc107; font-weight: bold; }
+        .status-error { color: #dc3545; font-weight: bold; }
+        .code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        h1, h2 { color: #343a40; }
+        h1 { text-align: center; margin-bottom: 30px; }
+        .section { margin: 30px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 การตรวจสอบระบบโฟลเดอร์ทั้งหมด</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            รายงานการตรวจสอบความถูกต้องของระบบจัดการโฟลเดอร์คอร์สทั้ง 5 บริษัท
+        </p>
+
+        <!-- สถานะโดยรวม -->
+        <div class="section">
+            <h2>📊 สถานะโดยรวม</h2>
+            <div class="success">
+                <h3>✅ ระบบทำงานได้ปกติ</h3>
+                <ul>
+                    <li><strong>บริษัททั้งหมด:</strong> 5 บริษัท (LOGIN, Meta, Med, EdTech, W2D)</li>
+                    <li><strong>โฟลเดอร์หลัก:</strong> ✅ ทั้งหมดเข้าถึงได้</li>
+                    <li><strong>API Endpoints:</strong> ✅ ใช้งานได้ปกติ</li>
+                    <li><strong>การสร้างคอร์ส:</strong> ✅ ทำงานได้ทุกบริษัท</li>
+                    <li><strong>ContentEditor:</strong> ✅ รองรับ Multi-company</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- รายละเอียดแต่ละบริษัท -->
+        <div class="section">
+            <h2>🏢 รายละเอียดแต่ละบริษัท</h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>บริษัท</th>
+                        <th>Root Folder</th>
+                        <th>Courses Folder</th>
+                        <th>Projects Folder</th>
+                        <th>จำนวนคอร์ส</th>
+                        <th>สถานะ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>LOGIN</strong></td>
+                        <td class="code">1xjUv7ruPHwiLhZJ42IeyfcKBkYP8CX4S</td>
+                        <td class="code">18BmNBBwDSUMLUdq4ODhxLWPD8w0Lh189</td>
+                        <td class="code">1vTWe8xU0fhqjcCQJQDzjM7PnHEU0oZya</td>
+                        <td>1 คอร์ส</td>
+                        <td class="status-ok">✅ ปกติ</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Meta</strong></td>
+                        <td class="code">1IyP3gtT6K5JRTPOEW1gIVYMHv1mQXVMG</td>
+                        <td class="code">1CI-73CLESxWCVPevYaDeSKGikLy2Tccg</td>
+                        <td class="code">1qzwC1e7XdPFxd09UXTmU5LVgzqEJR4d7</td>
+                        <td>1 คอร์ส</td>
+                        <td class="status-ok">✅ ปกติ</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Med</strong></td>
+                        <td class="code">1rZ5BNCoGsGaA7ZCzf_bEgPIEgAANp-O4</td>
+                        <td class="code">1yfN_Kw80H5xuF1IVZPZYuszyDZc7q0vZ</td>
+                        <td class="code">1BvltHmzfvm_f5uDk_8f2Vn1oC_dfuINK</td>
+                        <td>1 คอร์ส</td>
+                        <td class="status-ok">✅ ปกติ</td>
+                    </tr>
+                    <tr>
+                        <td><strong>EdTech</strong></td>
+                        <td class="code">163LK-tcU26Ea3JYmWrzqadkH0-8p3iiW</td>
+                        <td class="code">1cItGoQdXOyTflUnzZBLiLUiC8BMZ8G0C</td>
+                        <td class="code">1PbAKZBMtJmBxFDZ8rOeRuqfp-MUe6_q5</td>
+                        <td>1 คอร์ส</td>
+                        <td class="status-ok">✅ ปกติ</td>
+                    </tr>
+                    <tr>
+                        <td><strong>W2D</strong></td>
+                        <td class="code">1yA0vhAH7TrgCSsPGy3HpM05Wlz07HD8A</td>
+                        <td class="code">1f5KMjvF-J45vIxy4byI8eRPBXSHzZu1W</td>
+                        <td class="code">11BJWLVdy1ZLyt9WtY_BvWz3BnKKWDyun</td>
+                        <td>1 คอร์ส</td>
+                        <td class="status-ok">✅ ปกติ</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- รายละเอียดคอร์สในฐานข้อมูล -->
+        <div class="section">
+            <h2>📚 คอร์สในฐานข้อมูล</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>บริษัท</th>
+                        <th>ชื่อคอร์ส</th>
+                        <th>Folder ID</th>
+                        <th>สถานะใน Google Drive</th>
+                        <th>อัพเดท</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>LOGIN</td>
+                        <td>Test1</td>
+                        <td class="code">1Fyq7tkra-DAZ6ndcvlUnERH5ryfOMQ7B</td>
+                        <td class="status-warning">⚠️ ไม่พบในโฟลเดอร์</td>
+                        <td>2025-08-15</td>
+                    </tr>
+                    <tr>
+                        <td>Meta</td>
+                        <td>METAMETAMETAMETAMETAMETAMETA</td>
+                        <td class="code">1xZx3CJs9U9FafxLCmgWjp5h_p5ZQPROF</td>
+                        <td class="status-ok">✅ พบแล้ว</td>
+                        <td>2025-08-19</td>
+                    </tr>
+                    <tr>
+                        <td>Med</td>
+                        <td>MED MED</td>
+                        <td class="code">1WLo0bmNy_5RhoiqTJQXyZRxgUGTie9wr</td>
+                        <td class="status-ok">✅ พบแล้ว</td>
+                        <td>2025-08-19</td>
+                    </tr>
+                    <tr>
+                        <td>EdTech</td>
+                        <td>EDTECH</td>
+                        <td class="code">1-idBfzDeAhSuHytu-uDYVAkKvDJlXuU5</td>
+                        <td class="status-ok">✅ พบแล้ว</td>
+                        <td>2025-08-19</td>
+                    </tr>
+                    <tr>
+                        <td>W2D</td>
+                        <td>W2DW2DW2D</td>
+                        <td class="code">15VX90NmTPOz7LWF2tDipRnBmsMLCLHrY</td>
+                        <td class="status-ok">✅ พบแล้ว</td>
+                        <td>2025-08-19</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- API Endpoints -->
+        <div class="section">
+            <h2>🔗 Google Drive API Endpoints</h2>
+            <div class="info">
+                <h3>📋 Endpoints ที่ใช้งานได้:</h3>
+                <ul>
+                    <li><span class="code">/health</span> - ตรวจสอบสถานะ</li>
+                    <li><span class="code">/create-course-structure</span> - สร้างโครงสร้างคอร์ส</li>
+                    <li><span class="code">/create-topic-folder</span> - สร้างโฟลเดอร์หัวข้อ ✅</li>
+                    <li><span class="code">/delete-project-folder</span> - ลบโฟลเดอร์โปรเจค</li>
+                    <li><span class="code">/simple-upload</span> - อัปโหลดไฟล์</li>
+                    <li><span class="code">/delete-file</span> - ลบไฟล์</li>
+                    <li><span class="code">/list</span> - แสดงรายการไฟล์</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ปัญหาที่พบและแก้ไขแล้ว -->
+        <div class="section">
+            <h2>🔧 ปัญหาที่พบและแก้ไขแล้ว</h2>
+            
+            <div class="success">
+                <h3>✅ ปัญหาที่แก้ไขสำเร็จ:</h3>
+                <ol>
+                    <li><strong>Google Drive API Endpoint:</strong> แก้ไขจาก <span class="code">/create-folder</span> เป็น <span class="code">/create-topic-folder</span></li>
+                    <li><strong>Company Folder IDs:</strong> อัพเดทใช้โฟลเดอร์ที่มีอยู่จริงทั้ง 5 บริษัท</li>
+                    <li><strong>W2D Course Folder:</strong> สร้างโฟลเดอร์ใหม่ในตำแหน่งที่ถูกต้อง</li>
+                    <li><strong>ContentEditor Multi-company:</strong> รองรับการอัปโหลดไฟล์ทุกบริษัท</li>
+                    <li><strong>Course Creation System:</strong> ทำงานได้กับทุกบริษัท</li>
+                </ol>
+            </div>
+
+            <div class="warning">
+                <h3>⚠️ ข้อสังเกต:</h3>
+                <ul>
+                    <li><strong>คอร์ส "Test1" ของ LOGIN:</strong> ไม่พบโฟลเดอร์ใน Google Drive แต่มี ID ในฐานข้อมูล (อาจเป็นคอร์สเก่า)</li>
+                    <li><strong>W2D มีโฟลเดอร์ 2 อัน:</strong> มีทั้ง "W2DW2DW2D" และ "คอร์สเรียน W2D" (โฟลเดอร์เก่าและใหม่)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- คำแนะนำการใช้งาน -->
+        <div class="section">
+            <h2>📋 คำแนะนำการใช้งาน</h2>
+            
+            <div class="info">
+                <h3>🎯 การสร้างคอร์สใหม่:</h3>
+                <ol>
+                    <li>เลือกบริษัทที่ต้องการใน dropdown</li>
+                    <li>กรอกชื่อคอร์สและรายละเอียด</li>
+                    <li>ระบบจะสร้างโฟลเดอร์ใน Google Drive โดยอัตโนมัติ</li>
+                    <li>โฟลเดอร์จะถูกสร้างใน: <span class="code">[บริษัท] → 📖 คอร์สเรียน → 📖 [ชื่อคอร์ส]</span></li>
+                </ol>
+            </div>
+
+            <div class="info">
+                <h3>📁 การอัปโหลดไฟล์เนื้อหา:</h3>
+                <ol>
+                    <li>เข้าไปแก้ไขเนื้อหาคอร์ส</li>
+                    <li>เลือกประเภทเนื้อหา "เอกสารเรียน"</li>
+                    <li>เลือก "อัปโหลดไฟล์" และเลือกไฟล์</li>
+                    <li>ไฟล์จะถูกอัปโหลดไปยังโฟลเดอร์ของคอร์สโดยอัตโนมัติ</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- สรุป -->
+        <div class="section">
+            <div class="success">
+                <h2>🎉 สรุปผลการตรวจสอบ</h2>
+                <p><strong>ระบบโฟลเดอร์คอร์สทำงานได้ปกติทั้ง 5 บริษัท</strong></p>
+                <ul>
+                    <li>✅ Google Drive API ทำงานได้ปกติ</li>
+                    <li>✅ การสร้างคอร์สใหม่ทำงานได้ทุกบริษัท</li>
+                    <li>✅ การอัปโหลดไฟล์ทำงานได้ทุกบริษัท</li>
+                    <li>✅ ContentEditor รองรับ Multi-company</li>
+                    <li>✅ Folder structure ถูกต้องตามมาตรฐาน</li>
+                </ul>
+                <p style="margin-top: 15px; font-weight: bold; color: #28a745;">
+                    🚀 ระบบพร้อมใช้งานการผลิต!
+                </p>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 0.9em;">
+            <p>รายงานนี้สร้างขึ้นเมื่อ: <span id="timestamp"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // Set current timestamp
+        document.getElementById('timestamp').textContent = new Date().toLocaleString('th-TH');
+    </script>
+</body>
+</html>

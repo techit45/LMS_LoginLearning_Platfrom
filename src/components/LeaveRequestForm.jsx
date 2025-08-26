@@ -1,17 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, 
-  Clock, 
-  User, 
-  FileText, 
-  AlertCircle,
   CheckCircle,
   XCircle,
   Send,
   CalendarDays,
   Phone,
-  BookOpen,
-  Users,
   X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -35,9 +29,6 @@ const LeaveRequestForm = ({
     is_half_day: false,
     half_day_period: 'morning',
     reason: '',
-    affects_teaching_schedule: false,
-    substitute_instructor_id: '',
-    classes_to_cover: [],
     emergency_contact_info: {
       name: '',
       phone: '',
@@ -47,7 +38,6 @@ const LeaveRequestForm = ({
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(null);
   const [calculatedDays, setCalculatedDays] = useState(0);
-  const [availableInstructors, setAvailableInstructors] = useState([]);
 
   // Load existing request data if editing
   useEffect(() => {
@@ -70,13 +60,6 @@ const LeaveRequestForm = ({
     }
   }, [formData.start_date, formData.end_date, formData.is_half_day]);
 
-  // Load available instructors for substitution
-  useEffect(() => {
-    if (formData.affects_teaching_schedule) {
-      loadAvailableInstructors();
-    }
-  }, [formData.affects_teaching_schedule]);
-
   const calculateTotalDays = () => {
     const start = new Date(formData.start_date);
     const end = new Date(formData.end_date);
@@ -91,19 +74,6 @@ const LeaveRequestForm = ({
       }
     } else {
       setCalculatedDays(0);
-    }
-  };
-
-  const loadAvailableInstructors = async () => {
-    try {
-      // This would load other instructors who could substitute
-      // For now, we'll use a placeholder
-      setAvailableInstructors([
-        { id: 'user1', full_name: 'อาจารย์สมชาย ใจดี' },
-        { id: 'user2', full_name: 'อาจารย์สมหญิง รักเรียน' }
-      ]);
-    } catch (error) {
-      console.error('Error loading instructors:', error);
     }
   };
 
@@ -149,16 +119,6 @@ const LeaveRequestForm = ({
 
     if (formData.reason.trim().length < 10) {
       newErrors.reason = 'เหตุผลการลาต้องมีอย่างน้อย 10 ตัวอักษร';
-    }
-
-    if (formData.affects_teaching_schedule) {
-      if (!formData.substitute_instructor_id) {
-        newErrors.substitute_instructor_id = 'กรุณาเลือกอาจารย์ทดแทน';
-      }
-      
-      if (formData.classes_to_cover.length === 0) {
-        newErrors.classes_to_cover = 'กรุณาระบุคลาสที่ต้องหาคนสอนแทน';
-      }
     }
 
     if (formData.leave_type === 'emergency') {
@@ -208,9 +168,6 @@ const LeaveRequestForm = ({
           is_half_day: false,
           half_day_period: 'morning',
           reason: '',
-          affects_teaching_schedule: false,
-          substitute_instructor_id: '',
-          classes_to_cover: [],
           emergency_contact_info: {
             name: '',
             phone: '',
@@ -249,23 +206,6 @@ const LeaveRequestForm = ({
         ...prev.emergency_contact_info,
         [field]: value
       }
-    }));
-  };
-
-  const addClassToCover = () => {
-    const className = prompt('ระบุชื่อคลาสที่ต้องหาคนสอนแทน:');
-    if (className && className.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        classes_to_cover: [...prev.classes_to_cover, className.trim()]
-      }));
-    }
-  };
-
-  const removeClassToCover = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      classes_to_cover: prev.classes_to_cover.filter((_, i) => i !== index)
     }));
   };
 
@@ -452,85 +392,6 @@ const LeaveRequestForm = ({
               {formData.reason.length}/500 ตัวอักษร
             </p>
           </div>
-        </div>
-
-        {/* Teaching Schedule Impact */}
-        <div className="border-t border-gray-200 pt-6">
-          <label className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              checked={formData.affects_teaching_schedule}
-              onChange={(e) => handleInputChange('affects_teaching_schedule', e.target.checked)}
-              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-            />
-            <div className="flex items-center space-x-2">
-              <BookOpen className="w-4 h-4 text-indigo-600" />
-              <span className="text-sm font-medium text-gray-700">
-                การลานี้ส่งผลต่อตารางสอน (ต้องหาคนสอนแทน)
-              </span>
-            </div>
-          </label>
-
-          {formData.affects_teaching_schedule && (
-            <div className="mt-4 space-y-4 pl-7">
-              {/* Substitute Instructor */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  อาจารย์ทดแทน *
-                </label>
-                <select
-                  value={formData.substitute_instructor_id}
-                  onChange={(e) => handleInputChange('substitute_instructor_id', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                    errors.substitute_instructor_id ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">เลือกอาจารย์ทดแทน</option>
-                  {availableInstructors.map(instructor => (
-                    <option key={instructor.id} value={instructor.id}>
-                      {instructor.full_name}
-                    </option>
-                  ))}
-                </select>
-                {errors.substitute_instructor_id && (
-                  <p className="mt-1 text-sm text-red-600">{errors.substitute_instructor_id}</p>
-                )}
-              </div>
-
-              {/* Classes to Cover */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  คลาสที่ต้องหาคนสอนแทน *
-                </label>
-                <div className="space-y-2">
-                  {formData.classes_to_cover.map((className, index) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <span className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded">
-                        {className}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeClassToCover(index)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addClassToCover}
-                    className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-indigo-400 hover:text-indigo-600"
-                  >
-                    + เพิ่มคลาส
-                  </button>
-                </div>
-                {errors.classes_to_cover && (
-                  <p className="mt-1 text-sm text-red-600">{errors.classes_to_cover}</p>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Emergency Contact (for emergency leave) */}

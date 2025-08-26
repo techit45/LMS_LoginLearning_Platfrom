@@ -24,8 +24,7 @@ class NotificationService {
         this.templates.set(template.template_key, template);
       });
     } catch (error) {
-      console.error('Error loading notification templates:', error);
-    }
+      }
   }
 
   // Get notifications for a user
@@ -70,7 +69,6 @@ class NotificationService {
       if (error) throw error;
       return { data: data || [], error: null };
     } catch (error) {
-      console.error('Error fetching notifications:', error);
       return { data: [], error: error.message };
     }
   }
@@ -86,7 +84,6 @@ class NotificationService {
       if (error) throw error;
       return { count: data || 0, error: null };
     } catch (error) {
-      console.error('Error getting unread count:', error);
       return { count: 0, error: error.message };
     }
   }
@@ -108,7 +105,6 @@ class NotificationService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error marking notification as read:', error);
       return { data: null, error: error.message };
     }
   }
@@ -124,7 +120,6 @@ class NotificationService {
       if (error) throw error;
       return { count: data || 0, error: null };
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
       return { count: 0, error: error.message };
     }
   }
@@ -143,14 +138,12 @@ class NotificationService {
       if (fetchError) {
         if (fetchError.code === 'PGRST116') {
           // Notification doesn't exist or doesn't belong to user
-          console.log('🚫 Notification not found or access denied:', notificationId);
           return { error: 'Notification not found or access denied' };
         }
         throw fetchError;
       }
 
       if (!existing) {
-        console.log('🚫 No notification found with ID:', notificationId);
         return { error: 'Notification not found' };
       }
 
@@ -164,19 +157,15 @@ class NotificationService {
         .single();
 
       if (error) {
-        console.error('❌ Database delete error:', error);
         throw error;
       }
 
       if (deleted && deleted.id) {
-        console.log('✅ Notification successfully deleted from database:', deleted.id);
         return { error: null, deletedId: deleted.id };
       } else {
-        console.error('⚠️ Delete operation completed but no data returned');
         return { error: 'Delete operation may have failed - no confirmation received' };
       }
     } catch (error) {
-      console.error('💥 Error deleting notification:', error);
       return { error: error.message };
     }
   }
@@ -221,7 +210,6 @@ class NotificationService {
 
       return await this.createNotification(notification);
     } catch (error) {
-      console.error('Error creating notification from template:', error);
       return { data: null, error: error.message };
     }
   }
@@ -238,7 +226,6 @@ class NotificationService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error creating notification:', error);
       return { data: null, error: error.message };
     }
   }
@@ -254,7 +241,6 @@ class NotificationService {
       if (error) throw error;
       return { data: data || [], error: null };
     } catch (error) {
-      console.error('Error creating bulk notifications:', error);
       return { data: [], error: error.message };
     }
   }
@@ -289,7 +275,6 @@ class NotificationService {
 
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching user preferences:', error);
       return { data: null, error: error.message };
     }
   }
@@ -325,7 +310,6 @@ class NotificationService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error creating default preferences:', error);
       return { data: null, error: error.message };
     }
   }
@@ -346,7 +330,6 @@ class NotificationService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error updating user preferences:', error);
       return { data: null, error: error.message };
     }
   }
@@ -400,7 +383,6 @@ class NotificationService {
       if (error) throw error;
       return { deletedCount: data || 0, error: null };
     } catch (error) {
-      console.error('Error cleaning up expired notifications:', error);
       return { deletedCount: 0, error: error.message };
     }
   }

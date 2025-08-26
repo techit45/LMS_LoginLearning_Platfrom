@@ -18,19 +18,31 @@ const ROLES = {
   GUEST: 'guest', // Default for non-logged-in users
 };
 
-// Helper function to check if email is admin
+// 🔒 SECURE: Enhanced admin email validation
 const isAdminEmail = (email) => {
-  if (!email) {
-    console.log('🔍 isAdminEmail: No email provided');
+  if (!email || typeof email !== 'string') {
     return false;
   }
-  const isAdmin = email.toLowerCase().endsWith(`@${ADMIN_DOMAIN}`);
-  console.log('🔍 isAdminEmail check:', {
-    email: email,
-    domain: ADMIN_DOMAIN,
-    isAdmin: isAdmin,
-    lowercaseEmail: email.toLowerCase()
-  });
+  
+  // 🔒 Validate email format first
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    console.warn('🔒 Invalid email format for admin check:', email);
+    return false;
+  }
+  
+  const normalizedEmail = email.toLowerCase().trim();
+  const isAdmin = normalizedEmail.endsWith(`@${ADMIN_DOMAIN.toLowerCase()}`);
+  
+  // 🔒 Log admin checks securely (don't expose full email in production)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 isAdminEmail check:', {
+      emailDomain: normalizedEmail.split('@')[1],
+      expectedDomain: ADMIN_DOMAIN.toLowerCase(),
+      isAdmin: isAdmin
+    });
+  }
+  
   return isAdmin;
 };
 
@@ -88,10 +100,7 @@ export const AuthProvider = ({ children }) => {
         // Check if we're on reset password page to prevent loading additional data
         const isResetPasswordPage = location.pathname === '/reset-password';
         
-        console.log('AuthContext initAuth - isResetPasswordPage:', isResetPasswordPage);
-        
         if (!supabase) {
-          console.warn("Supabase client is not initialized. This might be because Supabase URL or Anon Key are missing or incorrect.");
           // Only show toast if toast function is available and not on reset password page
           if (toast && !isResetPasswordPage) {
             toast({ 
@@ -105,21 +114,35 @@ export const AuthProvider = ({ children }) => {
           return;
         }
 
-    // Clear any invalid stored auth data first
+    // 🔒 SECURE: Enhanced auth data validation and cleanup
     const clearInvalidAuth = () => {
       try {
-        const storedSession = localStorage.getItem('sb-vuitwzisazvikrhtfthh-auth-token');
-        if (storedSession) {
-          const parsed = JSON.parse(storedSession);
-          if (!parsed.refresh_token || !parsed.access_token) {
-            localStorage.removeItem('sb-vuitwzisazvikrhtfthh-auth-token');
-            console.log('Cleared invalid stored auth data');
+        const authKeys = [
+          'sb-vuitwzisazvikrhtfthh-auth-token',
+          'supabase.auth.token'
+        ];
+        
+        authKeys.forEach(key => {
+          try {
+            const storedSession = localStorage.getItem(key);
+            if (storedSession) {
+              const parsed = JSON.parse(storedSession);
+              
+              // 🔒 Validate token structure and expiration
+              if (!parsed.refresh_token || 
+                  !parsed.access_token || 
+                  (parsed.expires_at && parsed.expires_at < Date.now() / 1000)) {
+                console.log(`🔒 Clearing invalid/expired auth data for key: ${key}`);
+                localStorage.removeItem(key);
+              }
+            }
+          } catch (parseError) {
+            console.log(`🔒 Clearing corrupted auth data for key: ${key}`);
+            localStorage.removeItem(key);
           }
-        }
-      } catch (e) {
-        // If parsing fails, clear the data
-        localStorage.removeItem('sb-vuitwzisazvikrhtfthh-auth-token');
-        console.log('Cleared corrupted stored auth data');
+        });
+      } catch (error) {
+        console.error('🔒 Error during auth cleanup:', error);
       }
     };
 
@@ -129,7 +152,6 @@ export const AuthProvider = ({ children }) => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          console.error("Error getting session:", error);
           // Handle common auth errors gracefully
           if (error.message.includes('Invalid Refresh Token') || 
               error.message.includes('Refresh Token Not Found') ||
@@ -137,7 +159,6 @@ export const AuthProvider = ({ children }) => {
               error.message.includes('Load failed')) {
             await supabase.auth.signOut();
             localStorage.removeItem('sb-vuitwzisazvikrhtfthh-auth-token');
-            console.log("Cleared invalid/failed session");
             setUser(null);
             setIsAdmin(false);
             setUserRole(ROLES.GUEST);
@@ -155,12 +176,10 @@ export const AuthProvider = ({ children }) => {
         if (currentUser) {
           // Don't fetch user profile data if on reset password page
           if (isResetPasswordPage) {
-            console.log('On reset password page, skipping profile data fetch');
             setIsAdmin(false);
             setUserRole(ROLES.STUDENT); // Use minimal role for reset page
           } else {
             if (isAdminEmail(currentUser.email)) {
-              console.log('✅ Setting user as SUPER_ADMIN');
               setIsAdmin(true);
               setUserRole(ROLES.SUPER_ADMIN); // Admin domain users are super admin
             } else {
@@ -173,19 +192,15 @@ export const AuthProvider = ({ children }) => {
                   .maybeSingle();
                 
                 if (profileError) {
-                  console.log('Error fetching user profile:', profileError);
-                }
+                  }
                 
                 const dbRole = profile?.role || 'student';
-                console.log('📊 Database role found:', dbRole, 'Profile data:', profile);
                 const mappedRole = dbRole === 'admin' ? ROLES.SUPER_ADMIN : 
                                  dbRole === 'instructor' ? ROLES.INSTRUCTOR : ROLES.STUDENT;
                 
-                console.log('📊 Setting role from database:', { dbRole, mappedRole });
                 setIsAdmin(dbRole === 'admin' || dbRole === 'instructor');
                 setUserRole(mappedRole);
               } catch (error) {
-                console.log('Could not fetch user role from database, using default');
                 setIsAdmin(false);
                 setUserRole(ROLES.STUDENT);
               }
@@ -197,7 +212,6 @@ export const AuthProvider = ({ children }) => {
         }
 
       } catch (e) {
-        console.error("Exception in getSession:", e);
         toast({ title: "เกิดข้อผิดพลาดร้ายแรงในการโหลดเซสชัน", description: e.message, variant: "destructive" });
       } finally {
         setLoading(false);
@@ -207,16 +221,8 @@ export const AuthProvider = ({ children }) => {
     getSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, session);
-      
       // Check if we're on reset password page
       const currentIsResetPasswordPage = window.location.pathname === '/reset-password';
-      console.log('🔍 Auth state change - Reset password page check:', {
-        pathname: window.location.pathname,
-        isResetPasswordPage: currentIsResetPasswordPage,
-        event: event
-      });
-
       const currentUser = session?.user ?? null;
       
       // ป้องกันการ process ซ้ำสำหรับ INITIAL_SESSION events
@@ -228,9 +234,18 @@ export const AuthProvider = ({ children }) => {
 
       if (currentUser) {
         // ✅ ALWAYS PROCESS ROLES - ไม่ต้องตรวจสอบ reset password page ที่นี่
-        console.log('🔄 Processing user roles for current user');
+        // สำหรับ Google OAuth users, ตรวจสอบและสร้าง profile หากจำเป็น
+        if (currentUser.app_metadata?.provider === 'google' && !currentIsResetPasswordPage) {
+          try {
+            const { ensureUserProfile } = await import('../lib/userProfileHelper');
+            const { error: profileError } = await ensureUserProfile(currentUser);
+            if (profileError) {
+              } else {
+              }
+          } catch (error) {
+            }
+        }
         if (isAdminEmail(currentUser.email)) {
-          console.log('✅ Auth state change: Setting user as SUPER_ADMIN');
           setIsAdmin(true);
           setUserRole(ROLES.SUPER_ADMIN);
         } else {
@@ -243,8 +258,7 @@ export const AuthProvider = ({ children }) => {
                 .maybeSingle();
               
               if (profileError) {
-                console.log('Error fetching user profile:', profileError);
-              }
+                }
               
               const dbRole = profile?.role || 'student';
               const mappedRole = dbRole === 'admin' ? ROLES.SUPER_ADMIN : 
@@ -253,7 +267,6 @@ export const AuthProvider = ({ children }) => {
               setIsAdmin(dbRole === 'admin' || dbRole === 'instructor');
               setUserRole(mappedRole);
             } catch (error) {
-              console.log('Could not fetch user role from database, using default');
               setIsAdmin(false);
               setUserRole(ROLES.STUDENT);
             }
@@ -295,7 +308,6 @@ export const AuthProvider = ({ children }) => {
           authListener?.subscription.unsubscribe();
         };
       } catch (error) {
-        console.error('Error initializing auth:', error);
         setLoading(false);
       }
     };
@@ -309,12 +321,8 @@ export const AuthProvider = ({ children }) => {
       return { error: { message: "Supabase client not initialized" } };
     }
     setLoading(true);
-    console.log('Attempting to sign in with email:', email);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    console.log('Sign in result:', { data, error });
-    
     if (error) {
-      console.error('Sign in error:', error);
       if (error.message.includes('Email not confirmed')) {
         toast({ 
           title: "อีเมลยังไม่ได้รับการยืนยัน", 
@@ -332,6 +340,47 @@ export const AuthProvider = ({ children }) => {
     
     setLoading(false);
     return { data, error };
+  };
+
+  const signInWithGoogle = async () => {
+    if (!supabase) {
+      toast({ title: "Supabase ยังไม่ได้เชื่อมต่อ", description: "กรุณาเชื่อมต่อ Supabase ก่อนใช้งาน", variant: "destructive" });
+      return { error: { message: "Supabase client not initialized" } };
+    }
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
+      
+      if (error) {
+        toast({ 
+          title: "ไม่สามารถเข้าสู่ระบบด้วย Google ได้", 
+          description: error.message, 
+          variant: "destructive" 
+        });
+      } else {
+        }
+      
+      setLoading(false);
+      return { data, error };
+    } catch (error) {
+      setLoading(false);
+      toast({ 
+        title: "เกิดข้อผิดพลาด", 
+        description: "ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่", 
+        variant: "destructive" 
+      });
+      return { error };
+    }
   };
 
   const signUpWithPassword = async (email, password, fullName) => {
@@ -356,9 +405,7 @@ export const AuthProvider = ({ children }) => {
     if (!error && data?.user) {
       try {
         await NotificationIntegrations.handleUserWelcome(data.user.id);
-        console.log('Welcome notification sent to new user:', data.user.id);
-      } catch (notificationError) {
-        console.error('Error sending welcome notification:', notificationError);
+        } catch (notificationError) {
         // Don't fail signup if notification fails
       }
     }
@@ -366,7 +413,6 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
     return { data, error };
   };
-
 
   const signOut = async () => {
     if (!supabase) {
@@ -381,7 +427,6 @@ export const AuthProvider = ({ children }) => {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !session) {
-        console.log('No valid session found, clearing local state only');
         // Clear local auth state without calling server logout
         localStorage.removeItem('sb-vuitwzisazvikrhtfthh-auth-token');
         setUser(null);
@@ -431,7 +476,6 @@ export const AuthProvider = ({ children }) => {
     return userRole === requiredRole;
   };
 
-
   const value = {
     user,
     isAdmin, // Kept for simpler admin checks where needed
@@ -439,6 +483,7 @@ export const AuthProvider = ({ children }) => {
     ROLES, // Expose ROLES object
     hasRole, // Expose role checking function
     signInWithPassword,
+    signInWithGoogle,
     signUpWithPassword,
     signOut,
     loading,
@@ -447,13 +492,7 @@ export const AuthProvider = ({ children }) => {
 
   // Debug log context values on change
   React.useEffect(() => {
-    console.log('🎯 AuthContext values updated:', {
-      user: user?.email || 'no user',
-      isAdmin,
-      userRole,
-      loading
-    });
-  }, [user, isAdmin, userRole, loading]);
+    }, [user, isAdmin, userRole, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

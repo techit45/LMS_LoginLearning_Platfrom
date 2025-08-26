@@ -163,8 +163,7 @@ const SpecialCaseDialog = ({
       await onConfirm(caseData);
       onClose();
     } catch (error) {
-      console.error('Special case submission error:', error);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };

@@ -45,7 +45,6 @@ const NotificationCenter = ({ onClose, isOpen = false }) => {
       });
 
       if (error) {
-        console.error('Error loading notifications:', error);
         // Show empty state instead of fallback data
         setNotifications([]);
         setUnreadCount(0);
@@ -76,17 +75,14 @@ const NotificationCenter = ({ onClose, isOpen = false }) => {
           const { count } = await notificationService.getUnreadCount(user.id);
           setUnreadCount(count || 0);
         } catch (countError) {
-          console.error('Error loading unread count:', countError);
           setUnreadCount(transformedNotifications.filter(n => !n.isRead).length);
         }
       } else {
         // No notifications found - show empty state
-        console.log('No notifications found');
         setNotifications([]);
         setUnreadCount(0);
       }
     } catch (error) {
-      console.error('Error loading notifications:', error);
       // Show empty state on any error
       setNotifications([]);
       setUnreadCount(0);
@@ -173,7 +169,6 @@ const NotificationCenter = ({ onClose, isOpen = false }) => {
 
     // Check if this is a sample notification (not from database)
     if (typeof id === 'string' && id.startsWith('sample-')) {
-      console.log('🧪 Sample notification clicked, only updating UI');
       // Only update UI for sample data
       setNotifications(prev => 
         prev.map(notif => 
@@ -196,9 +191,7 @@ const NotificationCenter = ({ onClose, isOpen = false }) => {
     // Update in database (only for real notifications)
     try {
       await notificationService.markAsRead(id, user.id);
-      console.log('✅ Notification marked as read:', id);
-    } catch (error) {
-      console.error('❌ Error marking notification as read:', error);
+      } catch (error) {
       // Revert optimistic update on error
       setNotifications(prev => 
         prev.map(notif => 
@@ -224,9 +217,7 @@ const NotificationCenter = ({ onClose, isOpen = false }) => {
     // Update in database
     try {
       await notificationService.markAllAsRead(user.id);
-      console.log('✅ All notifications marked as read');
-    } catch (error) {
-      console.error('❌ Error marking all notifications as read:', error);
+      } catch (error) {
       // Revert optimistic update on error
       setNotifications(prev => prev.map(notif => 
         unreadNotifications.some(un => un.id === notif.id) 
@@ -244,11 +235,8 @@ const NotificationCenter = ({ onClose, isOpen = false }) => {
     // Find notification to check if it's unread
     const notification = notifications.find(n => n.id === id);
     if (!notification) {
-      console.log('❌ Notification not found in UI state:', id);
       return;
     }
-    
-    console.log('🗑️ Attempting to delete notification:', { id, title: notification.title });
     
     const wasUnread = !notification.isRead;
 
@@ -260,11 +248,9 @@ const NotificationCenter = ({ onClose, isOpen = false }) => {
 
     // Delete from database
     try {
-      console.log('🔍 Calling notificationService.deleteNotification with:', { id, userId: user.id });
       const result = await notificationService.deleteNotification(id, user.id);
       
       if (result.error) {
-        console.error('❌ Database delete failed:', result.error);
         // Revert optimistic update on error
         setNotifications(prev => [...prev, notification].sort(
           (a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)
@@ -273,10 +259,8 @@ const NotificationCenter = ({ onClose, isOpen = false }) => {
           setUnreadCount(prev => prev + 1);
         }
       } else {
-        console.log('✅ Notification successfully deleted from database:', result.deletedId || id);
-      }
+        }
     } catch (error) {
-      console.error('💥 Exception during delete:', error);
       // Revert optimistic update on error
       setNotifications(prev => [...prev, notification].sort(
         (a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)
@@ -313,9 +297,7 @@ const NotificationCenter = ({ onClose, isOpen = false }) => {
       );
       
       await Promise.all(deletePromises);
-      console.log('✅ All notifications deleted successfully');
-    } catch (error) {
-      console.error('❌ Error deleting all notifications:', error);
+      } catch (error) {
       // Revert optimistic update on error
       setNotifications(currentNotifications);
       setUnreadCount(currentUnreadCount);
@@ -572,6 +554,5 @@ const NotificationCenter = ({ onClose, isOpen = false }) => {
     </AnimatePresence>
   );
 };
-
 
 export default NotificationCenter;

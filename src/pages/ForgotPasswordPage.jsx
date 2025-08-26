@@ -89,8 +89,6 @@ const ForgotPasswordPage = () => {
       });
 
     } catch (error) {
-      console.error('Forgot password error:', error);
-      
       let errorMessage = "เกิดข้อผิดพลาดในการส่งอีเมล กรุณาลองอีกครั้ง";
       
       if (error.message.includes('Email not confirmed')) {

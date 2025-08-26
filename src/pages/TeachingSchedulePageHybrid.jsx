@@ -270,7 +270,6 @@ const TeachingSchedulePageHybrid = () => {
       ]);
 
       if (coursesResult.error) {
-        console.error('Error loading courses:', coursesResult.error);
         toast({
           title: "❌ เกิดข้อผิดพลาด",
           description: "ไม่สามารถโหลดข้อมูลคอร์สได้",
@@ -278,12 +277,10 @@ const TeachingSchedulePageHybrid = () => {
         });
         setCourses([]);
       } else {
-        console.log('📚 Courses loaded successfully:', coursesResult.data?.length || 0);
         setCourses(coursesResult.data || []);
       }
 
       if (instructorsResult.error) {
-        console.error('Error loading instructors:', instructorsResult.error);
         toast({
           title: "⚠️ แจ้งเตือน",
           description: "ไม่สามารถโหลดข้อมูลผู้สอนได้",
@@ -291,12 +288,10 @@ const TeachingSchedulePageHybrid = () => {
         });
         setInstructors([]);
       } else {
-        console.log('👨‍🏫 Instructors loaded successfully:', instructorsResult.data?.length || 0);
         setInstructors(instructorsResult.data || []);
       }
 
     } catch (error) {
-      console.error('💥 Error loading schedule data:', error);
       toast({
         title: "❌ เกิดข้อผิดพลาดในการโหลดข้อมูล",
         description: "กรุณาลองรีเฟรชหน้าเว็บ",
@@ -309,8 +304,6 @@ const TeachingSchedulePageHybrid = () => {
 
   // **ENHANCED: Handle drop with hybrid scheduling**
   const handleDrop = useCallback(async (item, day, time) => {
-    console.log('🎯 Hybrid drop event:', { item, day, time });
-    
     if (item.type === 'COURSE') {
       const course = item.course;
       const dayIndex = parseInt(day);
@@ -343,24 +336,18 @@ const TeachingSchedulePageHybrid = () => {
       });
 
       if (result?.success) {
-        console.log('✅ Hybrid schedule added successfully');
-      } else {
-        console.error('❌ Failed to add hybrid schedule:', result?.error);
-      }
+        } else {
+        }
     }
   }, [hasSchedule, addHybridSchedule, toast]);
 
   // **ENHANCED: Handle delete with hybrid scheduling**
   const handleDelete = useCallback(async (schedule) => {
-    console.log('🗑️ Hybrid delete:', schedule);
-    
     const result = await removeHybridSchedule(schedule.dayIndex, schedule.timeIndex);
     
     if (result?.success) {
-      console.log('✅ Hybrid schedule deleted successfully');
-    } else {
-      console.error('❌ Failed to delete hybrid schedule:', result?.error);
-    }
+      } else {
+      }
   }, [removeHybridSchedule]);
 
   // Load initial data
@@ -576,8 +563,7 @@ const TeachingSchedulePageHybrid = () => {
                                     schedule={schedule}
                                     onDrop={handleDrop}
                                     onEdit={(schedule) => {
-                                      console.log('Edit schedule:', schedule);
-                                    }}
+                                      }}
                                     onDelete={handleDelete}
                                     scheduleType={scheduleType}
                                   />
@@ -720,7 +706,6 @@ const TrashZone = ({ onDeleteSchedule }) => {
     accept: ['schedule_item'],
     drop: (item) => {
       if (item.type === 'schedule_item') {
-        console.log('🗑️ Deleting schedule:', item.schedule);
         onDeleteSchedule(item.schedule);
       }
     },

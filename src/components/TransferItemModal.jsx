@@ -87,7 +87,6 @@ const TransferItemModal = ({
 
       onClose();
     } catch (error) {
-      console.error('Transfer error:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: error.message || `ไม่สามารถย้าย${itemTypeLabel}ได้`,

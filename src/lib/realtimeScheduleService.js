@@ -85,8 +85,6 @@ export class RealtimeScheduleService {
   subscribeToWeek(weekStartDate, company = 'login', callbacks = {}) {
     const channelName = `teaching-schedule-${formatDateForDB(weekStartDate)}-${company}`;
     
-    console.log(`🔔 Subscribing to real-time updates: ${channelName}`);
-    
     // Remove existing subscription if any
     this.unsubscribeFromWeek(weekStartDate, company);
     
@@ -101,15 +99,12 @@ export class RealtimeScheduleService {
           filter: `week_start_date=eq.${formatDateForDB(weekStartDate)}`
         },
         (payload) => {
-          console.log('📡 Real-time update received:', payload);
           this.handleScheduleChange(payload, callbacks);
         }
       )
       .subscribe((status) => {
-        console.log(`🔌 Subscription status: ${status}`);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to real-time updates');
-        }
+          }
       });
 
     this.subscriptions.set(`${weekStartDate.getTime()}-${company}`, channel);
@@ -124,7 +119,6 @@ export class RealtimeScheduleService {
     const channel = this.subscriptions.get(key);
     
     if (channel) {
-      console.log('🔌 Unsubscribing from real-time updates');
       supabase.removeChannel(channel);
       this.subscriptions.delete(key);
     }
@@ -134,7 +128,6 @@ export class RealtimeScheduleService {
    * Unsubscribe from all channels
    */
   unsubscribeAll() {
-    console.log('🔌 Unsubscribing from all real-time channels');
     this.subscriptions.forEach((channel) => {
       supabase.removeChannel(channel);
     });
@@ -146,8 +139,6 @@ export class RealtimeScheduleService {
    */
   handleScheduleChange(payload, callbacks = {}) {
     const { eventType, new: newRecord, old: oldRecord } = payload;
-    
-    console.log(`📝 Schedule ${eventType}:`, { new: newRecord, old: oldRecord });
     
     switch (eventType) {
       case 'INSERT':
@@ -172,8 +163,7 @@ export class RealtimeScheduleService {
         break;
         
       default:
-        console.log('🤷 Unknown event type:', eventType);
-    }
+        }
     
     // General change callback
     if (callbacks.onChange) {
@@ -201,12 +191,9 @@ export class RealtimeScheduleService {
         .order('time_slot_index');
 
       if (error) {
-        console.error('❌ Error loading schedules:', error);
         return { data: [], error };
       }
 
-      console.log(`✅ Loaded ${data?.length || 0} schedules`);
-      
       // Transform data for UI
       const schedules = {};
       data?.forEach(schedule => {
@@ -216,7 +203,6 @@ export class RealtimeScheduleService {
 
       return { data: schedules, error: null };
     } catch (error) {
-      console.error('💥 Exception loading schedules:', error);
       return { data: {}, error };
     }
   }
@@ -249,7 +235,6 @@ export class RealtimeScheduleService {
         .maybeSingle();
 
       if (fetchError) {
-        console.error('❌ Error checking existing schedule:', fetchError);
         return { data: null, error: fetchError };
       }
 
@@ -274,7 +259,6 @@ export class RealtimeScheduleService {
 
       if (existing) {
         // Update existing schedule
-        console.log('🔄 Updating existing schedule:', existing.id);
         result = await supabase
           .from('teaching_schedules')
           .update(schedulePayload)
@@ -283,7 +267,6 @@ export class RealtimeScheduleService {
           .single();
       } else {
         // Create new schedule
-        console.log('➕ Creating new schedule');
         result = await supabase
           .from('teaching_schedules')
           .insert({
@@ -295,15 +278,12 @@ export class RealtimeScheduleService {
       }
 
       if (result.error) {
-        console.error('❌ Error upserting schedule:', result.error);
         return { data: null, error: result.error };
       }
 
-      console.log('✅ Schedule upserted successfully:', result.data);
       return { data: transformScheduleForUI(result.data), error: null };
 
     } catch (error) {
-      console.error('💥 Exception upserting schedule:', error);
       return { data: null, error };
     }
   }
@@ -328,15 +308,12 @@ export class RealtimeScheduleService {
         .eq('company', company);
 
       if (error) {
-        console.error('❌ Error deleting schedule:', error);
         return { error };
       }
 
-      console.log('✅ Schedule deleted successfully');
       return { error: null };
 
     } catch (error) {
-      console.error('💥 Exception deleting schedule:', error);
       return { error };
     }
   }

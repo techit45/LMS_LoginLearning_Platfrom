@@ -46,7 +46,6 @@ const QuizEditor = ({ contentId, initialQuiz, onSave }) => {
     onSave(quizData);
   };
 
-
   const handleAddQuestion = () => {
     setEditingQuestion({
       id: Date.now().toString(),

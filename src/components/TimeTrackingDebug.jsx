@@ -93,8 +93,7 @@ const TimeTrackingDebug = () => {
           regular_hours: 8.0,
           overtime_hours: 0.0,
           entry_type: 'teaching',
-          status: 'pending',
-          work_description: 'Teaching React fundamentals'
+          employee_notes: 'Teaching React fundamentals'
         },
         {
           user_id: user.id,
@@ -106,10 +105,7 @@ const TimeTrackingDebug = () => {
           regular_hours: 8.0,
           overtime_hours: 0.5,
           entry_type: 'meeting',
-          status: 'approved',
-          work_description: 'Team meeting and project planning',
-          approved_by: user.id,
-          approved_at: new Date().toISOString()
+          employee_notes: 'Team meeting and project planning'
         },
         {
           user_id: user.id,
@@ -121,8 +117,7 @@ const TimeTrackingDebug = () => {
           regular_hours: 8.0,
           overtime_hours: 0.0,
           entry_type: 'prep',
-          status: 'pending',
-          work_description: 'Preparing course materials'
+          employee_notes: 'Preparing course materials'
         }
       ];
 

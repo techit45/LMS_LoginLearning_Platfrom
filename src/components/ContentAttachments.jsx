@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useToast } from "../hooks/use-toast.jsx"
-import { getContentAttachments, downloadAttachment } from '../lib/attachmentService';
+import { getContentAttachments, downloadAttachment, formatFileSize } from '../lib/attachmentService';
 
 const ContentAttachments = ({ contentId, className = '' }) => {
   const { toast } = useToast();
@@ -49,14 +49,7 @@ const ContentAttachments = ({ contentId, className = '' }) => {
     return <File className="w-5 h-5 text-slate-500" />;
   };
 
-  // Format file size
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+  // Remove duplicate formatFileSize function - using imported one
 
   // Load attachments
   useEffect(() => {
@@ -65,11 +58,9 @@ const ContentAttachments = ({ contentId, className = '' }) => {
       
       setLoading(true);
       try {
-        console.log('Loading attachments for content:', contentId);
         const { data, error } = await getContentAttachments(contentId);
         
         if (error) {
-          console.error('Error loading attachments:', error);
           toast({
             title: "ไม่สามารถโหลดไฟล์แนบได้",
             description: "มีข้อผิดพลาดในการโหลดไฟล์แนบ",
@@ -78,10 +69,8 @@ const ContentAttachments = ({ contentId, className = '' }) => {
           return;
         }
 
-        console.log('Loaded attachments:', data);
         setAttachments(data || []);
       } catch (error) {
-        console.error('Error in loadAttachments:', error);
         toast({
           title: "เกิดข้อผิดพลาด",
           description: "ไม่สามารถโหลดไฟล์แนบได้",
@@ -99,8 +88,6 @@ const ContentAttachments = ({ contentId, className = '' }) => {
   const handleDownload = async (attachment) => {
     setDownloading(attachment.id);
     try {
-      console.log('Downloading file:', attachment);
-      
       // Use the public URL directly for download
       if (attachment.file_url) {
         const a = document.createElement('a');
@@ -119,7 +106,6 @@ const ContentAttachments = ({ contentId, className = '' }) => {
         throw new Error('ไม่พบ URL ของไฟล์');
       }
     } catch (error) {
-      console.error('Download error:', error);
       toast({
         title: "ไม่สามารถดาวน์โหลดได้",
         description: error.message || "เกิดข้อผิดพลาดในการดาวน์โหลดไฟล์",

@@ -7,7 +7,6 @@ import {
   DollarSign, 
   Clock, 
   Users, 
-  Tag, 
   AlertCircle,
   FileText,
   Image as ImageIcon,
@@ -19,7 +18,6 @@ import { Input } from '../components/ui/input';
 import { useToast } from "../hooks/use-toast.jsx"
 import { createCourse, updateCourse } from '../lib/courseService';
 import { uploadCourseImage } from '../lib/attachmentService';
-import { createCourseStructure } from '../lib/courseStructureService';
 import CourseImageUpload from '../components/CourseImageUpload';
 
 const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
@@ -28,14 +26,13 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: '',
     level: 'beginner',
     duration_hours: 0,
     // price: 0, // ตัดฟังก์ชันเงินออกไปก่อน
-    max_students: 50,
     is_active: true,
     is_featured: false,
     thumbnail_url: '',
+    company: 'login', // Add company field with default value
     instructor_name: '',
     instructor_email: ''
   });
@@ -74,16 +71,9 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
       newErrors.description = 'กรุณากรอกคำอธิบายอย่างน้อย 20 ตัวอักษร';
     }
     
-    if (!formData.category) {
-      newErrors.category = 'กรุณาเลือกหมวดหมู่';
-    }
     
     if (formData.duration_hours <= 0) {
       newErrors.duration_hours = 'กรุณากรอกระยะเวลาที่มากกว่า 0';
-    }
-    
-    if (formData.max_students <= 0) {
-      newErrors.max_students = 'กรุณากรอกจำนวนนักเรียนที่มากกว่า 0';
     }
     
     if (!formData.company) {
@@ -114,58 +104,47 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
         finalFormData.thumbnail_url = galleryImages[0].url;
       }
       
-      console.log('Submitting course data:', finalFormData);
+      console.log('🚀 Creating course with automatic folder creation:', finalFormData.title);
+      const result = await createCourse(finalFormData);
       
-      const { data, error } = await createCourse(finalFormData);
-      
-      if (error) {
-        console.error('Course creation error:', error);
-        throw new Error(error.message || 'ไม่สามารถสร้างคอร์สได้');
+      if (result.error) {
+        throw new Error(result.error.message || 'ไม่สามารถสร้างคอร์สได้');
       }
       
-      console.log('Course created successfully:', data);
+      const { data, folderCreated, folderError } = result;
       
-      // Create Google Drive folder structure
-      try {
-        console.log('🗂️ Creating Google Drive folder structure...');
-        const driveStructure = await createCourseStructure({
-          title: data.title,
-          company: data.company || 'login'
-        });
-        
-        if (driveStructure.courseFolderId) {
-          // Update course with Google Drive folder ID
-          await updateCourse(data.id, {
-            google_drive_folder_id: driveStructure.courseFolderId
-          });
-          console.log('✅ Google Drive folder created and linked to course');
-        }
-      } catch (driveError) {
-        console.error('⚠️ Failed to create Google Drive folder:', driveError);
-        // Don't fail the whole operation, just show warning
+      // Show appropriate success message based on folder creation status
+      if (folderCreated) {
+        console.log('✅ Course and folder created successfully');
         toast({
-          title: "คำเตือน",
-          description: "สร้างคอร์สสำเร็จ แต่ไม่สามารถสร้างโฟลเดอร์ Google Drive ได้",
+          title: "สร้างคอร์สและโฟลเดอร์สำเร็จ! 🎉",
+          description: `คอร์ส "${finalFormData.title}" พร้อมโฟลเดอร์ Google Drive แล้ว`
+        });
+      } else if (folderError) {
+        console.warn('⚠️ Course created but folder creation failed:', folderError);
+        toast({
+          title: "คอร์สสร้างสำเร็จ แต่มีปัญหาโฟลเดอร์",
+          description: `คอร์ส "${finalFormData.title}" ถูกสร้างแล้ว แต่ไม่สามารถสร้างโฟลเดอร์ Google Drive ได้: ${folderError}`,
           variant: "warning"
         });
+      } else {
+        console.log('✅ Course created successfully');
+        toast({
+          title: "สร้างคอร์สสำเร็จ! 🎉",
+          description: `คอร์ส "${finalFormData.title}" ถูกสร้างเรียบร้อยแล้ว`
+        });
       }
-
-      toast({
-        title: "สร้างคอร์สสำเร็จ! 🎉",
-        description: `คอร์ส "${formData.title}" ถูกสร้างเรียบร้อยแล้ว`
-      });
 
       // Reset form
       setFormData({
         title: '',
         description: '',
-        category: '',
         level: 'beginner',
         duration_hours: 0,
         // price: 0, // ตัดฟังก์ชันเงินออกไปก่อน
-        max_students: 50,
         is_active: true,
-        thumbnail_url: ''
+        thumbnail_url: '',
+        company: 'login' // Add company field to reset
       });
       setCoverImage(null);
       setImagePreview(null);
@@ -175,8 +154,6 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
       onSuccess && onSuccess(data);
       onClose();
     } catch (error) {
-      console.error('Error creating course:', error);
-      
       let errorMessage = error.message;
       let errorTitle = "ไม่สามารถสร้างคอร์สได้";
       
@@ -262,10 +239,6 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
     }
   };
 
-  const categories = [
-    'Electronics', 'Civil Engineering', 'Energy', 'Software', 
-    'Design', 'Robotics', 'Mechanical', 'Chemical', 'Environmental'
-  ];
 
   const difficultyLevels = [
     { value: 'beginner', label: 'ผู้เริ่มต้น' },
@@ -382,12 +355,11 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 h-12 shadow-sm"
               >
-                <option value="login">Login Learning</option>
-                <option value="meta">Meta Tech Academy</option>
-                <option value="med">Med Solutions</option>
-                <option value="edtech">EdTech Innovation</option>
-                <option value="innotech">InnoTech Labs</option>
-                <option value="w2d">W2D Studio</option>
+                <option value="login">Login</option>
+                <option value="meta">Meta</option>
+                <option value="med">Med</option>
+                <option value="edtech">EdTech</option>
+                <option value="w2d">W2D</option>
               </select>
               {errors.company && (
                 <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
@@ -397,33 +369,8 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
               )}
             </div>
 
-            {/* Category and Difficulty */}
+            {/* Difficulty Level */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-6 rounded-xl border border-purple-200">
-                <label className="block text-gray-800 font-semibold mb-3 flex items-center">
-                  <div className="bg-purple-500 p-2 rounded-lg mr-3">
-                    <Tag className="w-4 h-4 text-white" />
-                  </div>
-                  หมวดหมู่ *
-                </label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 h-12 shadow-sm"
-                >
-                  <option value="">เลือกหมวดหมู่</option>
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-                {errors.category && (
-                  <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
-                    <AlertCircle className="w-4 h-4 mr-2" />
-                    {errors.category}
-                  </p>
-                )}
-              </div>
 
               <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-xl border border-amber-200">
                 <label className="block text-gray-800 font-semibold mb-3 flex items-center">
@@ -508,34 +455,6 @@ const CreateCourseForm = ({ isOpen, onClose, onSuccess }) => {
               */}
             </div>
 
-
-            {/* Max Students */}
-            <div className="bg-gradient-to-br from-rose-50 to-pink-50 p-6 rounded-xl border border-rose-200">
-              <label className="block text-gray-800 font-semibold mb-3 flex items-center">
-                <div className="bg-rose-500 p-2 rounded-lg mr-3">
-                  <Users className="w-4 h-4 text-white" />
-                </div>
-                จำนวนนักเรียนสูงสุด *
-              </label>
-              <div className="relative max-w-xs">
-                <Users className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  type="number"
-                  name="max_students"
-                  value={formData.max_students}
-                  onChange={handleInputChange}
-                  placeholder="50"
-                  min="1"
-                  className="pl-12 pr-4 bg-white border-gray-300 text-gray-800 h-12 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 rounded-xl shadow-sm text-lg"
-                />
-              </div>
-              {errors.max_students && (
-                <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
-                  <AlertCircle className="w-4 h-4 mr-2" />
-                  {errors.max_students}
-                </p>
-              )}
-            </div>
 
             {/* Course Images Gallery */}
             <div className="bg-gradient-to-br from-teal-50 to-cyan-50 p-6 rounded-xl border border-teal-200">

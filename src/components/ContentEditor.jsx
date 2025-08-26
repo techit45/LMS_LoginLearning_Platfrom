@@ -20,6 +20,7 @@ import {
 import { Button } from '../components/ui/button';
 import { useToast } from "../hooks/use-toast.jsx"
 import { useCompany } from '../contexts/CompanyContext';
+import { supabase } from '../lib/supabaseClient';
 
 const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
   const { toast } = useToast();
@@ -56,7 +57,6 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
       description: 'เชื่อมโยงเอกสารจาก Google Drive'
     }
   ];
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -98,7 +98,6 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
       });
       
     } catch (error) {
-      console.error('Error saving content:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: error.message || "ไม่สามารถบันทึกได้",
@@ -163,12 +162,12 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
       return;
     }
 
-    // Validate file size (10MB max)
-    const maxSize = 10 * 1024 * 1024;
+    // Validate file size (500MB max with chunked upload support)
+    const maxSize = 500 * 1024 * 1024; // 500MB
     if (file.size > maxSize) {
       toast({
         title: "ไฟล์ใหญ่เกินไป",
-        description: "ขนาดไฟล์ต้องไม่เกิน 10 MB",
+        description: "ขนาดไฟล์ต้องไม่เกิน 500 MB",
         variant: "destructive"
       });
       return;
@@ -179,8 +178,9 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
       // Create proper folder structure: [COMPANY] > คอร์สเรียน > Course Title
       let targetFolderId = null;
       let courseTitle = 'Unknown Course';
+      let courseCompany = 'login'; // default to login
       
-      // Get course information first
+      // Get course information first (including company)
       if (courseId) {
         try {
           const { getCourseByIdAdmin } = await import('../lib/courseService.js');
@@ -188,66 +188,51 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
           
           if (!result.error && result.data) {
             courseTitle = result.data.title || 'Unknown Course';
-            console.log('📚 Course info:', { id: courseId, title: courseTitle });
-          }
+            courseCompany = result.data.company || 'login';
+            console.log('📚 Course info:', { title: courseTitle, company: courseCompany });
+            }
         } catch (courseError) {
-          console.warn('Could not get course info:', courseError);
-        }
+          console.warn('⚠️ Could not get course info, using defaults');
+          }
       }
       
-      // Create proper folder structure: [LOGIN] > โปรเจค > Course Name
-      
-      // Use one of the existing คอร์สเรียน folders to avoid creating duplicates
-      // We'll find and use the first คอร์สเรียน folder that exists
+      // Get the correct company folder for courses using courseFolderService
       let coursesFolderId = null;
       
       try {
-        // List folders in [LOGIN] to find existing คอร์สเรียน folder
-        const loginFolderId = '1xjUv7ruPHwiLhZJ42IeyfcKBkYP8CX4S';
-        const listResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-drive/list?folderId=${loginFolderId}&isSharedDrive=true`, {
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-          }
+        // Import and use the courseFolderService to get correct folder
+        const { getCompanyFolder } = await import('../lib/courseFolderService.js');
+        const companyConfig = await getCompanyFolder(courseCompany);
+        coursesFolderId = companyConfig.courses;
+        
+        console.log('📁 Using company folder:', { 
+          company: courseCompany, 
+          companyName: companyConfig.name,
+          coursesFolderId 
         });
-        
-        if (listResponse.ok) {
-          const listData = await listResponse.json();
-          console.log('📂 Found folders in [LOGIN]:', listData);
-          
-          // Find existing คอร์สเรียน folder
-          const existingCoursesFolder = listData.files?.find(file => 
-            file.name.includes('คอร์สเรียน') && file.mimeType === 'application/vnd.google-apps.folder'
-          );
-          
-          if (existingCoursesFolder) {
-            coursesFolderId = existingCoursesFolder.id;
-            console.log('📁 Using existing คอร์สเรียน folder:', coursesFolderId);
-          }
-        }
-        
-        // If no existing folder found, use working folder as fallback
-        if (!coursesFolderId) {
-          console.log('⚠️ No คอร์สเรียน folder found, using โปรเจค folder as fallback');
-          coursesFolderId = '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF'; // Use working โปรเจค folder
-        }
         
         // PREVENT DUPLICATE FOLDERS - Always use คอร์สเรียน folder directly
         if (coursesFolderId) {
+          // 🔒 SECURE: Get dynamic session token
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError || !session?.access_token) {
+            throw new Error('Authentication required for course folder operations');
+          }
+
           // List folders in คอร์สเรียน to find existing course folder first
           const listCourseResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-drive/list?folderId=${coursesFolderId}&isSharedDrive=true`, {
             headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+              'Authorization': `Bearer ${session.access_token}` // 🔒 Dynamic token
             }
           });
           
           let existingCourseFolder = null;
           if (listCourseResponse.ok) {
             const listCourseData = await listCourseResponse.json();
-            console.log('📂 Found folders in คอร์สเรียน:', listCourseData);
-            
             // Find existing folder with exact course name match (more precise matching)
+            // ✅ Use correct 📖 icon for course folders (not 📚)
             existingCourseFolder = listCourseData.files?.find(file => 
-              file.name === `📚 ${courseTitle}` && file.mimeType === 'application/vnd.google-apps.folder'
+              file.name === `📖 ${courseTitle}` && file.mimeType === 'application/vnd.google-apps.folder'
             );
             
             // If exact match not found, try partial match with course title
@@ -256,88 +241,86 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
                 file.name.includes(courseTitle) && file.mimeType === 'application/vnd.google-apps.folder'
               );
             }
+            
+            // If still not found, try looking for any folder with course title
+            if (!existingCourseFolder && listCourseData.files) {
+              console.warn(`⚠️ Exact match not found, trying broader search for "${courseTitle}"`);
+              existingCourseFolder = listCourseData.files.find(file => 
+                file.mimeType === 'application/vnd.google-apps.folder' && 
+                (file.name.toLowerCase().includes(courseTitle.toLowerCase()) ||
+                 courseTitle.toLowerCase().includes(file.name.toLowerCase().replace('📖 ', '')))
+              );
+              
+              if (existingCourseFolder) {
+                console.log(`🔍 Found course folder via broader search: ${existingCourseFolder.name}`);
+              }
+            }
           }
           
           if (existingCourseFolder) {
             // Use existing course folder
             targetFolderId = existingCourseFolder.id;
-            console.log('✅ Using existing course folder:', { 
-              courseTitle, 
-              folderId: targetFolderId,
-              folderName: existingCourseFolder.name 
-            });
+            console.log('✅ Found existing course folder:', existingCourseFolder.name);
+            console.log('📁 Using target folder ID:', targetFolderId);
           } else {
-            // For now, use คอร์สเรียน folder directly to prevent duplicates
-            // This ensures all files go to the same location until we fix the duplication issue
-            targetFolderId = coursesFolderId;
-            console.log('🔄 Using คอร์สเรียน folder directly (prevent duplicates):', {
-              courseTitle,
-              folderId: coursesFolderId
-            });
+            // ❌ STOP creating new folders during file upload!
+            // Course folder should already exist from course creation
+            throw new Error(`ไม่พบโฟลเดอร์สำหรับคอร์ส "${courseTitle}" กรุณาตรวจสอบว่าคอร์สถูกสร้างอย่างถูกต้อง`);
           }
         }
       } catch (folderError) {
-        console.error('⚠️ Failed to find/create course folder:', folderError);
+        console.error('❌ Error finding course folder:', folderError.message);
+        throw new Error(`ไม่สามารถหาโฟลเดอร์สำหรับคอร์ส "${courseTitle}" ได้: ${folderError.message}`);
       }
       
-      // Fallback to [LOGIN] folder if everything failed
+      // ❌ NO MORE FALLBACKS - Course folder MUST exist!
       if (!targetFolderId) {
-        targetFolderId = '1xjUv7ruPHwiLhZJ42IeyfcKBkYP8CX4S';
-        console.log('🔄 Using [LOGIN] folder as fallback:', targetFolderId);
+        throw new Error(`ไม่พบโฟลเดอร์สำหรับคอร์ส "${courseTitle}" กรุณาสร้างคอร์สใหม่อีกครั้ง`);
       }
 
-      // Create FormData for upload
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
-      uploadFormData.append('folderId', targetFolderId);
+      // Use direct Google Drive upload for now (bypass attachmentService until content is saved)
+      console.log('🔍 Checking content ID...', { contentId: content.id, hasId: !!content.id });
       
-      console.log('📤 Upload parameters:', {
-        fileName: file.name,
-        fileSize: file.size,
-        targetFolderId: targetFolderId,
-        fileType: file.type
-      });
+      // Import uploadFileToFolder for direct upload
+      console.log('📤 Starting upload with googleDriveClientService...');
+      console.log('📄 File details:', { name: file.name, size: file.size, targetFolderId });
       
-      // Call upload API via Supabase Edge Function
-      const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
-      const response = await fetch(`${API_BASE}/simple-upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
-        },
-        body: uploadFormData,
-      });
+      const { uploadFileToFolder } = await import('../lib/googleDriveClientService.js');
+      
+      // Upload directly to Google Drive
+      console.log('🚀 Calling uploadFileToFolder...');
+      const uploadResult = await uploadFileToFolder(file, targetFolderId);
+      
+      console.log('📦 Upload result:', uploadResult);
 
-      if (!response.ok) {
-        throw new Error('Upload failed');
+      if (!uploadResult || !uploadResult.fileId) {
+        throw new Error('Upload failed - no file ID returned');
       }
 
-      const result = await response.json();
-      console.log('✅ Upload successful:', result);
-      
       // Set uploaded file info
-      const fileId = result.fileId || result.id; // Support both field names
-      console.log('📋 File ID extracted:', { fileId, resultFileId: result.fileId, resultId: result.id });
+      const fileUrl = uploadResult.webViewLink || `https://drive.google.com/file/d/${uploadResult.fileId}/view`;
+      
       setUploadedFile({
         name: file.name,
         size: file.size,
         type: file.type,
-        url: result.webViewLink || `https://drive.google.com/file/d/${fileId}/view`,
-        id: fileId
+        url: fileUrl,
+        id: uploadResult.fileId,
+        attachmentId: uploadResult.fileId
       });
 
       // Update document_url in form
-      handleInputChange('document_url', result.webViewLink || `https://drive.google.com/file/d/${fileId}/view`);
+      handleInputChange('document_url', fileUrl);
 
       toast({
         title: "อัปโหลดสำเร็จ",
-        description: `ไฟล์ ${file.name} ถูกอัปโหลดไป Google Drive แล้ว`,
+        description: file.size > 100 * 1024 * 1024 
+          ? `ไฟล์ขนาดใหญ่ ${file.name} ถูกอัปโหลดแล้ว (Chunked Upload)`
+          : `ไฟล์ ${file.name} ถูกอัปโหลดไป Google Drive แล้ว`,
         variant: "default"
       });
 
     } catch (error) {
-      console.error('Upload error:', error);
-      
       // Show more specific error message
       let errorMessage = "ไม่สามารถอัปโหลดไฟล์ได้ กรุณาลองใหม่";
       if (error.message.includes('File not found')) {
@@ -367,12 +350,30 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
     try {
       setUploading(true);
       
-      // Delete file from Google Drive
+      console.log('🗑️ Starting file deletion...', {
+        fileId: uploadedFile.id,
+        fileName: uploadedFile.name,
+        fileUrl: uploadedFile.url
+      });
+      
+      // 🔒 SECURE: Delete file with dynamic auth token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        throw new Error('Authentication required for file deletion');
+      }
+
       const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+      
+      console.log('🔐 Sending delete request to:', `${API_BASE}/delete-file`);
+      console.log('📤 Delete payload:', {
+        fileId: uploadedFile.id,
+        fileName: uploadedFile.name
+      });
+      
       const response = await fetch(`${API_BASE}/delete-file`, {
         method: 'DELETE',
         headers: {
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+          'Authorization': `Bearer ${session.access_token}`, // 🔒 Dynamic token
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -381,12 +382,16 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
         })
       });
 
+      console.log('📥 Delete response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error('Delete failed');
+        const errorData = await response.text();
+        console.error('❌ Delete request failed:', errorData);
+        throw new Error(`Delete failed: ${response.status} - ${errorData}`);
       }
 
       const result = await response.json();
-      console.log('✅ File deleted from Google Drive:', result);
+      console.log('✅ Delete result:', result);
       
       // Clear uploaded file state
       setUploadedFile(null);
@@ -399,11 +404,11 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
       });
 
     } catch (error) {
-      console.error('Delete error:', error);
+      console.error('❌ File deletion error:', error);
       
       toast({
         title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถลบไฟล์ได้ กรุณาลองใหม่",
+        description: `ไม่สามารถลบไฟล์ได้: ${error.message}`,
         variant: "destructive"
       });
     } finally {
@@ -418,7 +423,6 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
-
 
   const selectedType = contentTypes.find(type => type.value === formData.content_type);
 
@@ -673,7 +677,7 @@ const ContentEditor = ({ mode, content, onSave, onClose, courseId }) => {
                               รองรับ PDF, Word, PowerPoint, Excel, รูปภาพ และ Text
                             </p>
                             <p className="text-blue-500 text-xs mt-1">
-                              ขนาดไฟล์สูงสุด 10 MB
+                              ขนาดไฟล์สูงสุด 500 MB (รองรับไฟล์ขนาดใหญ่)
                             </p>
                           </div>
                         )}

@@ -20,7 +20,6 @@ export const loadInstructorPreferences = async () => {
       .eq('user_id', user.id)
 
     if (error) {
-      console.error('Error loading instructor preferences:', error)
       return {}
     }
 
@@ -33,7 +32,6 @@ export const loadInstructorPreferences = async () => {
     console.log('✅ Loaded instructor preferences:', Object.keys(preferences).length, 'preferences')
     return preferences
   } catch (error) {
-    console.error('Error in loadInstructorPreferences:', error)
     return {}
   }
 }
@@ -59,13 +57,10 @@ export const saveInstructorPreference = async (instructorId, isVisible) => {
       })
 
     if (error) {
-      console.error('Error saving instructor preference:', error)
       throw error
     }
 
-    console.log(`✅ Saved preference: instructor ${instructorId} -> ${isVisible ? 'visible' : 'hidden'}`)
-  } catch (error) {
-    console.error('Error in saveInstructorPreference:', error)
+    } catch (error) {
     throw error
   }
 }
@@ -92,13 +87,10 @@ export const saveMultipleInstructorPreferences = async (preferences) => {
       })
 
     if (error) {
-      console.error('Error saving multiple instructor preferences:', error)
       throw error
     }
 
-    console.log(`✅ Saved ${preferences.length} instructor preferences`)
-  } catch (error) {
-    console.error('Error in saveMultipleInstructorPreferences:', error)
+    } catch (error) {
     throw error
   }
 }
@@ -119,13 +111,10 @@ export const deleteInstructorPreference = async (instructorId) => {
       .eq('instructor_user_id', instructorId)
 
     if (error) {
-      console.error('Error deleting instructor preference:', error)
       throw error
     }
 
-    console.log(`✅ Deleted preference for instructor ${instructorId}`)
-  } catch (error) {
-    console.error('Error in deleteInstructorPreference:', error)
+    } catch (error) {
     throw error
   }
 }

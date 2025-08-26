@@ -60,8 +60,7 @@ const LocationRegistration = () => {
       const { data: registrations, error: regError } = await locationService.getUserRegisteredLocations();
       
       if (regError) {
-        console.error('Error loading registrations:', regError);
-      } else {
+        } else {
         setUserRegistrations(registrations || []);
         
         // Create registration status map

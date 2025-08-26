@@ -23,10 +23,8 @@ class NotificationIntegrations {
         );
       }
       
-      console.log('Course enrollment notifications sent');
-    } catch (error) {
-      console.error('Error sending course enrollment notifications:', error);
-    }
+      } catch (error) {
+      }
   }
 
   // Assignment submission notifications
@@ -42,10 +40,8 @@ class NotificationIntegrations {
         );
       }
       
-      console.log('Assignment submission notification sent');
-    } catch (error) {
-      console.error('Error sending assignment submission notification:', error);
-    }
+      } catch (error) {
+      }
   }
 
   // Assignment grading notifications
@@ -58,10 +54,8 @@ class NotificationIntegrations {
         maxScore
       );
       
-      console.log('Assignment graded notification sent');
-    } catch (error) {
-      console.error('Error sending assignment graded notification:', error);
-    }
+      } catch (error) {
+      }
   }
 
   // New course content notifications
@@ -78,10 +72,8 @@ class NotificationIntegrations {
       );
 
       await Promise.all(notificationPromises);
-      console.log(`New content notifications sent to ${enrolledStudentIds.length} students`);
-    } catch (error) {
-      console.error('Error sending new course content notifications:', error);
-    }
+      } catch (error) {
+      }
   }
 
   // Forum reply notifications
@@ -99,50 +91,40 @@ class NotificationIntegrations {
       // Notify other participants in the topic (if any tracking system exists)
       // This would require a participants tracking system
       
-      console.log('Forum reply notification sent');
-    } catch (error) {
-      console.error('Error sending forum reply notification:', error);
-    }
+      } catch (error) {
+      }
   }
 
   // Achievement notifications
   static async handleAchievement(userId, badgeName, description) {
     try {
       await NotificationHelpers.notifyAchievement(userId, badgeName, description);
-      console.log('Achievement notification sent');
-    } catch (error) {
-      console.error('Error sending achievement notification:', error);
-    }
+      } catch (error) {
+      }
   }
 
   // Course completion notifications
   static async handleCourseCompletion(userId, courseData) {
     try {
       await NotificationHelpers.notifyCourseCompletion(userId, courseData);
-      console.log('Course completion notification sent');
-    } catch (error) {
-      console.error('Error sending course completion notification:', error);
-    }
+      } catch (error) {
+      }
   }
 
   // Assignment reminder notifications
   static async handleAssignmentReminder(userId, assignmentData, daysLeft) {
     try {
       await NotificationHelpers.notifyAssignmentReminder(userId, assignmentData, daysLeft);
-      console.log('Assignment reminder notification sent');
-    } catch (error) {
-      console.error('Error sending assignment reminder notification:', error);
-    }
+      } catch (error) {
+      }
   }
 
   // Welcome notification for new users
   static async handleUserWelcome(userId) {
     try {
       await NotificationHelpers.notifyWelcome(userId);
-      console.log('Welcome notification sent');
-    } catch (error) {
-      console.error('Error sending welcome notification:', error);
-    }
+      } catch (error) {
+      }
   }
 
   // System announcements
@@ -154,10 +136,8 @@ class NotificationIntegrations {
       }
 
       await NotificationHelpers.notifyAnnouncement(targetUserIds, message, url);
-      console.log(`System announcement sent to ${targetUserIds.length} users`);
-    } catch (error) {
-      console.error('Error sending system announcement:', error);
-    }
+      } catch (error) {
+      }
   }
 
   // Helper methods for data retrieval
@@ -171,7 +151,6 @@ class NotificationIntegrations {
         .single();
 
       if (error) {
-        console.error('Error fetching user profile:', error);
         return {
           id: userId,
           full_name: 'ผู้ใช้งาน',
@@ -185,7 +164,6 @@ class NotificationIntegrations {
         email: data.email || 'user@example.com'
       };
     } catch (error) {
-      console.error('Error getting user profile:', error);
       return { id: userId, full_name: 'ผู้ใช้งาน', email: 'user@example.com' };
     }
   }
@@ -200,13 +178,11 @@ class NotificationIntegrations {
         .eq('is_active', true);
 
       if (error) {
-        console.error('Error fetching enrolled students:', error);
         return [];
       }
 
       return data ? data.map(enrollment => enrollment.user_id) : [];
     } catch (error) {
-      console.error('Error getting enrolled students:', error);
       return [];
     }
   }
@@ -220,13 +196,11 @@ class NotificationIntegrations {
         .eq('is_active', true);
 
       if (error) {
-        console.error('Error fetching active users:', error);
         return [];
       }
 
       return data ? data.map(profile => profile.user_id) : [];
     } catch (error) {
-      console.error('Error getting active users:', error);
       return [];
     }
   }

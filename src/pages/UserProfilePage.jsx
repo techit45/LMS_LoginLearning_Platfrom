@@ -151,7 +151,6 @@ const UserProfilePage = () => {
       setIsChangingPassword(false);
       
     } catch (error) {
-      console.error('Password change error:', error);
       toast({
         title: "ไม่สามารถเปลี่ยนรหัสผ่านได้",
         description: error.message || "เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน",

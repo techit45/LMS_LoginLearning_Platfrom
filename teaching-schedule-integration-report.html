@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานการเชื่อมต่อระบบตารางสอน</title>
+    <style>
+        body { font-family: 'Sarabun', Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; color: #856404; }
+        .code { background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; margin: 10px 0; font-size: 14px; }
+        h1 { color: #2c3e50; text-align: center; }
+        h2, h3 { color: #34495e; }
+        .integration-flow { background: #e8f5e8; padding: 15px; border-left: 4px solid #28a745; margin: 10px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f8f9fa; }
+        .status-active { color: #28a745; font-weight: bold; }
+        .status-partial { color: #ffc107; font-weight: bold; }
+        .status-inactive { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 รายงานการเชื่อมต่อระบบตารางสอน</h1>
+        <p style="text-align: center; color: #6c757d;">หน้า Admin Teaching Schedule: <strong>https://login-learning-platform.vercel.app/#/admin/teaching-schedule</strong></p>
+        
+        <div class="section success">
+            <h2>✅ ระบบตารางสอนปัจจุบัน</h2>
+            <div class="integration-flow">
+                <h3>🎯 คอมโพเนนต์หลัก:</h3>
+                <ul>
+                    <li><strong>TeachingSchedulePageSimple:</strong> หน้าจัดการตารางสอนหลัก</li>
+                    <li><strong>ScheduleGrid:</strong> ตารางแสดงเวลาสอนพร้อม Drag & Drop</li>
+                    <li><strong>CourseManager:</strong> จัดการคอร์สและอาจารย์</li>
+                    <li><strong>useSimpleSchedule:</strong> Hook สำหรับจัดการข้อมูลตารางสอน</li>
+                    <li><strong>teachingScheduleService:</strong> บริการจัดการข้อมูลตารางสอน</li>
+                </ul>
+                
+                <h3>🔧 ฟีเจอร์:</h3>
+                <ul>
+                    <li>Drag & Drop ลากคอร์สเข้าตารางสอน</li>
+                    <li>Resize ปรับขนาดช่วงเวลาสอน</li>
+                    <li>Real-time collaborative editing</li>
+                    <li>สถิติการสอน (ตารางทั้งหมด, ชั่วโมงรวม, คอร์ส, อาจารย์)</li>
+                    <li>Navigation วันที่และสัปดาห์</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section info">
+            <h2>🔗 การเชื่อมต่อกับระบบอื่น</h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>ระบบ</th>
+                        <th>สถานะการเชื่อมต่อ</th>
+                        <th>รายละเอียด</th>
+                        <th>ตำแหน่งในโค้ด</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Time Tracking System</strong></td>
+                        <td><span class="status-active">🟢 เชื่อมต่อแล้ว</span></td>
+                        <td>ตรวจจับตารางสอนอัตโนมัติเมื่อเช็คอิน</td>
+                        <td>timeTrackingService.js:274-306</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Course Management</strong></td>
+                        <td><span class="status-active">🟢 เชื่อมต่อแล้ว</span></td>
+                        <td>ดึงข้อมูลคอร์สจากฐานข้อมูล courses</td>
+                        <td>teachingScheduleService.js:110+</td>
+                    </tr>
+                    <tr>
+                        <td><strong>User Profiles</strong></td>
+                        <td><span class="status-active">🟢 เชื่อมต่อแล้ว</span></td>
+                        <td>ดึงข้อมูลอาจารย์จาก user_profiles</td>
+                        <td>teachingScheduleService.js:85-110</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Payroll System</strong></td>
+                        <td><span class="status-partial">🟡 บางส่วน</span></td>
+                        <td>นับชั่วโมงสอนสำหรับคำนวณเงินเดือน</td>
+                        <td>timeTrackingService.js:519-527</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Real-time Updates</strong></td>
+                        <td><span class="status-active">🟢 เชื่อมต่อแล้ว</span></td>
+                        <td>อัปเดตตารางสอนแบบ real-time</td>
+                        <td>useRealtimeSchedule.js, useSimpleSchedule.js</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Google Workspace</strong></td>
+                        <td><span class="status-inactive">🔴 ไม่ได้เชื่อมต่อ</span></td>
+                        <td>ไม่มีการซิงค์กับ Google Calendar</td>
+                        <td>ไม่พบในโค้ดปัจจุบัน</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section success">
+            <h2>🚀 การเชื่อมต่อกับ Time Tracking System</h2>
+            <div class="integration-flow">
+                <h3>💡 Smart Schedule Detection:</h3>
+                <div class="code">
+// ใน timeTrackingService.js
+export const checkIn = async (checkInData = {}) => {
+  // Smart teaching schedule detection for instructors
+  let teachingDetection = null;
+  if (isInstructor && !checkInData.skipTeachingDetection) {
+    const { data: scheduleMatch } = await supabase
+      .rpc('smart_schedule_detection', {
+        p_instructor_id: user.user.id,
+        p_check_in_time: new Date().toISOString()
+      });
+
+    if (scheduleMatch && scheduleMatch.length > 0) {
+      teachingDetection = scheduleMatch[0];
+    }
+  }
+
+  // Auto-detected teaching session
+  if (teachingDetection && teachingDetection.confidence_score >= 80) {
+    timeEntry.entry_type = ENTRY_TYPES.TEACHING;
+    timeEntry.weekly_schedule_id = teachingDetection.schedule_id;
+    timeEntry.teaching_course_id = teachingDetection.course_id;
+    timeEntry.course_taught = teachingDetection.course_name;
+    timeEntry.scheduled_start_time = teachingDetection.scheduled_start;
+    timeEntry.scheduled_end_time = teachingDetection.scheduled_end;
+  }
+}
+                </div>
+                
+                <h3>⏰ การนับชั่วโมงสอน:</h3>
+                <ul>
+                    <li>ระบบจะตรวจจับว่าเป็นการสอนหรือไม่จากตารางสอน</li>
+                    <li>หากเป็นการสอน จะนับชั่วโมงเต็มไม่มีการ cap ที่ 8 ชั่วโมง</li>
+                    <li>หากไม่เป็นการสอน จะ cap ที่ 8 ชั่วโมงตามนีตปกติ</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section warning">
+            <h2>⚠️ ข้อจำกัดและแนะนำการปรับปรุง</h2>
+            
+            <h3>🔴 ข้อจำกัดปัจจุบัน:</h3>
+            <ul>
+                <li><strong>Google Calendar:</strong> ไม่มีการซิงค์กับ Google Calendar</li>
+                <li><strong>Email Notifications:</strong> ไม่มีการแจ้งเตือนการเปลี่ยนแปลงตารางสอน</li>
+                <li><strong>Mobile App:</strong> ไม่มี API สำหรับแอปมือถือ</li>
+                <li><strong>Attendance Tracking:</strong> ไม่มีการติดตามการเข้าเรียนของนักเรียน</li>
+            </ul>
+            
+            <h3>💡 แนะนำการปรับปรุง:</h3>
+            <ol>
+                <li><strong>Google Calendar Integration:</strong> เชื่อมต่อกับ Google Calendar เพื่อซิงค์ตารางสอน</li>
+                <li><strong>Push Notifications:</strong> แจ้งเตือนการเปลี่ยนแปลงตารางสอน</li>
+                <li><strong>Student Check-in:</strong> ให้นักเรียนสามารถเช็คอินเข้าเรียนได้</li>
+                <li><strong>Analytics Dashboard:</strong> รายงานสถิติการสอนและการเข้าเรียน</li>
+                <li><strong>Mobile Responsive:</strong> ปรับปรุงให้ใช้งานบนมือถือได้ดีขึ้น</li>
+            </ol>
+        </div>
+
+        <div class="section info">
+            <h2>📋 ข้อมูลฐานข้อมูลที่เกี่ยวข้อง</h2>
+            
+            <h3>🗄️ ตารางหลัก:</h3>
+            <ul>
+                <li><strong>weekly_schedules:</strong> ตารางสอนรายสัปดาห์</li>
+                <li><strong>courses:</strong> ข้อมูลคอร์ส</li>
+                <li><strong>user_profiles:</strong> ข้อมูลอาจารย์และผู้ใช้</li>
+                <li><strong>time_entries:</strong> บันทึกเวลาทำงาน (เชื่อมกับตารางสอน)</li>
+                <li><strong>enrollments:</strong> การลงทะเบียนเรียน</li>
+            </ul>
+            
+            <h3>🔧 Functions ที่เกี่ยวข้อง:</h3>
+            <ul>
+                <li><strong>smart_schedule_detection:</strong> ตรวจจับตารางสอนอัตโนมัติ</li>
+                <li><strong>get_weekly_schedules:</strong> ดึงตารางสอนรายสัปดาห์</li>
+                <li><strong>create_schedule:</strong> สร้างตารางสอนใหม่</li>
+            </ul>
+        </div>
+
+        <div class="section success">
+            <h2>✅ สรุปผลการตรวจสอบ</h2>
+            <div class="integration-flow">
+                <p><strong>ระบบตารางสอนมีการเชื่อมต่อกับระบบอื่นๆ ได้ดีแล้ว โดยเฉพาะ:</strong></p>
+                <ul>
+                    <li>✅ <strong>Time Tracking:</strong> เชื่อมต่อและทำงานอัตโนมัติ</li>
+                    <li>✅ <strong>Course Management:</strong> ดึงข้อมูลคอร์สได้สมบูรณ์</li>
+                    <li>✅ <strong>User Management:</strong> จัดการอาจารย์และสิทธิ์ได้</li>
+                    <li>✅ <strong>Real-time Updates:</strong> อัปเดตข้อมูลแบบ real-time</li>
+                    <li>✅ <strong>Payroll Integration:</strong> นับชั่วโมงสอนสำหรับเงินเดือน</li>
+                </ul>
+                
+                <p><strong>ระบบพร้อมใช้งานและสามารถขยายเพิ่มเติมได้</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // อัปเดตเวลาปัจจุบัน
+        function updateCurrentTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('th-TH', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.title = `รายงานการเชื่อมต่อระบบตารางสอน - ${timeString}`;
+        }
+        
+        setInterval(updateCurrentTime, 1000);
+        updateCurrentTime();
+        
+        console.log('📊 รายงานการเชื่อมต่อระบบตารางสอน');
+        console.log('✅ ระบบตารางสอนเชื่อมต่อกับระบบอื่นๆ ได้ดีแล้ว');
+        console.log('🔗 การเชื่อมต่อหลัก: Time Tracking, Course Management, User Profiles');
+    </script>
+</body>
+</html>

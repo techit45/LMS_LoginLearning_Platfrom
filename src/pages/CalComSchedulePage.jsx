@@ -658,8 +658,7 @@ const CourseCreateModal = ({ isOpen, onClose, onCourseCreated, createCourseFn })
         });
       }
     } catch (error) {
-      console.error('Failed to create course:', error);
-    } finally {
+      } finally {
       setCreating(false);
     }
   };
@@ -780,7 +779,6 @@ const CalComSchedulePage = () => {
   useEffect(() => {
     const handleAuthError = () => {
       if (!user && import.meta.env.DEV) {
-        console.log('🔧 Development mode: Running without authentication');
         toast({
           title: "Development Mode",
           description: "Running Cal.com scheduling without authentication",
@@ -861,8 +859,7 @@ const CalComSchedulePage = () => {
       });
 
       if (!result.success) {
-        console.error('❌ Failed to add Cal.com schedule:', result.error);
-      }
+        }
     } else if (item.type === ItemTypes.INSTRUCTOR) {
       const instructor = item.instructor;
       const existingSchedule = getSchedule(dayIndex, timeIndex);
@@ -921,7 +918,6 @@ const CalComSchedulePage = () => {
     const timeIndex = schedule.timeIndex !== undefined ? schedule.timeIndex : parseInt(schedule.time);
     
     if (dayIndex === undefined || timeIndex === undefined) {
-      console.error('❌ Missing dayIndex or timeIndex for deletion');
       toast({
         title: "ไม่สามารถลบได้",
         description: "ข้อมูลตำแหน่งไม่ครบถ้วน",
@@ -939,7 +935,6 @@ const CalComSchedulePage = () => {
         variant: "default"
       });
     } else {
-      console.error('❌ Failed to delete Cal.com schedule:', result.error);
       toast({
         title: "ลบตารางไม่สำเร็จ",
         description: result.error || "เกิดข้อผิดพลาด",
@@ -950,8 +945,6 @@ const CalComSchedulePage = () => {
 
   // Handle schedule resize
   const handleResize = useCallback(async (schedule, newDuration) => {
-    console.log('🔄 Resizing Cal.com schedule:', { schedule, newDuration });
-
     try {
       const scheduleId = schedule.id;
       
@@ -966,7 +959,6 @@ const CalComSchedulePage = () => {
       await updateScheduleDuration(scheduleId, newDurationMinutes);
 
     } catch (error) {
-      console.error('❌ Failed to resize schedule:', error);
       toast({
         title: "ปรับขนาดไม่สำเร็จ",
         description: error.message || "เกิดข้อผิดพลาด",
@@ -1135,8 +1127,7 @@ const CalComSchedulePage = () => {
                                       schedule={schedule}
                                       onDrop={handleDrop}
                                       onEdit={(schedule) => {
-                                        console.log('Edit Cal.com schedule:', schedule);
-                                      }}
+                                        }}
                                       onDelete={handleDelete}
                                       onResize={handleResize}
                                       isWeekend={isWeekend}
@@ -1161,14 +1152,14 @@ const CalComSchedulePage = () => {
         <CourseCreateModal
           isOpen={showCourseModal}
           onClose={() => setShowCourseModal(false)}
-          onCourseCreated={() => console.log('Course created')}
+          onCourseCreated={() => {/* Handle course created */}}
           createCourseFn={createCourse}
         />
 
         <InstructorCreateModal
           isOpen={showInstructorModal}
           onClose={() => setShowInstructorModal(false)}
-          onInstructorCreated={() => console.log('Instructor created')}
+          onInstructorCreated={() => {/* Handle instructor created */}}
           createInstructorFn={createInstructor || (() => Promise.resolve({ success: false }))}
         />
 

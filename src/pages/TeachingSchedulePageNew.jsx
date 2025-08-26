@@ -264,7 +264,6 @@ const ScheduleItem = ({ schedule, onEdit, onDelete, onResize, timeSlots }) => {
       schedule
     },
     canDrag: () => {
-      console.log('🎯 canDrag check - isResizing:', isResizing);
       return !isResizing;
     },
     collect: (monitor) => ({
@@ -313,7 +312,6 @@ const ScheduleItem = ({ schedule, onEdit, onDelete, onResize, timeSlots }) => {
   useEffect(() => {
     if (isResizing) {
       const timer = setTimeout(() => {
-        console.log('🔧 Auto-resetting isResizing state');
         setIsResizing(false);
       }, 5000); // Reset after 5 seconds if stuck
       return () => clearTimeout(timer);
@@ -329,11 +327,6 @@ const ScheduleItem = ({ schedule, onEdit, onDelete, onResize, timeSlots }) => {
     const currentDuration = schedule.duration || 1;
     setInitialDuration(currentDuration);
     lastAppliedDurationRef.current = currentDuration; // Reset ref ก่อน start
-    
-    console.log('🚀 Resize Start:', {
-      currentDuration,
-      scheduleId: schedule.id
-    });
     
     // Get the actual table cell width dynamically
     const tableElement = e.target.closest('table');
@@ -364,7 +357,6 @@ const ScheduleItem = ({ schedule, onEdit, onDelete, onResize, timeSlots }) => {
       
       // ใช้ ref เพื่อลด duplicate calls
       if (newDuration !== lastAppliedDurationRef.current && newDuration >= 1 && newDuration <= 4) {
-        console.log('✅ Calling onResize:', { from: lastAppliedDurationRef.current, to: newDuration });
         lastAppliedDurationRef.current = newDuration; // Update ref
         onResize(schedule, newDuration);
       }
@@ -467,7 +459,6 @@ const ScheduleItem = ({ schedule, onEdit, onDelete, onResize, timeSlots }) => {
           </button>
           <button
             onClick={(e) => {
-              console.log('🗑️ DELETE CLICKED IN CORRECT FILE!', schedule);
               e.preventDefault();
               e.stopPropagation();
               onDelete(schedule);
@@ -514,8 +505,7 @@ const InstructorTimeSlot = ({ instructor, dayId, timeSlot, schedule, onDrop, onE
       
       // If this slot has a spanning schedule and we're dropping the same item, allow repositioning
       if (schedule && item.schedule && item.schedule.id === schedule.id) {
-        // console.log('🔄 Allowing repositioning of same schedule item');
-        return onDrop(item, dayId, timeSlot, instructor);
+        // return onDrop(item, dayId, timeSlot, instructor);
       }
       
       // If this is an empty slot or we're dropping a different item
@@ -530,9 +520,7 @@ const InstructorTimeSlot = ({ instructor, dayId, timeSlot, schedule, onDrop, onE
       const canDropHere = !schedule || (item.schedule && item.schedule.id === schedule.id) || item.type === ItemTypes.COURSE;
       
       // Only log when debugging specific issues (reduce console spam)
-      // console.log(`🎯 canDrop check: ${timeSlot}, canDrop: ${canDropHere}, hasSchedule: ${!!schedule}, itemType: ${item.type}`);
-      
-      return canDropHere;
+      // return canDropHere;
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
@@ -783,10 +771,8 @@ const DroppableSidebar = ({ children, onDeleteSchedule, onRemoveInstructor }) =>
     accept: [ItemTypes.SCHEDULE_ITEM, ItemTypes.INSTRUCTOR_ASSIGNMENT],
     drop: (item) => {
       if (item.type === ItemTypes.SCHEDULE_ITEM) {
-        console.log('🗑️ Deleting schedule from sidebar:', item.schedule);
         onDeleteSchedule(item.schedule);
       } else if (item.type === ItemTypes.INSTRUCTOR_ASSIGNMENT) {
-        console.log('🗑️ Removing instructor assignment from sidebar:', item.instructor, item.dayId);
         onRemoveInstructor(item.dayId, item.instructor.id);
       }
     },
@@ -832,10 +818,8 @@ const TrashZone = ({ onDeleteSchedule, onRemoveInstructor }) => {
     accept: [ItemTypes.SCHEDULE_ITEM, ItemTypes.INSTRUCTOR_ASSIGNMENT],
     drop: (item) => {
       if (item.type === ItemTypes.SCHEDULE_ITEM) {
-        console.log('🗑️ Deleting schedule:', item.schedule);
         onDeleteSchedule(item.schedule);
       } else if (item.type === ItemTypes.INSTRUCTOR_ASSIGNMENT) {
-        console.log('🗑️ Removing instructor assignment:', item.instructor, item.dayId);
         onRemoveInstructor(item.dayId, item.instructor.id);
       }
     },
@@ -931,8 +915,6 @@ const TeachingSchedulePageNew = () => {
     { id: 'e4063418-1e57-43c1-8cd5-9ae44838f15e', name: 'IRE', color: '#6b7280' }
   ];
   
-  console.log('🏢 Companies data in TeachingSchedulePageNew:', companies);
-
   const locations = [
     { id: 'sriracha', name: 'ศรีราชา', color: '#2563eb' }, // สีน้ำเงิน
     { id: 'rayong', name: 'ระยอง', color: '#0ea5e9' }, // สีฟ้า
@@ -1075,7 +1057,6 @@ const TeachingSchedulePageNew = () => {
   const [syncStatus, setSyncStatus] = useState('idle'); // 'idle', 'syncing', 'success', 'error'
   const [lastSyncTime, setLastSyncTime] = useState(null);
 
-
   // Check access permissions
   const canEdit = hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.INSTRUCTOR);
   const canViewAll = hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.BRANCH_MANAGER);
@@ -1093,41 +1074,32 @@ const TeachingSchedulePageNew = () => {
 
       // Handle courses loading
       if (coursesResult.error) {
-        console.error('Error loading courses:', coursesResult.error);
         toast({
           title: "❌ เกิดข้อผิดพลาด",
           description: "ไม่สามารถโหลดข้อมูลคอร์สได้",
           variant: "destructive"
         });
       } else {
-        console.log('📚 Loaded courses from Supabase:', coursesResult.data?.length || 0);
         // Use sample data as fallback if no courses in database
         const coursesData = coursesResult.data?.length > 0 ? coursesResult.data : sampleCourses;
         setCourses(coursesData);
-        console.log('📚 Using courses data:', coursesData.length, 'courses');
-      }
+        }
 
       // Handle instructors loading  
       if (instructorsResult.error) {
-        console.error('Error loading instructors:', instructorsResult.error);
         toast({
           title: "❌ เกิดข้อผิดพลาด", 
           description: "ไม่สามารถโหลดข้อมูลผู้สอนได้",
           variant: "destructive"
         });
       } else {
-        console.log('👨‍🏫 Loaded instructors from Supabase:', instructorsResult.data?.length || 0);
         // Use sample data as fallback if no instructors in database
         const instructorsData = instructorsResult.data?.length > 0 ? instructorsResult.data : availableInstructors;
         setInstructors(instructorsData);
-        console.log('👨‍🏫 Using instructors data:', instructorsData.length, 'instructors');
-      }
+        }
 
       // Note: Schedules are now loaded via useRealtimeSchedule hook
-      console.log('📋 Real-time schedules will be loaded by useRealtimeSchedule hook');
-
-    } catch (error) {
-      console.error('Error loading data:', error);
+      } catch (error) {
       toast({
         title: "❌ เกิดข้อผิดพลาด",
         description: "ไม่สามารถโหลดข้อมูลได้",
@@ -1161,7 +1133,6 @@ const TeachingSchedulePageNew = () => {
       // Add new course to state directly
       setCourses(prevCourses => [...prevCourses, result.data]);
     } catch (error) {
-      console.error('Error adding course:', error);
       toast({
         title: "❌ เกิดข้อผิดพลาด",
         description: "ไม่สามารถสร้างวิชาได้",
@@ -1199,7 +1170,6 @@ const TeachingSchedulePageNew = () => {
       setEditingCourse(null);
       setShowCourseForm(false);
     } catch (error) {
-      console.error('Error updating course:', error);
       toast({
         title: "❌ เกิดข้อผิดพลาด",
         description: "ไม่สามารถแก้ไขวิชาได้",
@@ -1226,13 +1196,9 @@ const TeachingSchedulePageNew = () => {
       return;
     }
 
-    console.log('🗑️ Deleting course:', course.id, course.name);
-
     try {
       const { deleteCourse } = await import('../lib/teachingScheduleService');
       const result = await deleteCourse(course.id);
-      
-      console.log('📝 Delete result:', result);
       
       if (result.error) {
         toast({
@@ -1250,13 +1216,10 @@ const TeachingSchedulePageNew = () => {
 
       // Update courses state directly instead of full reload
       setCourses(prevCourses => {
-        console.log('📊 Before filter:', prevCourses.length, 'courses');
         const filtered = prevCourses.filter(c => c.id !== course.id);
-        console.log('📊 After filter:', filtered.length, 'courses');
         return filtered;
       });
     } catch (error) {
-      console.error('Error deleting course:', error);
       toast({
         title: "❌ เกิดข้อผิดพลาด",
         description: "ไม่สามารถลบวิชาได้",
@@ -1270,12 +1233,10 @@ const TeachingSchedulePageNew = () => {
     loadScheduleData();
   }, [loadScheduleData]);
 
-
   // Load data when week or schedule type changes
   useEffect(() => {
     loadScheduleData();
   }, [currentWeek, scheduleType, loadScheduleData]);
-
 
   // Week navigation functions
   const goToPreviousWeek = () => {
@@ -1416,7 +1377,6 @@ const TeachingSchedulePageNew = () => {
         throw new Error(result.error);
       }
     } catch (error) {
-      console.error('Export to Google Sheets failed:', error);
       setSyncStatus('error');
       toast({
         title: "❌ ส่งออกไม่สำเร็จ",
@@ -1480,9 +1440,6 @@ const TeachingSchedulePageNew = () => {
 
   // Remove Instructor Assignment
   const handleRemoveInstructor = useCallback((dayId, instructorId = null) => {
-    console.log('🗑️ handleRemoveInstructor called with dayId:', dayId, 'instructorId:', instructorId);
-    console.log('🔍 Current dayInstructors before removal:', dayInstructors);
-    
     setDayInstructors(prev => {
       const newInstructors = { ...prev };
       
@@ -1500,7 +1457,6 @@ const TeachingSchedulePageNew = () => {
         delete newInstructors[dayId];
       }
       
-      console.log('✅ dayInstructors after removal:', newInstructors);
       return newInstructors;
     });
 
@@ -1552,20 +1508,12 @@ const TeachingSchedulePageNew = () => {
   }, []);
 
   const handleDrop = useCallback(async (item, dayId, timeSlot, instructor = null) => {
-    console.log('🎯 Real-time DROP:', { 
-      course: item.course?.name, 
-      instructor: instructor?.name || instructor?.full_name, 
-      time: timeSlot,
-      dayId: dayId
-    });
-    
     if (item.type === ItemTypes.COURSE && instructor) {
       // Convert to real-time format
       const dayIndex = getDayIndex(dayId);
       const timeIndex = getTimeSlotIndex(timeSlot);
       
       if (timeIndex === -1) {
-        console.error('❌ Invalid time slot:', timeSlot);
         toast({
           title: "❌ เกิดข้อผิดพลาด",
           description: "ช่วงเวลาไม่ถูกต้อง",
@@ -1589,8 +1537,7 @@ const TeachingSchedulePageNew = () => {
       const result = await addRealtimeSchedule(dayIndex, timeIndex, scheduleData);
       
       if (result && result.success) {
-        console.log('✅ Real-time schedule created successfully');
-      }
+        }
       
     } else if (item.schedule) {
       // Moving existing schedule - need to delete old and create new
@@ -1605,7 +1552,6 @@ const TeachingSchedulePageNew = () => {
       const newTimeIndex = getTimeSlotIndex(timeSlot);
       
       if (oldTimeIndex === -1 || newTimeIndex === -1) {
-        console.error('❌ Invalid time slots for move');
         return;
       }
 
@@ -1629,8 +1575,7 @@ const TeachingSchedulePageNew = () => {
       const result = await addRealtimeSchedule(newDayIndex, newTimeIndex, scheduleData);
       
       if (result && result.success) {
-        console.log('✅ Real-time schedule moved successfully');
-      }
+        }
     }
   }, [scheduleType, getDayIndex, getTimeSlotIndex, addRealtimeSchedule, removeRealtimeSchedule, toast]);
 
@@ -1649,25 +1594,19 @@ const TeachingSchedulePageNew = () => {
       : getTimeSlotIndex(schedule.timeSlot);
     
     if (timeIndex === -1) {
-      console.error('❌ Invalid time slot for deletion:', schedule.timeSlot || schedule.timeIndex);
       return;
     }
 
-    console.log('🗑️ Real-time DELETE:', { dayIndex, timeIndex, course: schedule.course?.name });
-    
     try {
       // First try real-time deletion
       const result = await removeRealtimeSchedule(dayIndex, timeIndex);
       
       if (result && result.success) {
-        console.log('✅ Real-time schedule deleted successfully');
         return;
       }
       
       // Fallback: If real-time doesn't find the schedule, try legacy deletion by ID
       if (schedule.id) {
-        console.log('🔄 Fallback: Deleting legacy schedule by ID:', schedule.id);
-        
         const { supabase } = await import('/src/lib/supabaseClient.js');
         const { error } = await supabase
           .from('teaching_schedules')
@@ -1675,15 +1614,12 @@ const TeachingSchedulePageNew = () => {
           .eq('id', schedule.id);
         
         if (error) {
-          console.error('❌ Failed to delete legacy schedule:', error);
           toast({
             title: "ลบตารางไม่สำเร็จ",
             description: error.message,
             variant: "destructive"
           });
         } else {
-          console.log('✅ Legacy schedule deleted successfully');
-          
           // Remove from legacy state manually
           setSchedules(prev => prev.filter(s => s.id !== schedule.id));
           
@@ -1693,11 +1629,9 @@ const TeachingSchedulePageNew = () => {
           });
         }
       } else {
-        console.error('❌ No schedule found to delete');
-      }
+        }
       
     } catch (error) {
-      console.error('💥 Error during deletion:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถลบตารางได้",
@@ -1720,7 +1654,6 @@ const TeachingSchedulePageNew = () => {
       
       // Validate schedule object structure
       if (!schedule.course || !schedule.instructor) {
-        console.error('❌ Incomplete schedule object for resize:', schedule);
         toast({
           title: "❌ เกิดข้อผิดพลาด",
           description: "ไม่สามารถปรับขนาดตารางได้ ข้อมูลไม่สมบูรณ์",
@@ -1746,7 +1679,6 @@ const TeachingSchedulePageNew = () => {
       const result = await addRealtimeSchedule(schedule.dayIndex, schedule.timeIndex, scheduleData);
       
       if (!result || !result.success) {
-        console.error('Error resizing schedule:', result?.error);
         toast({
           title: "❌ เกิดข้อผิดพลาด", 
           description: "ไม่สามารถปรับขนาดตารางได้",
@@ -1755,8 +1687,6 @@ const TeachingSchedulePageNew = () => {
         return;
       }
 
-      console.log('✅ Schedule resized successfully:', result.data);
-      
       // Success toast
       toast({
         title: "✅ ปรับขนาดตารางสำเร็จ",
@@ -1766,7 +1696,6 @@ const TeachingSchedulePageNew = () => {
       // Real-time system will automatically update the UI via subscription
 
     } catch (error) {
-      console.error('Error resizing schedule:', error);
       toast({
         title: "❌ เกิดข้อผิดพลาด",
         description: "ไม่สามารถปรับขนาดตารางได้",
@@ -2219,8 +2148,7 @@ const TeachingSchedulePageNew = () => {
                                 {timeSlots.map((time, timeIndex) => {
                                   const slotKey = `${instructor.id}-${day.id}-${time}`;
                                   const schedule = getEnrichedSchedule(day.id, timeIndex);
-                                  
-                                  
+
                                   // Check if this slot is occupied by a spanning schedule from previous slots
                                   let isOccupiedBySpanning = false;
                                   let spanningSchedule = null;

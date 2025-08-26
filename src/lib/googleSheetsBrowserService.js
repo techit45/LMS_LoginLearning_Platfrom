@@ -16,8 +16,6 @@ class GoogleSheetsBrowserService {
     if (this.initialized) return true;
 
     try {
-      console.log('🔧 Initializing Google Sheets Browser Service...');
-      
       // Test connection to our Google Drive server
       const response = await fetch(`${this.serverEndpoint}/health`);
       if (!response.ok) {
@@ -25,14 +23,10 @@ class GoogleSheetsBrowserService {
       }
       
       const health = await response.json();
-      console.log('📡 Server health check:', health);
-      
       this.initialized = true;
-      console.log('✅ Google Sheets Browser Service initialized successfully');
       return true;
       
     } catch (error) {
-      console.error('❌ Failed to initialize Google Sheets Browser Service:', error);
       return false;
     }
   }
@@ -47,8 +41,6 @@ class GoogleSheetsBrowserService {
       const weekRange = this.getWeekRange(weekStartDate);
       const title = `${company} - ตารางสอน ${weekRange}`;
       
-      console.log(`📊 Creating spreadsheet: ${title}`);
-      
       // For now, return a mock response since we need to implement the server endpoint
       // In production, this would call our server endpoint
       const mockResponse = {
@@ -58,11 +50,9 @@ class GoogleSheetsBrowserService {
         title
       };
       
-      console.log('✅ Mock spreadsheet created:', mockResponse);
       return mockResponse;
       
     } catch (error) {
-      console.error('❌ Failed to create spreadsheet:', error);
       return {
         success: false,
         error: error.message
@@ -77,8 +67,6 @@ class GoogleSheetsBrowserService {
     await this.initialize();
     
     try {
-      console.log(`📝 Updating cell [${row}, ${col}] in ${spreadsheetId}`);
-      
       // Mock implementation
       return {
         success: true,
@@ -86,7 +74,6 @@ class GoogleSheetsBrowserService {
       };
       
     } catch (error) {
-      console.error('❌ Failed to update cell:', error);
       return {
         success: false,
         error: error.message
@@ -101,8 +88,6 @@ class GoogleSheetsBrowserService {
     await this.initialize();
     
     try {
-      console.log(`📥 Syncing from Google Sheets: ${spreadsheetId}`);
-      
       // Mock implementation
       return {
         success: true,
@@ -111,7 +96,6 @@ class GoogleSheetsBrowserService {
       };
       
     } catch (error) {
-      console.error('❌ Failed to sync from Google Sheets:', error);
       return {
         success: false,
         error: error.message

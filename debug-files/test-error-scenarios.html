@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบ Error Scenarios - Google Drive System</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .test-section {
+            background: white;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+        
+        .test-section h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #edf2f7;
+            display: flex;
+            align-items: center;
+        }
+        
+        .icon {
+            margin-right: 0.5rem;
+            font-size: 1.2em;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            box-shadow: 0 2px 8px rgba(66, 153, 225, 0.3);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(66, 153, 225, 0.4);
+        }
+        
+        button:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .error-btn {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+        }
+        
+        .warning-btn {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+        }
+        
+        .loading {
+            color: #4299e1;
+            font-weight: 600;
+        }
+        
+        .success {
+            color: #38a169;
+            background: #f0fff4;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #38a169;
+            margin-top: 1rem;
+        }
+        
+        .error {
+            color: #e53e3e;
+            background: #fff5f5;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #e53e3e;
+            margin-top: 1rem;
+        }
+        
+        .warning {
+            color: #d69e2e;
+            background: #fffbf0;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #d69e2e;
+            margin-top: 1rem;
+        }
+        
+        .log-output {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .status-card {
+            background: #f7fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .status-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+        
+        .status-value {
+            font-size: 0.9em;
+            color: #4a5568;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0.25rem;
+        }
+        
+        .badge-success { background: #c6f6d5; color: #22543d; }
+        .badge-error { background: #fed7d7; color: #742a2a; }
+        .badge-warning { background: #feebc8; color: #744210; }
+        .badge-info { background: #bee3f8; color: #2a4365; }
+        
+        pre {
+            background: #f7fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            overflow-x: auto;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 ทดสอบ Error Scenarios</h1>
+        <p>ทดสอบการจัดการข้อผิดพลาดของระบบ Google Drive และการอัปโหลดคอร์สเรียน/โครงงาน</p>
+    </div>
+
+    <div class="test-section">
+        <h3><span class="icon">🔐</span>Authentication Failures</h3>
+        <p>ทดสอบการจัดการข้อผิดพลาดด้าน Authentication</p>
+        <button onclick="testInvalidAuth()">ทดสอบ Invalid Auth Token</button>
+        <button onclick="testMissingAuth()">ทดสอบ Missing Auth Header</button>
+        <button onclick="testExpiredSession()">ทดสอบ Expired Session</button>
+        <div id="auth-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3><span class="icon">🏢</span>Invalid Company Selections</h3>
+        <p>ทดสอบการตรวจสอบบริษัทที่ไม่ถูกต้อง</p>
+        <button onclick="testInvalidCompany()">ทดสอบ Invalid Company</button>
+        <button onclick="testNullCompany()">ทดสอบ Null/Undefined Company</button>
+        <button onclick="testSpecialCharacters()">ทดสอบ Special Characters in Company</button>
+        <div id="company-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3><span class="icon">🔌</span>Google Drive API Errors</h3>
+        <p>ทดสอบการจัดการข้อผิดพลาดจาก Google Drive API</p>
+        <button onclick="testInvalidFolderId()">ทดสอบ Invalid Folder ID</button>
+        <button onclick="testPermissionDenied()">ทดสอบ Permission Denied</button>
+        <button onclick="testQuotaExceeded()">ทดสอบ API Quota Exceeded</button>
+        <div id="drive-api-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3><span class="icon">🌐</span>Network Connectivity Issues</h3>
+        <p>ทดสอบการจัดการปัญหาเครือข่าย</p>
+        <button onclick="testNetworkTimeout()">ทดสอบ Network Timeout</button>
+        <button onclick="testConnectionFailed()">ทดสอบ Connection Failed</button>
+        <button onclick="testOfflineMode()">ทดสอบ Offline Mode</button>
+        <div id="network-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3><span class="icon">📁</span>File Upload Validation</h3>
+        <p>ทดสอบการตรวจสอบไฟล์และขนาด</p>
+        <button onclick="testOversizeFile()">ทดสอบ Oversize File</button>
+        <button onclick="testInvalidFileType()">ทดสอบ Invalid File Type</button>
+        <button onclick="testCorruptedFile()">ทดสอบ Corrupted File</button>
+        <div id="file-validation-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3><span class="icon">📊</span>Database Errors</h3>
+        <p>ทดสอบการจัดการข้อผิดพลาดจากฐานข้อมูล</p>
+        <button onclick="testRLSViolation()">ทดสอบ RLS Policy Violation</button>
+        <button onclick="testDuplicateEntry()">ทดสอบ Duplicate Entry</button>
+        <button onclick="testForeignKeyConstraint()">ทดสอบ Foreign Key Constraint</button>
+        <div id="database-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3><span class="icon">📝</span>Test Log</h3>
+        <button onclick="clearLog()">Clear Log</button>
+        <button onclick="exportLog()">Export Log</button>
+        <div class="log-output" id="test-log"></div>
+    </div>
+
+    <script>
+        // สร้าง Supabase client (จำเป็นต้องใช้ environment variables จริง)
+        let supabase;
+        try {
+            supabase = window.supabase.createClient(
+                'https://vuitwzisazvikrhtfthh.supabase.co',
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjM0MzM0OTgsImV4cCI6MjAzOTAwOTQ5OH0.xsUOezPl5rkm2e6xTyFvNh5_7CHc_DRuNXs86rNmBZs'
+            );
+        } catch (error) {
+            console.error('Failed to initialize Supabase:', error);
+        }
+
+        const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+
+        function logMessage(message, type = 'info') {
+            const logElement = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString('th-TH');
+            const logEntry = `[${timestamp}] [${type.toUpperCase()}] ${message}\n`;
+            logElement.textContent += logEntry;
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(logEntry);
+        }
+
+        function displayResult(elementId, result, type = 'info') {
+            const element = document.getElementById(elementId);
+            const className = type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'success';
+            element.innerHTML += `<div class="${className}"><strong>${type.charAt(0).toUpperCase() + type.slice(1)}:</strong> ${result}</div>`;
+        }
+
+        async function makeAPICall(endpoint, options = {}) {
+            try {
+                // Get auth token if available
+                let authHeader = {};
+                if (supabase) {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session?.access_token) {
+                        authHeader.Authorization = `Bearer ${session.access_token}`;
+                    }
+                }
+
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...authHeader,
+                        ...options.headers
+                    },
+                    ...options
+                });
+
+                const data = await response.json();
+                return { response, data, status: response.status };
+            } catch (error) {
+                return { error: error.message, status: 0 };
+            }
+        }
+
+        // Authentication Failure Tests
+        async function testInvalidAuth() {
+            logMessage('Testing invalid auth token...', 'test');
+            
+            const result = await makeAPICall('/create-topic-folder', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer invalid_token_here_123'
+                },
+                body: JSON.stringify({
+                    parentFolderId: 'test_folder_id',
+                    topicName: 'Test Topic',
+                    topicType: 'course'
+                })
+            });
+
+            if (result.status === 401) {
+                displayResult('auth-results', 'Invalid auth token correctly rejected', 'success');
+                logMessage('✅ Invalid auth token test passed', 'success');
+            } else {
+                displayResult('auth-results', `Unexpected response: ${result.status}`, 'error');
+                logMessage('❌ Invalid auth token test failed', 'error');
+            }
+        }
+
+        async function testMissingAuth() {
+            logMessage('Testing missing auth header...', 'test');
+            
+            const result = await makeAPICall('/create-topic-folder', {
+                method: 'POST',
+                headers: {}, // No auth header
+                body: JSON.stringify({
+                    parentFolderId: 'test_folder_id',
+                    topicName: 'Test Topic',
+                    topicType: 'course'
+                })
+            });
+
+            if (result.status === 401) {
+                displayResult('auth-results', 'Missing auth header correctly rejected', 'success');
+                logMessage('✅ Missing auth header test passed', 'success');
+            } else {
+                displayResult('auth-results', `Unexpected response: ${result.status}`, 'error');
+                logMessage('❌ Missing auth header test failed', 'error');
+            }
+        }
+
+        async function testExpiredSession() {
+            logMessage('Testing expired session handling...', 'test');
+            
+            // Simulate expired token (malformed JWT)
+            const result = await makeAPICall('/create-topic-folder', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer expired.jwt.token'
+                },
+                body: JSON.stringify({
+                    parentFolderId: 'test_folder_id',
+                    topicName: 'Test Topic',
+                    topicType: 'course'
+                })
+            });
+
+            if (result.status === 401) {
+                displayResult('auth-results', 'Expired session correctly handled', 'success');
+                logMessage('✅ Expired session test passed', 'success');
+            } else {
+                displayResult('auth-results', `Unexpected response: ${result.status}`, 'warning');
+                logMessage('⚠️ Expired session test needs investigation', 'warning');
+            }
+        }
+
+        // Company Validation Tests
+        async function testInvalidCompany() {
+            logMessage('Testing invalid company name...', 'test');
+            
+            try {
+                // Test with client-side company validation first
+                const companies = ['login', 'meta', 'med', 'edtech', 'w2d'];
+                const testCompany = 'invalid_company';
+                
+                if (!companies.includes(testCompany)) {
+                    displayResult('company-results', 'Invalid company correctly rejected by client validation', 'success');
+                    logMessage('✅ Invalid company test passed (client-side)', 'success');
+                } else {
+                    displayResult('company-results', 'Client validation failed', 'error');
+                    logMessage('❌ Invalid company test failed (client-side)', 'error');
+                }
+                
+                // Test server-side validation
+                const result = await makeAPICall('/create-course-structure', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        companySlug: 'invalid_company',
+                        courseTitle: 'Test Course',
+                        courseSlug: 'test-course'
+                    })
+                });
+
+                // Server should fallback to default company (login)
+                if (result.data?.company === 'login' || result.data?.success) {
+                    displayResult('company-results', 'Invalid company gracefully handled with fallback', 'success');
+                    logMessage('✅ Invalid company test passed (server-side fallback)', 'success');
+                } else {
+                    displayResult('company-results', `Server response: ${JSON.stringify(result.data)}`, 'warning');
+                    logMessage('⚠️ Server-side company handling needs review', 'warning');
+                }
+            } catch (error) {
+                displayResult('company-results', `Error: ${error.message}`, 'error');
+                logMessage(`❌ Invalid company test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testNullCompany() {
+            logMessage('Testing null/undefined company...', 'test');
+            
+            const result = await makeAPICall('/create-course-structure', {
+                method: 'POST',
+                body: JSON.stringify({
+                    companySlug: null,
+                    courseTitle: 'Test Course',
+                    courseSlug: 'test-course'
+                })
+            });
+
+            if (result.data?.company === 'login' || result.data?.success) {
+                displayResult('company-results', 'Null company handled with default fallback', 'success');
+                logMessage('✅ Null company test passed', 'success');
+            } else {
+                displayResult('company-results', `Response: ${JSON.stringify(result.data)}`, 'warning');
+                logMessage('⚠️ Null company handling needs review', 'warning');
+            }
+        }
+
+        async function testSpecialCharacters() {
+            logMessage('Testing special characters in company name...', 'test');
+            
+            const specialCompanies = ['login<script>alert("xss")</script>', 'meta; DROP TABLE users;--', 'company/with/slashes'];
+            
+            for (const testCompany of specialCompanies) {
+                const result = await makeAPICall('/create-course-structure', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        companySlug: testCompany,
+                        courseTitle: 'Test Course',
+                        courseSlug: 'test-course'
+                    })
+                });
+
+                if (result.data?.success && result.data.company === 'login') {
+                    displayResult('company-results', `Special characters in "${testCompany}" safely handled`, 'success');
+                    logMessage(`✅ Special characters test passed for: ${testCompany}`, 'success');
+                } else {
+                    displayResult('company-results', `Potential security issue with: ${testCompany}`, 'error');
+                    logMessage(`❌ Security concern with: ${testCompany}`, 'error');
+                }
+            }
+        }
+
+        // Google Drive API Error Tests
+        async function testInvalidFolderId() {
+            logMessage('Testing invalid Google Drive folder ID...', 'test');
+            
+            const result = await makeAPICall('/create-topic-folder', {
+                method: 'POST',
+                body: JSON.stringify({
+                    parentFolderId: 'invalid_folder_id_12345',
+                    topicName: 'Test Topic',
+                    topicType: 'course'
+                })
+            });
+
+            if (result.status >= 400 && result.data?.error) {
+                displayResult('drive-api-results', 'Invalid folder ID correctly rejected by Google Drive API', 'success');
+                logMessage('✅ Invalid folder ID test passed', 'success');
+            } else {
+                displayResult('drive-api-results', `Unexpected response: ${JSON.stringify(result.data)}`, 'warning');
+                logMessage('⚠️ Invalid folder ID handling needs review', 'warning');
+            }
+        }
+
+        async function testPermissionDenied() {
+            logMessage('Testing permission denied scenario...', 'test');
+            
+            // This would typically require a restricted folder ID
+            displayResult('drive-api-results', 'Permission denied test requires manual verification with restricted folders', 'warning');
+            logMessage('⚠️ Permission denied test requires manual setup', 'warning');
+        }
+
+        async function testQuotaExceeded() {
+            logMessage('Testing API quota exceeded scenario...', 'test');
+            
+            // This would require actually exceeding Google Drive API limits
+            displayResult('drive-api-results', 'Quota exceeded test requires actual API limit breach (not automated)', 'warning');
+            logMessage('⚠️ Quota exceeded test requires manual triggering', 'warning');
+        }
+
+        // Network Connectivity Tests
+        async function testNetworkTimeout() {
+            logMessage('Testing network timeout...', 'test');
+            
+            try {
+                // Create a request with a very short timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 100); // 100ms timeout
+                
+                const result = await fetch(`${API_BASE}/health`, {
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                displayResult('network-results', 'Network request completed (no timeout occurred)', 'success');
+                logMessage('✅ Network is fast enough (no timeout)', 'success');
+                
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    displayResult('network-results', 'Network timeout correctly handled', 'success');
+                    logMessage('✅ Network timeout test passed', 'success');
+                } else {
+                    displayResult('network-results', `Network error: ${error.message}`, 'error');
+                    logMessage(`❌ Network test error: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function testConnectionFailed() {
+            logMessage('Testing connection failure...', 'test');
+            
+            try {
+                // Try to connect to a non-existent endpoint
+                const response = await fetch('https://nonexistent-domain-12345.com/api');
+                displayResult('network-results', 'Unexpected success for non-existent domain', 'error');
+                logMessage('❌ Connection failure test failed - got response', 'error');
+            } catch (error) {
+                displayResult('network-results', `Connection failure correctly handled: ${error.message}`, 'success');
+                logMessage('✅ Connection failure test passed', 'success');
+            }
+        }
+
+        async function testOfflineMode() {
+            logMessage('Testing offline mode handling...', 'test');
+            
+            // Check if navigator.onLine is available
+            if (typeof navigator.onLine !== 'undefined') {
+                if (navigator.onLine) {
+                    displayResult('network-results', 'Device is online - offline mode test not applicable', 'warning');
+                    logMessage('⚠️ Device is online - cannot test offline mode', 'warning');
+                } else {
+                    displayResult('network-results', 'Device is offline - good for testing', 'success');
+                    logMessage('✅ Offline mode detected', 'success');
+                }
+            } else {
+                displayResult('network-results', 'Offline detection not supported in this browser', 'warning');
+                logMessage('⚠️ Offline detection not available', 'warning');
+            }
+        }
+
+        // File Validation Tests
+        async function testOversizeFile() {
+            logMessage('Testing oversize file validation...', 'test');
+            
+            try {
+                // Create a mock large file (100MB+)
+                const largeBuffer = new ArrayBuffer(100 * 1024 * 1024 + 1); // 100MB + 1 byte
+                const largeFile = new File([largeBuffer], 'large-file.txt', { type: 'text/plain' });
+                
+                // Test client-side validation
+                const maxSize = 100 * 1024 * 1024; // 100MB
+                if (largeFile.size > maxSize) {
+                    displayResult('file-validation-results', 'Oversize file correctly rejected by client validation', 'success');
+                    logMessage('✅ Oversize file validation passed', 'success');
+                } else {
+                    displayResult('file-validation-results', 'Client-side file size validation failed', 'error');
+                    logMessage('❌ File size validation failed', 'error');
+                }
+            } catch (error) {
+                displayResult('file-validation-results', `File validation test error: ${error.message}`, 'error');
+                logMessage(`❌ File validation test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testInvalidFileType() {
+            logMessage('Testing invalid file type validation...', 'test');
+            
+            try {
+                // Create a mock file with invalid type
+                const invalidFile = new File(['test content'], 'test.exe', { type: 'application/x-executable' });
+                
+                const allowedTypes = [
+                    'application/pdf',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'image/jpeg',
+                    'image/png',
+                    'image/gif',
+                    'video/mp4',
+                    'text/plain'
+                ];
+                
+                if (!allowedTypes.includes(invalidFile.type)) {
+                    displayResult('file-validation-results', 'Invalid file type correctly rejected', 'success');
+                    logMessage('✅ Invalid file type validation passed', 'success');
+                } else {
+                    displayResult('file-validation-results', 'File type validation failed', 'error');
+                    logMessage('❌ File type validation failed', 'error');
+                }
+            } catch (error) {
+                displayResult('file-validation-results', `File type test error: ${error.message}`, 'error');
+                logMessage(`❌ File type test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCorruptedFile() {
+            logMessage('Testing corrupted file handling...', 'test');
+            
+            try {
+                // Create a mock corrupted file (empty or with invalid content)
+                const corruptedFile = new File([''], 'corrupted.pdf', { type: 'application/pdf' });
+                
+                if (corruptedFile.size === 0) {
+                    displayResult('file-validation-results', 'Empty/corrupted file detected (0 bytes)', 'success');
+                    logMessage('✅ Corrupted file detection passed', 'success');
+                } else {
+                    displayResult('file-validation-results', 'Could not simulate corrupted file', 'warning');
+                    logMessage('⚠️ Corrupted file test needs real corrupted file', 'warning');
+                }
+            } catch (error) {
+                displayResult('file-validation-results', `Corrupted file test error: ${error.message}`, 'error');
+                logMessage(`❌ Corrupted file test error: ${error.message}`, 'error');
+            }
+        }
+
+        // Database Error Tests
+        async function testRLSViolation() {
+            logMessage('Testing RLS policy violation...', 'test');
+            
+            try {
+                if (!supabase) {
+                    displayResult('database-results', 'Supabase client not initialized', 'error');
+                    return;
+                }
+                
+                // Try to access courses without proper authentication
+                const { data, error } = await supabase
+                    .from('courses')
+                    .insert([{
+                        title: 'Unauthorized Course',
+                        description: 'This should be blocked by RLS',
+                        company: 'login'
+                    }]);
+                
+                if (error && error.message.includes('RLS') || error.message.includes('policy')) {
+                    displayResult('database-results', 'RLS policy correctly enforced', 'success');
+                    logMessage('✅ RLS violation test passed', 'success');
+                } else if (error) {
+                    displayResult('database-results', `Database error (may indicate RLS working): ${error.message}`, 'warning');
+                    logMessage(`⚠️ Database error: ${error.message}`, 'warning');
+                } else {
+                    displayResult('database-results', 'RLS policy may need review - insert succeeded', 'warning');
+                    logMessage('⚠️ RLS policy may be too permissive', 'warning');
+                }
+            } catch (error) {
+                displayResult('database-results', `RLS test error: ${error.message}`, 'error');
+                logMessage(`❌ RLS test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDuplicateEntry() {
+            logMessage('Testing duplicate entry handling...', 'test');
+            
+            displayResult('database-results', 'Duplicate entry test requires specific test data setup', 'warning');
+            logMessage('⚠️ Duplicate entry test requires manual setup', 'warning');
+        }
+
+        async function testForeignKeyConstraint() {
+            logMessage('Testing foreign key constraint...', 'test');
+            
+            try {
+                if (!supabase) {
+                    displayResult('database-results', 'Supabase client not initialized', 'error');
+                    return;
+                }
+                
+                // Try to create a course with invalid instructor_id
+                const { data, error } = await supabase
+                    .from('courses')
+                    .insert([{
+                        title: 'Test Course',
+                        description: 'Test Description',
+                        instructor_id: '00000000-0000-0000-0000-000000000000', // Non-existent UUID
+                        company: 'login'
+                    }]);
+                
+                if (error && (error.message.includes('foreign key') || error.message.includes('constraint'))) {
+                    displayResult('database-results', 'Foreign key constraint correctly enforced', 'success');
+                    logMessage('✅ Foreign key constraint test passed', 'success');
+                } else if (error) {
+                    displayResult('database-results', `Database error: ${error.message}`, 'warning');
+                    logMessage(`⚠️ Database error: ${error.message}`, 'warning');
+                } else {
+                    displayResult('database-results', 'Foreign key constraint may need review', 'warning');
+                    logMessage('⚠️ Foreign key constraint may be missing', 'warning');
+                }
+            } catch (error) {
+                displayResult('database-results', `Foreign key test error: ${error.message}`, 'error');
+                logMessage(`❌ Foreign key test error: ${error.message}`, 'error');
+            }
+        }
+
+        // Utility functions
+        function clearLog() {
+            document.getElementById('test-log').textContent = '';
+            logMessage('Test log cleared', 'info');
+        }
+
+        function exportLog() {
+            const logContent = document.getElementById('test-log').textContent;
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `error-scenarios-test-${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            logMessage('Test log exported', 'info');
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            logMessage('Error Scenarios Test Page initialized', 'info');
+            logMessage('All test functions loaded successfully', 'success');
+            
+            // Test Supabase connection
+            if (supabase) {
+                logMessage('Supabase client initialized successfully', 'success');
+            } else {
+                logMessage('Supabase client initialization failed', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

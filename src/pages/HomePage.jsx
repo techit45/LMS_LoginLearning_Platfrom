@@ -135,7 +135,6 @@ const HomePage = () => {
       try {
         const { data, error } = await getFeaturedCourses();
         if (error) {
-          console.error("Error loading featured courses:", error);
           toast({
             title: "ไม่สามารถโหลดคอร์สแนะนำได้",
             description: error.message,
@@ -145,8 +144,7 @@ const HomePage = () => {
           setFeaturedCourses(data || []);
         }
       } catch (error) {
-        console.error("Error:", error);
-      } finally {
+        } finally {
         setLoading(false);
       }
     };
@@ -166,8 +164,7 @@ const HomePage = () => {
         if (error) {
           // Only log timeout errors, not regular database errors
           if (error.message === "Projects loading timeout") {
-            console.log("⏱️ Projects loading timeout - using fallback data");
-          }
+            }
           // Use emergency data instead of showing error
           const emergencyData = getEmergencyData();
           setFeaturedProjects(emergencyData.projects);
@@ -177,8 +174,7 @@ const HomePage = () => {
       } catch (error) {
         // Only log meaningful errors, not expected timeouts
         if (error.message !== "Projects loading timeout") {
-          console.warn("Projects fallback:", error.message);
-        }
+          }
         // Use emergency data on any error
         const emergencyData = getEmergencyData();
         setFeaturedProjects(emergencyData.projects);
@@ -510,8 +506,7 @@ const HomePage = () => {
                       </div>
                     );
                   })}
-                  
-                  
+
                   {/* Enhanced 3D Connection Beams */}
                   <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-70">
                     {engineeringFields.map((field, index) => {

@@ -99,11 +99,9 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
           setCourseImages(images);
         }
       } catch (imagesError) {
-        console.warn('Could not load course images:', imagesError);
-      }
+        }
 
     } catch (error) {
-      console.error('Error loading course:', error);
       toast({
         title: "ไม่สามารถโหลดข้อมูลคอร์สได้",
         description: error.message,
@@ -126,7 +124,6 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
-
 
   const validateForm = () => {
     const newErrors = {};
@@ -178,7 +175,6 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
         const imageUrls = newImages.map(img => img.url);
         await updateCourseImages(courseId, imageUrls, formData.thumbnail_url);
       } catch (error) {
-        console.error('Error updating course images:', error);
         toast({
           title: "เกิดข้อผิดพลาด",
           description: "ไม่สามารถอัปเดตรูปภาพได้",
@@ -190,7 +186,6 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
 
   // Handle cover image change from gallery
   const handleCoverImageChange = async (newCoverUrl) => {
-    console.log('🖼️ Setting new cover image:', newCoverUrl);
     setFormData(prev => ({ ...prev, thumbnail_url: newCoverUrl }));
     setImagePreview(newCoverUrl);
     
@@ -198,10 +193,7 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
     if (courseId) {
       try {
         const imageUrls = courseImages.map(img => img.url);
-        console.log('📊 Updating course images in database:', { courseId, imageUrls, newCoverUrl });
         await updateCourseImages(courseId, imageUrls, newCoverUrl);
-        console.log('✅ Cover image updated successfully');
-        
         toast({
           title: "อัปเดตรูปหน้าปกสำเร็จ",
           description: "รูปหน้าปกของคอร์สถูกอัปเดตแล้ว"
@@ -212,7 +204,6 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
           onSuccess();
         }
       } catch (error) {
-        console.error('Error updating cover image:', error);
         toast({
           title: "เกิดข้อผิดพลาด",
           description: "ไม่สามารถอัปเดตรูปหน้าปกได้",
@@ -278,7 +269,6 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
       onSuccess && onSuccess(data);
       onClose();
     } catch (error) {
-      console.error('Error updating course:', error);
       toast({
         title: "ไม่สามารถอัปเดตคอร์สได้",
         description: error.message,
@@ -532,7 +522,6 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
                 )}
               </div>
 
-
               {/* Company Selection */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
                 <label className="block text-gray-800 font-semibold mb-3 flex items-center">
@@ -547,12 +536,11 @@ const EditCourseForm = ({ isOpen, onClose, onSuccess, courseId }) => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 h-12 shadow-sm"
                 >
-                  <option value="login">Login Learning</option>
-                  <option value="meta">Meta Tech Academy</option>
-                  <option value="med">Med Solutions</option>
-                  <option value="edtech">EdTech Innovation</option>
-                  <option value="innotech">InnoTech Labs</option>
-                  <option value="w2d">W2D Studio</option>
+                  <option value="login">Login</option>
+                  <option value="meta">Meta</option>
+                  <option value="med">Med</option>
+                  <option value="edtech">EdTech</option>
+                  <option value="w2d">W2D</option>
                 </select>
                 {errors.company && (
                   <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">

@@ -114,8 +114,7 @@ export const InstructorCreateModal = ({ isOpen, onClose, onInstructorCreated, cr
         });
       }
     } catch (error) {
-      console.error('Failed to create instructor:', error);
-    } finally {
+      } finally {
       setCreating(false);
     }
   };

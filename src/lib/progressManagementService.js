@@ -20,7 +20,6 @@ export const getCourseContentWithProgress = async (courseId) => {
 
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error fetching content with progress:', error);
     return { data: [], error };
   }
 };
@@ -52,7 +51,6 @@ export const updateContentCompletionRequirements = async (contentId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating completion requirements:', error);
     return { data: null, error };
   }
 };
@@ -77,7 +75,6 @@ export const createProgressFlow = async (courseId, contentId, prerequisiteConten
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error creating progress flow:', error);
     return { data: null, error };
   }
 };
@@ -101,7 +98,6 @@ export const getCourseProgressFlow = async (courseId) => {
 
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error fetching progress flow:', error);
     return { data: [], error };
   }
 };
@@ -121,7 +117,6 @@ export const checkContentAccessibility = async (enrollmentId, contentId) => {
 
     return { data: data || false, error: null };
   } catch (error) {
-    console.error('Error checking content accessibility:', error);
     return { data: false, error };
   }
 };
@@ -142,7 +137,6 @@ export const validateCompletionCriteria = async (enrollmentId, contentId, comple
 
     return { data: data || false, error: null };
   } catch (error) {
-    console.error('Error validating completion criteria:', error);
     return { data: false, error };
   }
 };
@@ -152,8 +146,6 @@ export const validateCompletionCriteria = async (enrollmentId, contentId, comple
  */
 export const markContentCompleted = async (enrollmentId, contentId, completionData = {}) => {
   try {
-    console.log('markContentCompleted called:', { enrollmentId, contentId, completionData });
-
     // Simple direct update/insert - no RPC functions
     let data, error;
     
@@ -183,8 +175,7 @@ export const markContentCompleted = async (enrollmentId, contentId, completionDa
       
       data = updateResult.data;
       error = updateResult.error;
-      console.log('Updated existing progress record');
-    } else {
+      } else {
       // Insert new record
       const insertResult = await supabase
         .from('course_progress')
@@ -206,15 +197,11 @@ export const markContentCompleted = async (enrollmentId, contentId, completionDa
 
       data = insertResult.data;
       error = insertResult.error;
-      console.log('Inserted new progress record');
-    }
+      }
 
     if (error) {
-      console.error('Database error in markContentCompleted:', error);
       throw error;
     }
-
-    console.log('Progress record updated:', data);
 
     // Simple enrollment progress update - just increment by 10%
     try {
@@ -234,15 +221,12 @@ export const markContentCompleted = async (enrollmentId, contentId, completionDa
           })
           .eq('id', enrollmentId);
 
-        console.log('Enrollment progress updated to:', newProgress + '%');
-      }
+        }
     } catch (err) {
-      console.warn('Could not update enrollment progress:', err);
-    }
+      }
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error marking content completed:', error);
     return { data: null, error };
   }
 };
@@ -265,7 +249,6 @@ export const getUserCourseProgress = async (enrollmentId) => {
 
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error fetching user course progress:', error);
     return { data: [], error };
   }
 };
@@ -328,7 +311,6 @@ export const updateEnrollmentProgress = async (enrollmentId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating enrollment progress:', error);
     return { data: null, error };
   }
 };
@@ -377,7 +359,6 @@ export const getNextAccessibleContent = async (enrollmentId) => {
 
     return { data: firstContent, error: null };
   } catch (error) {
-    console.error('Error getting next accessible content:', error);
     return { data: null, error };
   }
 };
@@ -405,7 +386,6 @@ export const awardProgressAchievement = async (enrollmentId, contentId, achievem
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error awarding progress achievement:', error);
     return { data: null, error };
   }
 };
@@ -469,7 +449,6 @@ export const resetContentProgress = async (enrollmentId, contentId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error resetting content progress:', error);
     return { data: null, error };
   }
 };
@@ -559,7 +538,6 @@ export const getCourseProgressAnalytics = async (courseId) => {
 
     return { data: { analytics, enrollments }, error: null };
   } catch (error) {
-    console.error('Error fetching progress analytics:', error);
     return { data: null, error };
   }
 };

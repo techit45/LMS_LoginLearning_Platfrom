@@ -27,7 +27,6 @@ export function convertOldKeyToNew(oldKey, scheduleType) {
     const date = new Date(dateStr + 'T00:00:00');
     return getWeekKey(date, `${type}_${scheduleType}`);
   } catch (error) {
-    console.error(`Cannot convert key ${oldKey}:`, error);
     return null;
   }
 }
@@ -64,13 +63,11 @@ export function migrateOldData(currentWeek, type) {
         const newData = localStorage.getItem(newKey);
         
         if (!newData && Array.isArray(parsed) && parsed.length > 0) {
-          console.log(`🔄 Migrating data from ${oldKey} to ${newKey}:`, parsed.length, 'items');
           localStorage.setItem(newKey, oldData);
           return parsed;
         }
       } catch (e) {
-        console.error(`❌ Failed to parse migrated data from ${oldKey}:`, e);
-      }
+        }
     }
   }
 
@@ -81,8 +78,6 @@ export function migrateOldData(currentWeek, type) {
  * Comprehensive migration that finds and converts all old teaching schedule data
  */
 export function runComprehensiveMigration() {
-  console.log('🚀 Starting comprehensive teaching schedule migration...');
-  
   const allKeys = Object.keys(localStorage);
   const oldTeachingKeys = allKeys.filter(key => {
     // Find old format keys that haven't been migrated yet
@@ -97,12 +92,9 @@ export function runComprehensiveMigration() {
   });
 
   if (oldTeachingKeys.length === 0) {
-    console.log('✅ No old data found to migrate');
     return 0;
   }
 
-  console.log(`📦 Found ${oldTeachingKeys.length} old keys to migrate`);
-  
   let migratedCount = 0;
   const migrationLog = [];
 
@@ -132,15 +124,13 @@ export function runComprehensiveMigration() {
               });
             }
           } catch (e) {
-            console.error(`❌ Migration failed for ${oldKey}:`, e);
-          }
+            }
         }
       }
     });
   });
 
   if (migratedCount > 0) {
-    console.log(`🎉 Migration completed! Converted ${migratedCount} data entries`);
     migrationLog.forEach(log => {
       console.log(`  📋 ${log.oldKey} → ${log.newKey} (${log.itemCount} items)`);
     });
@@ -155,8 +145,6 @@ export function runComprehensiveMigration() {
  */
 export function loadDataWithBackwardCompatibility(currentWeek, type, defaultValue) {
   const newKey = getWeekKey(currentWeek, type);
-  console.log(`📥 Loading data for: ${type}, key: ${newKey}`);
-  
   // Try new format first
   let saved = localStorage.getItem(newKey);
   
@@ -166,18 +154,15 @@ export function loadDataWithBackwardCompatibility(currentWeek, type, defaultValu
       console.log(`✅ Found new format data:`, Array.isArray(parsed) ? parsed.length : Object.keys(parsed).length, 'items');
       return parsed;
     } catch (e) {
-      console.error(`❌ Failed to parse new format data:`, e);
-    }
+      }
   }
   
-  console.log(`🔍 New format not found, trying migration...`);
   // Try migration from old format
   const migratedData = migrateOldData(currentWeek, type);
   if (migratedData) {
     return migratedData;
   }
   
-  console.log(`❌ No data found for ${type}, using default`);
   return defaultValue;
 }
 

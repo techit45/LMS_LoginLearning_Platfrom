@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Course UI Issue</title>
+    <style>
+        body { 
+            font-family: 'Sarabun', Arial, sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5; 
+            margin: 0;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        .debug-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f8f9fa;
+        }
+        .btn {
+            background: #3b82f6;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover { background: #2563eb; }
+        .btn.success { background: #10b981; }
+        .btn.danger { background: #ef4444; }
+        .course-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .course-name { font-weight: bold; color: #1f2937; }
+        .course-details { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .log { 
+            background: #1f2937; 
+            color: #f3f4f6; 
+            padding: 10px; 
+            border-radius: 5px; 
+            font-family: monospace; 
+            font-size: 12px; 
+            max-height: 200px; 
+            overflow-y: auto; 
+            margin: 10px 0;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background: #10b981; }
+        .status-error { background: #ef4444; }
+        .status-loading { background: #f59e0b; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Debug Course UI Issue - Step by Step</h1>
+        
+        <div class="debug-section">
+            <h3>🔍 Step 1: Check Database Connection</h3>
+            <button class="btn" onclick="testDatabaseConnection()">Test Database Connection</button>
+            <div id="dbStatus" class="log"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h3>📚 Step 2: Test Course Retrieval</h3>
+            <button class="btn" onclick="testCourseRetrieval()">Get All Courses</button>
+            <button class="btn" onclick="testCourseRetrievalWithCompany()">Get Courses (company=login)</button>
+            <div id="courseStatus" class="log"></div>
+            <div id="courseList"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h3>➕ Step 3: Test Course Creation</h3>
+            <button class="btn success" onclick="testCourseCreation()">Create Test Course</button>
+            <div id="createStatus" class="log"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h3>🔄 Step 4: Test UI Refresh</h3>
+            <button class="btn" onclick="testUIRefresh()">Simulate UI Refresh After Creation</button>
+            <div id="refreshStatus" class="log"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h3>🎯 Problem Summary</h3>
+            <div id="problemSummary" class="log">Waiting for tests to complete...</div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://vuitwzisazvikrhtfthh.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        let testResults = {
+            dbConnection: false,
+            courseRetrieval: false,
+            courseCreation: false,
+            uiRefresh: false
+        };
+
+        function updateStatus(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const color = isError ? '#ef4444' : '#10b981';
+            element.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        async function testDatabaseConnection() {
+            updateStatus('dbStatus', 'Testing database connection...', false);
+            try {
+                const { data, error } = await supabase.from('teaching_courses').select('count', { count: 'exact' });
+                if (error) throw error;
+                
+                updateStatus('dbStatus', `✅ Database connection successful! Found ${data?.length || 0} courses`, false);
+                testResults.dbConnection = true;
+            } catch (error) {
+                updateStatus('dbStatus', `❌ Database connection failed: ${error.message}`, true);
+                testResults.dbConnection = false;
+            }
+        }
+
+        async function testCourseRetrieval() {
+            updateStatus('courseStatus', '🔄 Retrieving all courses...', false);
+            try {
+                const { data, error } = await supabase
+                    .from('teaching_courses')
+                    .select('*')
+                    .order('name');
+
+                if (error) throw error;
+                
+                updateStatus('courseStatus', `✅ Retrieved ${data?.length || 0} courses successfully`, false);
+                
+                // Display courses
+                const courseListElement = document.getElementById('courseList');
+                courseListElement.innerHTML = '<h4>📋 All Courses:</h4>';
+                
+                if (data && data.length > 0) {
+                    data.forEach((course, index) => {
+                        courseListElement.innerHTML += `
+                            <div class="course-item">
+                                <div class="course-name">${course.name}</div>
+                                <div class="course-details">
+                                    Company: ${course.company} | Location: ${course.location || 'N/A'} | 
+                                    Duration: ${course.duration_hours}h | Color: ${course.company_color}
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    courseListElement.innerHTML += '<div class="course-item">No courses found</div>';
+                }
+                
+                testResults.courseRetrieval = true;
+            } catch (error) {
+                updateStatus('courseStatus', `❌ Course retrieval failed: ${error.message}`, true);
+                testResults.courseRetrieval = false;
+            }
+        }
+
+        async function testCourseRetrievalWithCompany() {
+            updateStatus('courseStatus', '🔄 Testing company filtering (login)...', false);
+            try {
+                const { data: allData, error } = await supabase
+                    .from('teaching_courses')
+                    .select('*')
+                    .order('name');
+
+                if (error) throw error;
+                
+                // Simulate the filtering logic from CourseManager
+                const company = 'login';
+                const filteredCourses = allData.filter(course => {
+                    const courseCompany = course.company?.toLowerCase() || '';
+                    const filterCompany = company.toLowerCase();
+                    
+                    const matches = courseCompany === filterCompany || 
+                                   courseCompany.includes(filterCompany) || 
+                                   filterCompany.includes(courseCompany);
+                    return matches;
+                });
+                
+                updateStatus('courseStatus', `✅ Company filter test: ${allData.length} total → ${filteredCourses.length} filtered (company=login)`, false);
+                
+                filteredCourses.forEach(course => {
+                    updateStatus('courseStatus', `   - ${course.name} (${course.company})`, false);
+                });
+                
+                if (filteredCourses.length === 0) {
+                    updateStatus('courseStatus', '⚠️  No courses match company filter! This could be the UI issue.', true);
+                    
+                    // Show what company values exist
+                    const companyValues = [...new Set(allData.map(c => c.company))];
+                    updateStatus('courseStatus', `Available company values: ${companyValues.join(', ')}`, false);
+                }
+                
+            } catch (error) {
+                updateStatus('courseStatus', `❌ Company filter test failed: ${error.message}`, true);
+            }
+        }
+
+        async function testCourseCreation() {
+            const testCourseName = `Debug Course ${new Date().getTime()}`;
+            updateStatus('createStatus', `➕ Creating test course: ${testCourseName}`, false);
+            
+            try {
+                const { data, error } = await supabase
+                    .from('teaching_courses')
+                    .insert([{
+                        name: testCourseName,
+                        company: 'Login',
+                        location: 'Debug Location',
+                        company_color: '#3b82f6',
+                        duration_hours: 2,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }])
+                    .select()
+                    .single();
+
+                if (error) throw error;
+                
+                updateStatus('createStatus', `✅ Course created successfully! ID: ${data.id}`, false);
+                updateStatus('createStatus', `   Course details: ${data.name} (${data.company})`, false);
+                
+                testResults.courseCreation = true;
+                
+                // Auto-trigger refresh test
+                setTimeout(testUIRefresh, 1000);
+                
+            } catch (error) {
+                updateStatus('createStatus', `❌ Course creation failed: ${error.message}`, true);
+                testResults.courseCreation = false;
+            }
+        }
+
+        async function testUIRefresh() {
+            updateStatus('refreshStatus', '🔄 Simulating UI refresh after course creation...', false);
+            
+            // Wait a moment to simulate async delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            try {
+                // Re-fetch courses as the UI would do
+                const { data: beforeData, error: beforeError } = await supabase
+                    .from('teaching_courses')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (beforeError) throw beforeError;
+                
+                updateStatus('refreshStatus', `✅ Refresh successful: ${beforeData?.length || 0} courses now available`, false);
+                
+                // Show most recent courses (should include the newly created one)
+                if (beforeData && beforeData.length > 0) {
+                    updateStatus('refreshStatus', `   Most recent: ${beforeData[0].name} (${beforeData[0].company})`, false);
+                }
+                
+                testResults.uiRefresh = true;
+                
+                // Update problem summary
+                updateProblemSummary();
+                
+            } catch (error) {
+                updateStatus('refreshStatus', `❌ UI refresh simulation failed: ${error.message}`, true);
+                testResults.uiRefresh = false;
+            }
+        }
+
+        function updateProblemSummary() {
+            const summaryElement = document.getElementById('problemSummary');
+            summaryElement.innerHTML = '<h4>🎯 Diagnosis Results:</h4>';
+            
+            const results = [
+                { name: 'Database Connection', status: testResults.dbConnection, key: 'dbConnection' },
+                { name: 'Course Retrieval', status: testResults.courseRetrieval, key: 'courseRetrieval' },
+                { name: 'Course Creation', status: testResults.courseCreation, key: 'courseCreation' },
+                { name: 'UI Refresh', status: testResults.uiRefresh, key: 'uiRefresh' }
+            ];
+            
+            results.forEach(result => {
+                const statusIcon = result.status ? '✅' : '❌';
+                const color = result.status ? '#10b981' : '#ef4444';
+                summaryElement.innerHTML += `<div style="color: ${color}">${statusIcon} ${result.name}: ${result.status ? 'PASS' : 'FAIL'}</div>`;
+            });
+            
+            // Provide diagnosis
+            if (testResults.courseCreation && testResults.uiRefresh) {
+                summaryElement.innerHTML += '<div style="color: #10b981; font-weight: bold; margin-top: 10px;">🎉 Course creation and UI refresh work correctly! The issue might be in the company filtering or component rendering.</div>';
+            } else if (testResults.dbConnection && testResults.courseRetrieval && !testResults.courseCreation) {
+                summaryElement.innerHTML += '<div style="color: #ef4444; font-weight: bold; margin-top: 10px;">❌ Issue is in course creation logic.</div>';
+            } else if (testResults.dbConnection && !testResults.courseRetrieval) {
+                summaryElement.innerHTML += '<div style="color: #ef4444; font-weight: bold; margin-top: 10px;">❌ Issue is in course retrieval logic.</div>';
+            } else if (!testResults.dbConnection) {
+                summaryElement.innerHTML += '<div style="color: #ef4444; font-weight: bold; margin-top: 10px;">❌ Issue is in database connection.</div>';
+            }
+        }
+
+        // Auto-start with database connection test
+        window.addEventListener('load', () => {
+            setTimeout(testDatabaseConnection, 500);
+        });
+    </script>
+</body>
+</html>

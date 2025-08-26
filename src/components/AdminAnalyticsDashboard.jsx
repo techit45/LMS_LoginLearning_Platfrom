@@ -56,8 +56,7 @@ const AdminAnalyticsDashboard = () => {
         generateExtendedData(stats);
       }
     } catch (error) {
-      console.error('Error loading analytics data:', error);
-    } finally {
+      } finally {
       setLoading(false);
       setRefreshing(false);
     }

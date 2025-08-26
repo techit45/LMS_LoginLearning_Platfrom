@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบระบบอนุมัติอัตโนมัติ</title>
+    <style>
+        body { font-family: 'Sarabun', Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; color: #856404; }
+        .code { background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; margin: 10px 0; font-size: 14px; }
+        h1 { color: #2c3e50; text-align: center; }
+        h3 { color: #34495e; }
+        .change-list { background: #e8f5e8; padding: 15px; border-left: 4px solid #28a745; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 ระบบอนุมัติอัตโนมัติ - เช็คอิน/เช็คเอาท์</h1>
+        
+        <div class="test-section success">
+            <h3>✅ การปรับปรุงที่เสร็จสิ้น</h3>
+            <div class="change-list">
+                <h4>🔧 timeTrackingService.js:</h4>
+                <p><strong>1. checkIn Function:</strong></p>
+                <div class="code">
+timeEntry = {
+    // ... other fields
+    status: 'approved',           // Auto-approve
+    approved_by: user.user.id,    // Self-approve
+    approved_at: new Date().toISOString()
+};
+                </div>
+                
+                <p><strong>2. checkOut Function:</strong></p>
+                <div class="code">
+updates = {
+    // ... other fields
+    status: 'approved',           // Auto-approve
+    approved_by: user.user.id,    // Self-approve 
+    approved_at: new Date().toISOString()
+};
+                </div>
+                
+                <p><strong>3. updateTimeEntry Function:</strong></p>
+                <div class="code">
+updates.status = 'approved';
+updates.approved_by = user.user.id;
+updates.approved_at = new Date().toISOString();
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section info">
+            <h3>🎯 สิ่งที่เปลี่ยนแปลง</h3>
+            <ul>
+                <li><strong>เช็คอิน:</strong> สถานะจะเป็น 'approved' ทันที</li>
+                <li><strong>เช็คเอาท์:</strong> สถานะจะเป็น 'approved' ทันที</li>
+                <li><strong>แก้ไขเวลา:</strong> สถานะจะเป็น 'approved' ทันที</li>
+                <li><strong>ไม่ต้องรอ Admin:</strong> ไม่ต้องรอการอนุมัติจากผู้ดูแลระบบ</li>
+                <li><strong>Self-Approval:</strong> ระบบให้ผู้ใช้อนุมัติตนเองอัตโนมัติ</li>
+            </ul>
+        </div>
+
+        <div class="test-section warning">
+            <h3>📋 การทดสอบที่ควรทำ</h3>
+            <ol>
+                <li><strong>ทดสอบเช็คอิน:</strong>
+                    <ul>
+                        <li>เข้าสู่ระบบและไปหน้า Dashboard</li>
+                        <li>ทำการเช็คอิน</li>
+                        <li>ตรวจสอบว่า status เป็น 'approved' ทันที</li>
+                    </ul>
+                </li>
+                <li><strong>ทดสอบเช็คเอาท์:</strong>
+                    <ul>
+                        <li>ทำการเช็คเอาท์หลังจากเช็คอิน</li>
+                        <li>ตรวจสอบว่า status เป็น 'approved' ทันที</li>
+                        <li>ตรวจสอบการคำนวณชั่วโมงที่ไม่หักเวลาพักเที่ยงอัตโนมัติ</li>
+                    </ul>
+                </li>
+                <li><strong>ทดสอบแก้ไขเวลา:</strong>
+                    <ul>
+                        <li>แก้ไขเวลาเช็คอิน/เช็คเอาท์</li>
+                        <li>ตรวจสอบว่าได้รับการอนุมัติทันที</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="test-section success">
+            <h3>🎉 ประโยชน์ของการปรับปรุง</h3>
+            <ul>
+                <li><strong>ความรวดเร็ว:</strong> ไม่ต้องรอการอนุมัติ</li>
+                <li><strong>ประสิทธิภาพ:</strong> ลดภาระงานของ Admin</li>
+                <li><strong>ความสะดวก:</strong> ผู้ใช้สามารถทำงานได้ทันที</li>
+                <li><strong>ความแม่นยำ:</strong> การนับเวลาที่ไม่หักพักเที่ยงอัตโนมัติ</li>
+                <li><strong>ความโปร่งใส:</strong> มี approved_by และ approved_at ชัดเจน</li>
+            </ul>
+        </div>
+
+        <div class="test-section info">
+            <h3>🔍 การตรวจสอบในฐานข้อมูล</h3>
+            <p>สามารถตรวจสอบได้ด้วย SQL:</p>
+            <div class="code">
+SELECT id, user_id, entry_date, status, approved_by, approved_at
+FROM time_entries 
+WHERE entry_date = CURRENT_DATE
+ORDER BY created_at DESC;
+            </div>
+            <p>ทุกรายการใหม่ควรมี status = 'approved'</p>
+        </div>
+
+        <div class="test-section warning">
+            <h3>⚠️ หมายเหตุสำคัญ</h3>
+            <ul>
+                <li>ระบบจะอนุมัติอัตโนมัติทันทีที่เช็คอิน-เช็คเอาท์</li>
+                <li>ไม่มีขั้นตอนการรอการอนุมัติอีกต่อไป</li>
+                <li>ผู้ดูแลระบบยังคงสามารถดูข้อมูลและแก้ไขได้หากจำเป็น</li>
+                <li>การแก้ไขข้อมูลเวลาจะได้รับการอนุมัติอัตโนมัติเช่นกัน</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // อัปเดตเวลาปัจจุบัน
+        function updateCurrentTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('th-TH', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.title = `ทดสอบระบบอนุมัติอัตโนมัติ - ${timeString}`;
+        }
+        
+        setInterval(updateCurrentTime, 1000);
+        updateCurrentTime();
+        
+        console.log('🚀 ระบบอนุมัติอัตโนมัติพร้อมใช้งาน');
+        console.log('✅ การเช็คอิน-เช็คเอาท์ไม่ต้องรอการอนุมัติ');
+        console.log('🔧 สถานะจะเป็น approved ทันทีอัตโนมัติ');
+    </script>
+</body>
+</html>

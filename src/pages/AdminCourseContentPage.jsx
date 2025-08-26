@@ -172,7 +172,6 @@ const DraggableContentItem = ({ content, index, moveContent, onEdit, onDelete, s
     end: (item, monitor) => {
       // Called when drag operation ends
       if (monitor.didDrop()) {
-        console.log(`🏁 Drag ended for ${section} item: ${content.title}`);
         // The drop handler will trigger the database update
       }
     },
@@ -190,13 +189,11 @@ const DraggableContentItem = ({ content, index, moveContent, onEdit, onDelete, s
       }
       
       if (draggedItem.section === section && draggedItem.index !== index) {
-        console.log(`🔄 Hovering: moving ${draggedItem.index} -> ${index} in ${section}`);
         moveContent(draggedItem.index, index, section);
         draggedItem.index = index;
       }
     },
     drop: (draggedItem, monitor) => {
-      console.log(`🎯 Drop completed for ${section} section`);
       // Trigger database update after drop with minimal delay
       onDragEnd(section);
       return { moved: true };
@@ -359,25 +356,19 @@ const AdminCourseContentPage = () => {
   
   // Drag and drop functions for different sections
   const moveContent = useCallback((dragIndex, hoverIndex, section) => {
-    console.log(`💫 Moving ${section} content from index ${dragIndex} to ${hoverIndex}`);
-    
     const sectionContents = section === 'video' ? videoContents : documentContents;
     
     // Validation checks
     if (dragIndex === hoverIndex) {
-      console.log('⚠️ Same index, skipping move');
       return;
     }
     
     if (dragIndex < 0 || hoverIndex < 0 || 
         dragIndex >= sectionContents.length || hoverIndex >= sectionContents.length) {
-      console.log('❌ Invalid indices:', { dragIndex, hoverIndex, sectionLength: sectionContents.length });
       return;
     }
     
     const draggedContent = sectionContents[dragIndex];
-    console.log(`📋 Moving "${draggedContent?.title}" from position ${dragIndex + 1} to ${hoverIndex + 1}`);
-    
     // Create new array with moved item
     const newSectionContents = [...sectionContents];
     newSectionContents.splice(dragIndex, 1);
@@ -387,7 +378,6 @@ const AdminCourseContentPage = () => {
     const otherSectionContents = section === 'video' ? documentContents : videoContents;
     const updatedContents = [...newSectionContents, ...otherSectionContents];
     
-    console.log(`✅ Updated ${section} section with ${newSectionContents.length} items`);
     setContents(updatedContents);
   }, [videoContents, documentContents]);
   
@@ -404,7 +394,6 @@ const AdminCourseContentPage = () => {
       if (contentError) throw contentError;
       setContents(contentData || []);
     } catch (error) {
-      console.error('Error loading course data:', error);
       toast({
         title: "ไม่สามารถโหลดข้อมูลได้",
         description: error.message,
@@ -418,7 +407,6 @@ const AdminCourseContentPage = () => {
   // Simplified database update function with debouncing
   const updateContentOrder = useCallback(async (section, sectionContents) => {
     if (pendingUpdates.has(section)) {
-      console.log(`⏳ Update already pending for ${section}, skipping...`);
       return;
     }
 
@@ -441,10 +429,7 @@ const AdminCourseContentPage = () => {
         duration: 2000
       });
       
-      console.log(`✅ Successfully updated ${section} content order`);
-      
-    } catch (error) {
-      console.error(`❌ Database update failed for ${section}:`, error);
+      } catch (error) {
       toast({
         title: "ไม่สามารถเรียงลำดับได้",
         description: error.message || 'เกิดข้อผิดพลาดในการจัดเรียงลำดับ',
@@ -471,8 +456,6 @@ const AdminCourseContentPage = () => {
   }, [isAdmin, loadCourseData]);
 
   const handleDragEnd = useCallback((section) => {
-    console.log(`🏁 Handling drag end for ${section} section`);
-    
     // Get current section contents and trigger database update
     const currentSectionContents = section === 'video' ? videoContents : documentContents;
     
@@ -502,7 +485,6 @@ const AdminCourseContentPage = () => {
     setIsVideoExpanded(!isVideoExpanded);
   };
 
-
   const handleDeleteContent = async (contentId) => {
     // eslint-disable-next-line no-restricted-globals
     if (!confirm('คุณแน่ใจหรือไม่ที่จะลบเนื้อหานี้?')) return;
@@ -518,7 +500,6 @@ const AdminCourseContentPage = () => {
 
       loadCourseData();
     } catch (error) {
-      console.error('Error deleting content:', error);
       toast({
         title: "ไม่สามารถลบเนื้อหาได้",
         description: error.message,
@@ -549,7 +530,6 @@ const AdminCourseContentPage = () => {
       setShowEditor(false);
       loadCourseData();
     } catch (error) {
-      console.error('Error saving content:', error);
       toast({
         title: "ไม่สามารถบันทึกได้",
         description: error.message,
@@ -557,7 +537,6 @@ const AdminCourseContentPage = () => {
       });
     }
   };
-
 
   // Reset video index when video contents change
   useEffect(() => {
@@ -812,6 +791,5 @@ const AdminCourseContentPage = () => {
     </DndProvider>
   );
 };
-
 
 export default AdminCourseContentPage;

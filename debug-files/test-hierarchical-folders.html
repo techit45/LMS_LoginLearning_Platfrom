@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบโครงสร้างโฟลเดอร์แบบลำดับขั้น</title>
+    <style>
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px;
+        }
+        .success { 
+            background-color: #d4edda; 
+            border-color: #c3e6cb; 
+            color: #155724; 
+        }
+        .error { 
+            background-color: #f8d7da; 
+            border-color: #f5c6cb; 
+            color: #721c24; 
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .loading { opacity: 0.6; cursor: not-allowed; }
+        pre { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 5px; 
+            overflow: auto; 
+            max-height: 300px;
+        }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+            font-weight: bold;
+        }
+        .hierarchy {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: monospace;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 ทดสอบการสร้างโครงสร้างโฟลเดอร์แบบลำดับขั้น</h1>
+        
+        <div class="hierarchy">
+            <strong>โครงสร้างที่ต้องการ:</strong><br>
+            📁 [LOGIN Platform (Shared Drive)]<br>
+            └── 📁 ชื่อบริษัท<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;└── 📁 คอร์สเรียน<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── 📁 ชื่อคอร์ส<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── 📄 ไฟล์
+        </div>
+
+        <div class="test-section">
+            <h2>1. ทดสอบการสร้างโครงสร้างโฟลเดอร์แบบลำดับขั้น</h2>
+            <p>สร้างโฟลเดอร์ตามลำดับ: บริษัท → คอร์สเรียน → คอร์สเฉพาะ</p>
+            
+            <div>
+                <label>ชื่อบริษัท:</label><br>
+                <input type="text" id="companyName" value="บริษัท เทคโนโลยี ABC จำกัด" style="width: 400px; padding: 5px;">
+                <br><br>
+                
+                <label>ชื่อคอร์ส:</label><br>
+                <input type="text" id="courseName" value="หลักสูตร React.js เบื้องต้น" style="width: 400px; padding: 5px;">
+                <br><br>
+                
+                <button onclick="testHierarchicalStructure()">สร้างโครงสร้างโฟลเดอร์</button>
+            </div>
+            
+            <div id="hierarchyResult" class="status" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>2. ทดสอบการอัปโหลดไฟล์</h2>
+            <p>อัปโหลดไฟล์ไปยังโครงสร้างที่สร้างขึ้น</p>
+            
+            <div>
+                <label>Target Folder ID (จากการสร้างโครงสร้างข้างต้น):</label><br>
+                <input type="text" id="finalFolderId" value="" style="width: 400px; padding: 5px;" readonly>
+                <br><br>
+                
+                <label>เลือกไฟล์:</label><br>
+                <input type="file" id="testFile" accept=".pdf,.doc,.docx,.jpg,.png,.txt">
+                <br><br>
+                
+                <button onclick="testFileUploadToHierarchy()">อัปโหลดไฟล์</button>
+            </div>
+            
+            <div id="uploadHierarchyResult" class="status" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>3. ผลลัพธ์การทดสอบ</h2>
+            <div id="testResults"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+        const AUTH_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE';
+        const LOGIN_ROOT_ID = '1xjUv7ruPHwiLhZJ42IeyfcKBkYP8CX4S'; // [LOGIN] root folder ID
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString('th-TH');
+            const color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff';
+            
+            results.innerHTML += `<div style="color: ${color}; margin: 5px 0;">[${timestamp}] ${message}</div>`;
+            console.log(message);
+        }
+
+        async function testHierarchicalStructure() {
+            const companyName = document.getElementById('companyName').value;
+            const courseName = document.getElementById('courseName').value;
+            
+            if (!companyName || !courseName) {
+                alert('กรุณากรอกชื่อบริษัทและชื่อคอร์ส');
+                return;
+            }
+
+            try {
+                log('🏗️ เริ่มสร้างโครงสร้างโฟลเดอร์แบบลำดับขั้น...', 'info');
+                
+                // Step 1: Create Company folder
+                log(`🏢 สร้างโฟลเดอร์บริษัท: ${companyName}`, 'info');
+                const companyResponse = await fetch(`${API_BASE}/create-topic-folder`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        parentFolderId: LOGIN_ROOT_ID,
+                        topicName: companyName,
+                        topicType: 'company'
+                    })
+                });
+
+                const companyResult = await companyResponse.json();
+                if (!companyResult.success) {
+                    throw new Error(`ไม่สามารถสร้างโฟลเดอร์บริษัทได้: ${companyResult.error}`);
+                }
+                
+                const companyFolderId = companyResult.topicFolderId;
+                log(`✅ โฟลเดอร์บริษัท: ${companyResult.folderName} (${companyResult.isExisting ? 'ใช้ที่มีอยู่' : 'สร้างใหม่'})`, 'success');
+
+                // Step 2: Create Course Category folder ("คอร์สเรียน")
+                log('📚 สร้างโฟลเดอร์ "คอร์สเรียน"', 'info');
+                const courseCategoryResponse = await fetch(`${API_BASE}/create-topic-folder`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        parentFolderId: companyFolderId,
+                        topicName: 'คอร์สเรียน',
+                        topicType: 'course_category'
+                    })
+                });
+
+                const courseCategoryResult = await courseCategoryResponse.json();
+                if (!courseCategoryResult.success) {
+                    throw new Error(`ไม่สามารถสร้างโฟลเดอร์ "คอร์สเรียน" ได้: ${courseCategoryResult.error}`);
+                }
+                
+                const courseCategoryFolderId = courseCategoryResult.topicFolderId;
+                log(`✅ โฟลเดอร์คอร์สเรียน: ${courseCategoryResult.folderName} (${courseCategoryResult.isExisting ? 'ใช้ที่มีอยู่' : 'สร้างใหม่'})`, 'success');
+
+                // Step 3: Create specific Course folder
+                log(`📖 สร้างโฟลเดอร์คอร์สเฉพาะ: ${courseName}`, 'info');
+                const courseResponse = await fetch(`${API_BASE}/create-topic-folder`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        parentFolderId: courseCategoryFolderId,
+                        topicName: courseName,
+                        topicType: 'course'
+                    })
+                });
+
+                const courseResult = await courseResponse.json();
+                if (!courseResult.success) {
+                    throw new Error(`ไม่สามารถสร้างโฟลเดอร์คอร์สได้: ${courseResult.error}`);
+                }
+                
+                const courseFolderId = courseResult.topicFolderId;
+                log(`✅ โฟลเดอร์คอร์ส: ${courseResult.folderName} (${courseResult.isExisting ? 'ใช้ที่มีอยู่' : 'สร้างใหม่'})`, 'success');
+
+                // Update UI
+                document.getElementById('finalFolderId').value = courseFolderId;
+                
+                document.getElementById('hierarchyResult').style.display = 'block';
+                document.getElementById('hierarchyResult').className = 'status success';
+                document.getElementById('hierarchyResult').innerHTML = `
+                    <strong>สร้างโครงสร้างโฟลเดอร์สำเร็จ! 🎉</strong><br><br>
+                    📁 [LOGIN Platform]<br>
+                    └── 🏢 ${companyResult.folderName}<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;└── 📚 ${courseCategoryResult.folderName}<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── 📖 ${courseResult.folderName}<br><br>
+                    <strong>Final Folder ID:</strong> ${courseFolderId}<br>
+                    <em>สามารถอัปโหลดไฟล์ได้แล้ว!</em>
+                `;
+
+                log('🎯 สร้างโครงสร้างโฟลเดอร์แบบลำดับขั้นสำเร็จ!', 'success');
+                
+            } catch (error) {
+                log(`🚨 เกิดข้อผิดพลาด: ${error.message}`, 'error');
+                
+                document.getElementById('hierarchyResult').style.display = 'block';
+                document.getElementById('hierarchyResult').className = 'status error';
+                document.getElementById('hierarchyResult').innerHTML = `
+                    <strong>สร้างโครงสร้างไม่สำเร็จ!</strong><br>
+                    ${error.message}
+                `;
+            }
+        }
+
+        async function testFileUploadToHierarchy() {
+            const folderId = document.getElementById('finalFolderId').value;
+            const fileInput = document.getElementById('testFile');
+            const file = fileInput.files[0];
+            
+            if (!folderId) {
+                alert('กรุณาสร้างโครงสร้างโฟลเดอร์ก่อน');
+                return;
+            }
+            
+            if (!file) {
+                alert('กรุณาเลือกไฟล์ที่ต้องการอัปโหลด');
+                return;
+            }
+
+            try {
+                log(`📤 กำลังอัปโหลดไฟล์ไปยังโครงสร้างที่สร้าง: ${file.name}...`, 'info');
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('folderId', folderId);
+                
+                const response = await fetch(`${API_BASE}/simple-upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    log(`✅ อัปโหลดไฟล์สำเร็จ: ${result.fileName}`, 'success');
+                    log(`🔗 Google Drive ID: ${result.fileId}`, 'success');
+                    
+                    document.getElementById('uploadHierarchyResult').style.display = 'block';
+                    document.getElementById('uploadHierarchyResult').className = 'status success';
+                    document.getElementById('uploadHierarchyResult').innerHTML = `
+                        <strong>อัปโหลดไฟล์สำเร็จ! 🎉</strong><br>
+                        ชื่อไฟล์: ${result.fileName}<br>
+                        Google Drive ID: ${result.fileId}<br>
+                        ${result.webViewLink ? `<a href="${result.webViewLink}" target="_blank">เปิดใน Google Drive</a>` : ''}
+                        <br><br>
+                        <em>ไฟล์ถูกจัดเก็บในโครงสร้างโฟลเดอร์ที่ถูกต้องแล้ว!</em>
+                    `;
+                } else {
+                    throw new Error(result.error || 'การอัปโหลดไม่สำเร็จ');
+                }
+                
+            } catch (error) {
+                log(`🚨 เกิดข้อผิดพลาดในการอัปโหลด: ${error.message}`, 'error');
+                
+                document.getElementById('uploadHierarchyResult').style.display = 'block';
+                document.getElementById('uploadHierarchyResult').className = 'status error';
+                document.getElementById('uploadHierarchyResult').innerHTML = `
+                    <strong>อัปโหลดไฟล์ไม่สำเร็จ!</strong><br>
+                    ${error.message}
+                `;
+            }
+        }
+
+        // เริ่มต้นด้วยการทดสอบ health check
+        window.onload = async function() {
+            try {
+                log('🚀 เริ่มการทดสอบระบบโครงสร้างโฟลเดอร์...', 'info');
+                
+                const response = await fetch(`${API_BASE}/health`, {
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    }
+                });
+                
+                const result = await response.json();
+                log(`📊 Health Check: ${result.status} (${result.version})`, 'success');
+                log('✨ พร้อมทดสอบการสร้างโครงสร้างโฟลเดอร์แบบลำดับขั้น', 'info');
+            } catch (error) {
+                log(`🚨 Health Check ล้มเหลว: ${error.message}`, 'error');
+            }
+        };
+    </script>
+</body>
+</html>

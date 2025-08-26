@@ -64,7 +64,6 @@ const ProjectForm = ({
   const [imagePreview, setImagePreview] = useState(null);
   const [newTechnology, setNewTechnology] = useState("");
   const [newTag, setNewTag] = useState("");
-  
 
   const isEditMode = mode === "edit" && projectId;
   const hasShownRecoveryToast = useRef(false);
@@ -82,8 +81,7 @@ const ProjectForm = ({
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       localStorage.setItem(STORAGE_EXPIRY_KEY, expiryTime.toString());
     } catch (error) {
-      console.warn("Cannot save to localStorage:", error);
-    }
+      }
   };
 
   // Load from localStorage
@@ -100,7 +98,6 @@ const ProjectForm = ({
       const saved = localStorage.getItem(STORAGE_KEY);
       return saved ? JSON.parse(saved) : null;
     } catch (error) {
-      console.warn("Cannot load from localStorage:", error);
       return null;
     }
   };
@@ -111,8 +108,7 @@ const ProjectForm = ({
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(STORAGE_EXPIRY_KEY);
     } catch (error) {
-      console.warn("Cannot clear localStorage:", error);
-    }
+      }
   };
 
   // Load project data when in edit mode
@@ -158,7 +154,6 @@ const ProjectForm = ({
           setImagePreview(data.cover_image_url || data.thumbnail_url);
         }
       } catch (error) {
-        console.error("Error loading project:", error);
         toast({
           title: "เกิดข้อผิดพลาด",
           description: "ไม่สามารถโหลดข้อมูลโครงงานได้",
@@ -392,9 +387,7 @@ const ProjectForm = ({
       newErrors.video_url = "กรุณาระบุ URL ที่ถูกต้อง";
     }
 
-    // console.log('🚨 Validation errors:', newErrors);
-    // console.log('📋 Form data being validated:', formData);
-    setErrors(newErrors);
+    // // setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
@@ -489,28 +482,15 @@ const ProjectForm = ({
       // Handle Google Drive folder creation for new projects
       if (!isEditMode && data) {
         try {
-          console.log('🗂️ Starting Google Drive integration...');
-          console.log('Project data:', finalFormData);
-          console.log('formData.company:', finalFormData.company);
-          
           // Create Drive structure
           const companySlug = getCompanySlug(finalFormData);
-          console.log('Company slug from getCompanySlug:', companySlug);
-          
           if (!companySlug) {
             throw new Error('Company slug is missing or invalid');
           }
           
-          console.log('Calling createProjectStructure with:', { 
-            projectData: finalFormData, 
-            companySlug 
-          });
           const finalDriveStructure = await createProjectStructure(finalFormData, companySlug);
-          console.log('Drive structure result:', finalDriveStructure);
-          
           // Update project with Google Drive folder ID
           if (finalDriveStructure && finalDriveStructure.success && finalDriveStructure.projectFolderId) {
-            console.log('Updating project with folder ID:', finalDriveStructure.projectFolderId);
             await updateProject(data.id, {
               google_drive_folder_id: finalDriveStructure.projectFolderId
             });
@@ -520,10 +500,8 @@ const ProjectForm = ({
               description: "Project folder structure created successfully",
             });
           } else {
-            console.warn('Drive structure creation failed or incomplete:', finalDriveStructure);
-          }
+            }
         } catch (driveError) {
-          console.error('🚨 Google Drive operations failed:', driveError);
           toast({
             title: "⚠️ Google Drive Warning",
             description: "Project created but some Drive operations failed.",
@@ -545,7 +523,6 @@ const ProjectForm = ({
       onSuccess && onSuccess(data);
       onClose();
     } catch (error) {
-      console.error("Error saving project:", error);
       toast({
         title: isEditMode
           ? "ไม่สามารถแก้ไขโครงงานได้"
@@ -632,14 +609,13 @@ const ProjectForm = ({
   };
 
   const categories = [
-    "Web Development",
-    "Mobile App",
-    "Desktop App",
-    "IoT/Hardware",
-    "AI/Machine Learning",
-    "Data Science",
-    "Game Development",
-    "Other",
+    "มัธยม 1",
+    "มัธยม 2",
+    "มัธยม 3",
+    "มัธยม 4",
+    "มัธยม 5",
+    "มัธยม 6",
+    "Workshop",
   ];
 
   const difficultyOptions = [
@@ -945,12 +921,11 @@ const ProjectForm = ({
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 h-12 shadow-sm"
                   >
-                    <option value="login">Login Learning</option>
-                    <option value="meta">Meta Tech Academy</option>
-                    <option value="med">Med Solutions</option>
-                    <option value="edtech">EdTech Innovation</option>
-                    <option value="innotech">InnoTech Labs</option>
-                    <option value="w2d">W2D Studio</option>
+                    <option value="login">Login</option>
+                    <option value="meta">Meta</option>
+                    <option value="med">Med</option>
+                    <option value="edtech">EdTech</option>
+                    <option value="w2d">W2D</option>
                   </select>
                   {errors.company && (
                     <p className="text-red-600 text-sm mt-2 flex items-center bg-red-50 p-2 rounded-lg">
@@ -1000,7 +975,6 @@ const ProjectForm = ({
                   className="bg-white border-gray-300 text-gray-800 h-12 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl shadow-sm"
                 />
               </div>
-
 
               {/* URLs */}
               <div className="bg-gradient-to-br from-gray-50 to-slate-50 p-6 rounded-xl border border-gray-200">

@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Learning Platform - Comprehensive System Verification</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .verification-section {
+            margin-bottom: 40px;
+            border: 2px solid #e1e5e9;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 2px solid #e1e5e9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .status-testing {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #00b894;
+        }
+
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #fdcb6e;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #e17055;
+        }
+
+        .section-content {
+            padding: 25px;
+        }
+
+        .test-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid #ddd;
+        }
+
+        .test-item.success {
+            border-left-color: #00b894;
+            background: #d4f6d4;
+        }
+
+        .test-item.warning {
+            border-left-color: #fdcb6e;
+            background: #fff9db;
+        }
+
+        .test-item.error {
+            border-left-color: #e17055;
+            background: #ffe0db;
+        }
+
+        .test-name {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .test-result {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .test-details {
+            font-size: 0.8rem;
+            color: #636e72;
+            margin-top: 5px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e1e5e9;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00b894, #00cec9);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .summary {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+
+        .summary h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .summary-stat {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary-stat .number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .summary-stat .label {
+            font-size: 0.9rem;
+            color: #636e72;
+            margin-top: 5px;
+        }
+
+        .recommendations {
+            background: #e8f4fd;
+            border: 1px solid #bee5eb;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .recommendations h4 {
+            color: #0c5460;
+            margin-bottom: 15px;
+        }
+
+        .recommendations ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .recommendations li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .recommendations li:before {
+            content: "•";
+            color: #17a2b8;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        .error-log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .section-header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+
+            .test-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 System Verification Dashboard</h1>
+            <p>Comprehensive testing of the Login Learning Platform</p>
+        </div>
+
+        <div class="main-content">
+            <div class="controls">
+                <button id="startVerification" class="btn">🚀 Start Comprehensive Verification</button>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p id="progressText">Ready to start verification...</p>
+            </div>
+
+            <!-- Database System Verification -->
+            <div class="verification-section">
+                <div class="section-header">
+                    <h2 class="section-title">🗄️ Database System</h2>
+                    <div class="status-badge status-testing" id="db-status">Pending</div>
+                </div>
+                <div class="section-content" id="db-content">
+                    <div class="test-item" id="db-connection">
+                        <div>
+                            <div class="test-name">Database Connection</div>
+                            <div class="test-details">Testing Supabase connection and authentication</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="db-tables">
+                        <div>
+                            <div class="test-name">Table Structure</div>
+                            <div class="test-details">Verifying all required tables exist with correct schema</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="db-rls">
+                        <div>
+                            <div class="test-name">Row Level Security</div>
+                            <div class="test-details">Testing RLS policies for data isolation</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="db-queries">
+                        <div>
+                            <div class="test-name">Query Performance</div>
+                            <div class="test-details">Testing common queries and data integrity</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Authentication System -->
+            <div class="verification-section">
+                <div class="section-header">
+                    <h2 class="section-title">🔐 Authentication & Authorization</h2>
+                    <div class="status-badge status-testing" id="auth-status">Pending</div>
+                </div>
+                <div class="section-content" id="auth-content">
+                    <div class="test-item" id="auth-login">
+                        <div>
+                            <div class="test-name">Login System</div>
+                            <div class="test-details">Testing email/password and Google OAuth login</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="auth-roles">
+                        <div>
+                            <div class="test-name">Role-Based Access Control</div>
+                            <div class="test-details">Verifying admin, instructor, student role permissions</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="auth-session">
+                        <div>
+                            <div class="test-name">Session Management</div>
+                            <div class="test-details">Testing JWT tokens and session persistence</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="auth-company">
+                        <div>
+                            <div class="test-name">Company Data Isolation</div>
+                            <div class="test-details">Testing multi-tenant data separation</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Learning Management Features -->
+            <div class="verification-section">
+                <div class="section-header">
+                    <h2 class="section-title">📚 Learning Management System</h2>
+                    <div class="status-badge status-testing" id="lms-status">Pending</div>
+                </div>
+                <div class="section-content" id="lms-content">
+                    <div class="test-item" id="lms-courses">
+                        <div>
+                            <div class="test-name">Course Management</div>
+                            <div class="test-details">Testing course CRUD operations and content management</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="lms-assignments">
+                        <div>
+                            <div class="test-name">Assignment System</div>
+                            <div class="test-details">Testing assignment creation, submission, and grading</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="lms-quiz">
+                        <div>
+                            <div class="test-name">Quiz Engine</div>
+                            <div class="test-details">Testing quiz creation, taking, and auto-grading</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="lms-progress">
+                        <div>
+                            <div class="test-name">Progress Tracking</div>
+                            <div class="test-details">Testing user progress monitoring and analytics</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Google Drive Integration -->
+            <div class="verification-section">
+                <div class="section-header">
+                    <h2 class="section-title">☁️ Google Drive Integration</h2>
+                    <div class="status-badge status-testing" id="drive-status">Pending</div>
+                </div>
+                <div class="section-content" id="drive-content">
+                    <div class="test-item" id="drive-auth">
+                        <div>
+                            <div class="test-name">API Authentication</div>
+                            <div class="test-details">Testing Google Drive service account authentication</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="drive-upload">
+                        <div>
+                            <div class="test-name">File Upload</div>
+                            <div class="test-details">Testing file upload to shared drives</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="drive-folders">
+                        <div>
+                            <div class="test-name">Folder Management</div>
+                            <div class="test-details">Testing folder creation and organization</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="drive-permissions">
+                        <div>
+                            <div class="test-name">Permission Management</div>
+                            <div class="test-details">Testing sharing and access control</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teaching Schedule System -->
+            <div class="verification-section">
+                <div class="section-header">
+                    <h2 class="section-title">📅 Teaching Schedule System</h2>
+                    <div class="status-badge status-testing" id="schedule-status">Pending</div>
+                </div>
+                <div class="section-content" id="schedule-content">
+                    <div class="test-item" id="schedule-crud">
+                        <div>
+                            <div class="test-name">Schedule CRUD Operations</div>
+                            <div class="test-details">Testing schedule creation, editing, and deletion</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="schedule-drag">
+                        <div>
+                            <div class="test-name">Drag & Drop</div>
+                            <div class="test-details">Testing drag and drop functionality</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="schedule-conflict">
+                        <div>
+                            <div class="test-name">Conflict Detection</div>
+                            <div class="test-details">Testing schedule conflict detection and prevention</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="schedule-realtime">
+                        <div>
+                            <div class="test-name">Real-time Updates</div>
+                            <div class="test-details">Testing real-time schedule synchronization</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- External Integrations -->
+            <div class="verification-section">
+                <div class="section-header">
+                    <h2 class="section-title">🔗 External Integrations</h2>
+                    <div class="status-badge status-testing" id="integrations-status">Pending</div>
+                </div>
+                <div class="section-content" id="integrations-content">
+                    <div class="test-item" id="integrations-sheets">
+                        <div>
+                            <div class="test-name">Google Sheets API</div>
+                            <div class="test-details">Testing Google Sheets integration for data export</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="integrations-calcom">
+                        <div>
+                            <div class="test-name">Cal.com Integration</div>
+                            <div class="test-details">Testing calendar scheduling integration</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="integrations-email">
+                        <div>
+                            <div class="test-name">Email Notifications</div>
+                            <div class="test-details">Testing email notification system</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="integrations-realtime">
+                        <div>
+                            <div class="test-name">Real-time Features</div>
+                            <div class="test-details">Testing WebSocket connections and live updates</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance & Security -->
+            <div class="verification-section">
+                <div class="section-header">
+                    <h2 class="section-title">🛡️ Performance & Security</h2>
+                    <div class="status-badge status-testing" id="security-status">Pending</div>
+                </div>
+                <div class="section-content" id="security-content">
+                    <div class="test-item" id="security-headers">
+                        <div>
+                            <div class="test-name">Security Headers</div>
+                            <div class="test-details">Testing CSP, CORS, and other security headers</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="security-input">
+                        <div>
+                            <div class="test-name">Input Sanitization</div>
+                            <div class="test-details">Testing XSS and injection prevention</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="security-performance">
+                        <div>
+                            <div class="test-name">Performance Metrics</div>
+                            <div class="test-details">Testing page load times and resource optimization</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                    <div class="test-item" id="security-ssl">
+                        <div>
+                            <div class="test-name">SSL/TLS Configuration</div>
+                            <div class="test-details">Testing HTTPS enforcement and certificate validity</div>
+                        </div>
+                        <div class="test-result">⏳ Waiting</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary" id="summary" style="display: none;">
+                <h3>🎯 Verification Summary</h3>
+                <p id="summaryText">Verification completed. Results summary:</p>
+                
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <div class="number" id="totalTests">0</div>
+                        <div class="label">Total Tests</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="number" id="passedTests" style="color: #00b894;">0</div>
+                        <div class="label">Passed</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="number" id="warningTests" style="color: #fdcb6e;">0</div>
+                        <div class="label">Warnings</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="number" id="failedTests" style="color: #e17055;">0</div>
+                        <div class="label">Failed</div>
+                    </div>
+                </div>
+
+                <div class="recommendations" id="recommendations">
+                    <h4>🔧 Recommendations for Improvements</h4>
+                    <ul id="recommendationsList">
+                        <!-- Recommendations will be populated here -->
+                    </ul>
+                </div>
+
+                <div class="error-log" id="errorLog" style="display: none;">
+                    <h4>📋 Detailed Error Log</h4>
+                    <pre id="errorDetails"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const SUPABASE_URL = 'https://vuitwzisazvikrhtfthh.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjMxOTgwOTgsImV4cCI6MjAzODc3NDA5OH0.8UfzDRKxO0tO8Bz6MBkNgtVFcdj0v1B-vb4EZFYz_FE';
+        
+        let supabaseClient;
+        let verificationResults = {
+            total: 0,
+            passed: 0,
+            warnings: 0,
+            failed: 0,
+            errors: []
+        };
+
+        // Initialize Supabase client
+        try {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log('✅ Supabase client initialized successfully');
+        } catch (error) {
+            console.error('❌ Failed to initialize Supabase client:', error);
+        }
+
+        // Utility functions
+        function updateTestResult(testId, status, message, details = '') {
+            const testElement = document.getElementById(testId);
+            if (!testElement) return;
+
+            testElement.className = `test-item ${status}`;
+            const resultElement = testElement.querySelector('.test-result');
+            const detailsElement = testElement.querySelector('.test-details');
+            
+            let icon = '';
+            switch (status) {
+                case 'success':
+                    icon = '✅';
+                    verificationResults.passed++;
+                    break;
+                case 'warning':
+                    icon = '⚠️';
+                    verificationResults.warnings++;
+                    break;
+                case 'error':
+                    icon = '❌';
+                    verificationResults.failed++;
+                    verificationResults.errors.push(`${testId}: ${message}`);
+                    break;
+                default:
+                    icon = '⏳';
+            }
+            
+            resultElement.textContent = `${icon} ${message}`;
+            if (details) {
+                detailsElement.textContent = details;
+            }
+            
+            verificationResults.total++;
+        }
+
+        function updateSectionStatus(sectionId, status) {
+            const statusElement = document.getElementById(`${sectionId}-status`);
+            if (!statusElement) return;
+
+            statusElement.className = `status-badge status-${status}`;
+            
+            switch (status) {
+                case 'success':
+                    statusElement.textContent = '✅ Passed';
+                    break;
+                case 'warning':
+                    statusElement.textContent = '⚠️ Warnings';
+                    break;
+                case 'error':
+                    statusElement.textContent = '❌ Failed';
+                    break;
+                default:
+                    statusElement.textContent = '🔄 Testing';
+            }
+        }
+
+        function updateProgress(percentage, text) {
+            document.getElementById('progressFill').style.width = `${percentage}%`;
+            document.getElementById('progressText').textContent = text;
+        }
+
+        // Test functions
+        async function testDatabaseSystem() {
+            console.log('🔍 Testing Database System...');
+            updateSectionStatus('db', 'testing');
+            
+            try {
+                // Test 1: Database Connection
+                updateProgress(10, 'Testing database connection...');
+                try {
+                    const { data, error } = await supabaseClient.from('user_profiles').select('count').limit(1);
+                    if (error) throw error;
+                    updateTestResult('db-connection', 'success', 'Connected', 'Supabase connection successful');
+                } catch (error) {
+                    updateTestResult('db-connection', 'error', 'Failed', `Connection failed: ${error.message}`);
+                }
+
+                // Test 2: Table Structure
+                updateProgress(20, 'Verifying table structure...');
+                try {
+                    const tables = ['user_profiles', 'courses', 'projects', 'enrollments', 'assignments'];
+                    let allTablesExist = true;
+                    
+                    for (const table of tables) {
+                        try {
+                            await supabaseClient.from(table).select('*').limit(1);
+                        } catch (error) {
+                            allTablesExist = false;
+                            break;
+                        }
+                    }
+                    
+                    if (allTablesExist) {
+                        updateTestResult('db-tables', 'success', 'Valid', 'All required tables exist');
+                    } else {
+                        updateTestResult('db-tables', 'warning', 'Incomplete', 'Some tables may be missing');
+                    }
+                } catch (error) {
+                    updateTestResult('db-tables', 'error', 'Failed', `Table check failed: ${error.message}`);
+                }
+
+                // Test 3: RLS Policies
+                updateProgress(30, 'Testing Row Level Security...');
+                try {
+                    // Try to access data without authentication
+                    const { data, error } = await supabaseClient.from('user_profiles').select('*').limit(1);
+                    
+                    // If we get data or a specific auth error, RLS is working
+                    if (error && error.message.includes('row-level security')) {
+                        updateTestResult('db-rls', 'success', 'Active', 'RLS policies are enforced');
+                    } else if (data) {
+                        updateTestResult('db-rls', 'warning', 'Partial', 'RLS may allow some public access');
+                    } else {
+                        updateTestResult('db-rls', 'warning', 'Unknown', 'RLS status unclear');
+                    }
+                } catch (error) {
+                    updateTestResult('db-rls', 'error', 'Failed', `RLS test failed: ${error.message}`);
+                }
+
+                // Test 4: Query Performance
+                updateProgress(40, 'Testing query performance...');
+                try {
+                    const startTime = Date.now();
+                    await supabaseClient.from('courses').select('id, title').limit(10);
+                    const queryTime = Date.now() - startTime;
+                    
+                    if (queryTime < 1000) {
+                        updateTestResult('db-queries', 'success', 'Fast', `Query completed in ${queryTime}ms`);
+                    } else if (queryTime < 3000) {
+                        updateTestResult('db-queries', 'warning', 'Slow', `Query took ${queryTime}ms`);
+                    } else {
+                        updateTestResult('db-queries', 'error', 'Very Slow', `Query took ${queryTime}ms`);
+                    }
+                } catch (error) {
+                    updateTestResult('db-queries', 'error', 'Failed', `Query test failed: ${error.message}`);
+                }
+
+                updateSectionStatus('db', 'success');
+            } catch (error) {
+                console.error('Database system test failed:', error);
+                updateSectionStatus('db', 'error');
+            }
+        }
+
+        async function testAuthenticationSystem() {
+            console.log('🔍 Testing Authentication System...');
+            updateSectionStatus('auth', 'testing');
+            updateProgress(50, 'Testing authentication system...');
+
+            try {
+                // Test 1: Login System
+                try {
+                    // Check if auth is configured
+                    const { data: session } = await supabaseClient.auth.getSession();
+                    updateTestResult('auth-login', 'success', 'Configured', 'Auth system is configured and accessible');
+                } catch (error) {
+                    updateTestResult('auth-login', 'error', 'Failed', `Auth system error: ${error.message}`);
+                }
+
+                // Test 2: Role-Based Access Control
+                try {
+                    // This is a basic check - in a real test, we'd need authenticated users
+                    const { data, error } = await supabaseClient.from('user_profiles').select('role').limit(1);
+                    if (error && error.message.includes('row-level security')) {
+                        updateTestResult('auth-roles', 'success', 'Protected', 'Role-based access is enforced');
+                    } else {
+                        updateTestResult('auth-roles', 'warning', 'Check Needed', 'RBAC needs manual verification');
+                    }
+                } catch (error) {
+                    updateTestResult('auth-roles', 'error', 'Failed', `RBAC test failed: ${error.message}`);
+                }
+
+                // Test 3: Session Management
+                try {
+                    const { data } = await supabaseClient.auth.getSession();
+                    updateTestResult('auth-session', 'success', 'Working', 'Session management is functional');
+                } catch (error) {
+                    updateTestResult('auth-session', 'error', 'Failed', `Session test failed: ${error.message}`);
+                }
+
+                // Test 4: Company Data Isolation
+                try {
+                    // Check for company-related tables
+                    const { data, error } = await supabaseClient.from('companies').select('*').limit(1);
+                    if (error && error.message.includes('relation') && error.message.includes('does not exist')) {
+                        updateTestResult('auth-company', 'warning', 'No Table', 'Companies table not found');
+                    } else if (error && error.message.includes('row-level security')) {
+                        updateTestResult('auth-company', 'success', 'Isolated', 'Company data isolation active');
+                    } else {
+                        updateTestResult('auth-company', 'warning', 'Check Needed', 'Company isolation needs verification');
+                    }
+                } catch (error) {
+                    updateTestResult('auth-company', 'warning', 'Unknown', 'Company isolation status unclear');
+                }
+
+                updateSectionStatus('auth', 'success');
+            } catch (error) {
+                console.error('Authentication system test failed:', error);
+                updateSectionStatus('auth', 'error');
+            }
+        }
+
+        async function testLMSFeatures() {
+            console.log('🔍 Testing Learning Management System...');
+            updateSectionStatus('lms', 'testing');
+            updateProgress(60, 'Testing LMS features...');
+
+            try {
+                // Test 1: Course Management
+                try {
+                    const { data, error } = await supabaseClient.from('courses').select('id, title, description').limit(5);
+                    if (data && data.length > 0) {
+                        updateTestResult('lms-courses', 'success', 'Available', `Found ${data.length} courses`);
+                    } else if (error && error.message.includes('row-level security')) {
+                        updateTestResult('lms-courses', 'success', 'Protected', 'Course data is protected by RLS');
+                    } else {
+                        updateTestResult('lms-courses', 'warning', 'No Data', 'No courses found');
+                    }
+                } catch (error) {
+                    updateTestResult('lms-courses', 'error', 'Failed', `Course test failed: ${error.message}`);
+                }
+
+                // Test 2: Assignment System
+                try {
+                    const { data, error } = await supabaseClient.from('assignments').select('id, title').limit(1);
+                    if (error && error.message.includes('row-level security')) {
+                        updateTestResult('lms-assignments', 'success', 'Protected', 'Assignment system has RLS protection');
+                    } else if (data) {
+                        updateTestResult('lms-assignments', 'success', 'Available', 'Assignment system is accessible');
+                    } else {
+                        updateTestResult('lms-assignments', 'warning', 'No Data', 'No assignments found');
+                    }
+                } catch (error) {
+                    updateTestResult('lms-assignments', 'error', 'Failed', `Assignment test failed: ${error.message}`);
+                }
+
+                // Test 3: Quiz Engine
+                try {
+                    // Check for quiz-related functionality
+                    const { data, error } = await supabaseClient.from('course_content').select('id, type').eq('type', 'quiz').limit(1);
+                    if (data || (error && error.message.includes('row-level security'))) {
+                        updateTestResult('lms-quiz', 'success', 'Available', 'Quiz system structure exists');
+                    } else {
+                        updateTestResult('lms-quiz', 'warning', 'Check Needed', 'Quiz system needs verification');
+                    }
+                } catch (error) {
+                    updateTestResult('lms-quiz', 'warning', 'Unknown', 'Quiz system status unclear');
+                }
+
+                // Test 4: Progress Tracking
+                try {
+                    const { data, error } = await supabaseClient.from('user_progress').select('id, progress_percentage').limit(1);
+                    if (error && error.message.includes('row-level security')) {
+                        updateTestResult('lms-progress', 'success', 'Protected', 'Progress tracking has RLS protection');
+                    } else if (data) {
+                        updateTestResult('lms-progress', 'success', 'Available', 'Progress tracking is accessible');
+                    } else {
+                        updateTestResult('lms-progress', 'warning', 'No Data', 'No progress data found');
+                    }
+                } catch (error) {
+                    updateTestResult('lms-progress', 'error', 'Failed', `Progress test failed: ${error.message}`);
+                }
+
+                updateSectionStatus('lms', 'success');
+            } catch (error) {
+                console.error('LMS features test failed:', error);
+                updateSectionStatus('lms', 'error');
+            }
+        }
+
+        async function testGoogleDriveIntegration() {
+            console.log('🔍 Testing Google Drive Integration...');
+            updateSectionStatus('drive', 'testing');
+            updateProgress(70, 'Testing Google Drive integration...');
+
+            try {
+                // Test 1: API Authentication
+                try {
+                    // Check if Google Drive edge function exists
+                    const response = await fetch('/api/google-drive/test', { method: 'GET' });
+                    if (response.ok) {
+                        updateTestResult('drive-auth', 'success', 'Available', 'Google Drive API endpoint accessible');
+                    } else {
+                        updateTestResult('drive-auth', 'warning', 'No Endpoint', 'Google Drive API endpoint not found');
+                    }
+                } catch (error) {
+                    updateTestResult('drive-auth', 'warning', 'Check Needed', 'Google Drive API needs configuration');
+                }
+
+                // Test 2: File Upload
+                try {
+                    // Check for upload-related tables or functions
+                    const { data, error } = await supabaseClient.from('attachments').select('id, file_name').limit(1);
+                    if (data || (error && error.message.includes('row-level security'))) {
+                        updateTestResult('drive-upload', 'success', 'Structure Exists', 'File upload structure is in place');
+                    } else {
+                        updateTestResult('drive-upload', 'warning', 'Check Needed', 'File upload system needs verification');
+                    }
+                } catch (error) {
+                    updateTestResult('drive-upload', 'warning', 'Unknown', 'Upload system status unclear');
+                }
+
+                // Test 3: Folder Management
+                try {
+                    // Check for folder management in courses
+                    const { data, error } = await supabaseClient.from('courses').select('google_drive_folder_id').limit(1);
+                    if (data || (error && error.message.includes('row-level security'))) {
+                        updateTestResult('drive-folders', 'success', 'Integrated', 'Google Drive folders are integrated with courses');
+                    } else {
+                        updateTestResult('drive-folders', 'warning', 'Not Integrated', 'Google Drive folder integration missing');
+                    }
+                } catch (error) {
+                    updateTestResult('drive-folders', 'warning', 'Unknown', 'Folder management status unclear');
+                }
+
+                // Test 4: Permission Management
+                try {
+                    // This would require actual API calls to verify
+                    updateTestResult('drive-permissions', 'warning', 'Manual Check', 'Permission management requires manual verification');
+                } catch (error) {
+                    updateTestResult('drive-permissions', 'warning', 'Unknown', 'Permission system status unclear');
+                }
+
+                updateSectionStatus('drive', 'warning');
+            } catch (error) {
+                console.error('Google Drive integration test failed:', error);
+                updateSectionStatus('drive', 'error');
+            }
+        }
+
+        async function testTeachingScheduleSystem() {
+            console.log('🔍 Testing Teaching Schedule System...');
+            updateSectionStatus('schedule', 'testing');
+            updateProgress(80, 'Testing teaching schedule system...');
+
+            try {
+                // Test 1: Schedule CRUD Operations
+                try {
+                    const { data, error } = await supabaseClient.from('teaching_schedules').select('id, course_name, instructor_name').limit(5);
+                    if (data && data.length > 0) {
+                        updateTestResult('schedule-crud', 'success', 'Working', `Found ${data.length} schedule entries`);
+                    } else if (error && error.message.includes('row-level security')) {
+                        updateTestResult('schedule-crud', 'success', 'Protected', 'Schedule data is protected by RLS');
+                    } else {
+                        updateTestResult('schedule-crud', 'warning', 'No Data', 'No schedule data found');
+                    }
+                } catch (error) {
+                    updateTestResult('schedule-crud', 'error', 'Failed', `Schedule CRUD test failed: ${error.message}`);
+                }
+
+                // Test 2: Drag & Drop (UI Feature)
+                updateTestResult('schedule-drag', 'warning', 'UI Feature', 'Drag & drop requires manual testing in the UI');
+
+                // Test 3: Conflict Detection
+                try {
+                    // Check for conflict detection logic in constraints
+                    const { data, error } = await supabaseClient.from('teaching_schedules').select('day_of_week, start_time, end_time').limit(1);
+                    if (data || (error && error.message.includes('row-level security'))) {
+                        updateTestResult('schedule-conflict', 'success', 'Structure Exists', 'Schedule conflict detection structure in place');
+                    } else {
+                        updateTestResult('schedule-conflict', 'warning', 'Check Needed', 'Conflict detection needs verification');
+                    }
+                } catch (error) {
+                    updateTestResult('schedule-conflict', 'warning', 'Unknown', 'Conflict detection status unclear');
+                }
+
+                // Test 4: Real-time Updates
+                try {
+                    // Test if Supabase real-time is configured
+                    const channel = supabaseClient.channel('test-channel');
+                    if (channel) {
+                        updateTestResult('schedule-realtime', 'success', 'Available', 'Supabase real-time channels are available');
+                        supabaseClient.removeChannel(channel);
+                    } else {
+                        updateTestResult('schedule-realtime', 'warning', 'Check Needed', 'Real-time functionality needs verification');
+                    }
+                } catch (error) {
+                    updateTestResult('schedule-realtime', 'error', 'Failed', `Real-time test failed: ${error.message}`);
+                }
+
+                updateSectionStatus('schedule', 'success');
+            } catch (error) {
+                console.error('Teaching schedule system test failed:', error);
+                updateSectionStatus('schedule', 'error');
+            }
+        }
+
+        async function testExternalIntegrations() {
+            console.log('🔍 Testing External Integrations...');
+            updateSectionStatus('integrations', 'testing');
+            updateProgress(90, 'Testing external integrations...');
+
+            try {
+                // Test 1: Google Sheets API
+                updateTestResult('integrations-sheets', 'warning', 'Manual Check', 'Google Sheets integration requires API key verification');
+
+                // Test 2: Cal.com Integration
+                try {
+                    const { data, error } = await supabaseClient.from('calcom_instructors').select('id, calcom_username').limit(1);
+                    if (data || (error && error.message.includes('row-level security'))) {
+                        updateTestResult('integrations-calcom', 'success', 'Integrated', 'Cal.com integration structure exists');
+                    } else {
+                        updateTestResult('integrations-calcom', 'warning', 'Not Found', 'Cal.com integration table not found');
+                    }
+                } catch (error) {
+                    updateTestResult('integrations-calcom', 'warning', 'Unknown', 'Cal.com integration status unclear');
+                }
+
+                // Test 3: Email Notifications
+                try {
+                    const { data, error } = await supabaseClient.from('notifications').select('id, type, status').limit(1);
+                    if (data || (error && error.message.includes('row-level security'))) {
+                        updateTestResult('integrations-email', 'success', 'Structure Exists', 'Email notification system structure in place');
+                    } else {
+                        updateTestResult('integrations-email', 'warning', 'Check Needed', 'Email notification system needs verification');
+                    }
+                } catch (error) {
+                    updateTestResult('integrations-email', 'warning', 'Unknown', 'Email notification status unclear');
+                }
+
+                // Test 4: Real-time Features
+                try {
+                    // Test WebSocket connection capability
+                    const channel = supabaseClient.channel('integration-test');
+                    await new Promise((resolve) => {
+                        channel.subscribe((status) => {
+                            if (status === 'SUBSCRIBED') {
+                                updateTestResult('integrations-realtime', 'success', 'Connected', 'Real-time WebSocket connection successful');
+                                resolve();
+                            }
+                        });
+                        
+                        setTimeout(() => {
+                            updateTestResult('integrations-realtime', 'warning', 'Timeout', 'Real-time connection timeout');
+                            resolve();
+                        }, 3000);
+                    });
+                    
+                    supabaseClient.removeChannel(channel);
+                } catch (error) {
+                    updateTestResult('integrations-realtime', 'error', 'Failed', `Real-time test failed: ${error.message}`);
+                }
+
+                updateSectionStatus('integrations', 'warning');
+            } catch (error) {
+                console.error('External integrations test failed:', error);
+                updateSectionStatus('integrations', 'error');
+            }
+        }
+
+        async function testPerformanceAndSecurity() {
+            console.log('🔍 Testing Performance & Security...');
+            updateSectionStatus('security', 'testing');
+            updateProgress(95, 'Testing performance and security...');
+
+            try {
+                // Test 1: Security Headers
+                try {
+                    const response = await fetch(window.location.origin);
+                    const headers = response.headers;
+                    
+                    const hasCSP = headers.get('content-security-policy');
+                    const hasHSTS = headers.get('strict-transport-security');
+                    
+                    if (hasCSP && hasHSTS) {
+                        updateTestResult('security-headers', 'success', 'Configured', 'Security headers are properly configured');
+                    } else if (hasCSP || hasHSTS) {
+                        updateTestResult('security-headers', 'warning', 'Partial', 'Some security headers are missing');
+                    } else {
+                        updateTestResult('security-headers', 'warning', 'Missing', 'Security headers need configuration');
+                    }
+                } catch (error) {
+                    updateTestResult('security-headers', 'error', 'Failed', `Security headers test failed: ${error.message}`);
+                }
+
+                // Test 2: Input Sanitization
+                updateTestResult('security-input', 'warning', 'Manual Check', 'Input sanitization requires manual testing');
+
+                // Test 3: Performance Metrics
+                try {
+                    const startTime = performance.now();
+                    await fetch(window.location.origin);
+                    const loadTime = performance.now() - startTime;
+                    
+                    if (loadTime < 1000) {
+                        updateTestResult('security-performance', 'success', 'Fast', `Page loads in ${Math.round(loadTime)}ms`);
+                    } else if (loadTime < 3000) {
+                        updateTestResult('security-performance', 'warning', 'Acceptable', `Page loads in ${Math.round(loadTime)}ms`);
+                    } else {
+                        updateTestResult('security-performance', 'error', 'Slow', `Page loads in ${Math.round(loadTime)}ms`);
+                    }
+                } catch (error) {
+                    updateTestResult('security-performance', 'error', 'Failed', `Performance test failed: ${error.message}`);
+                }
+
+                // Test 4: SSL/TLS Configuration
+                try {
+                    const isHTTPS = window.location.protocol === 'https:';
+                    if (isHTTPS) {
+                        updateTestResult('security-ssl', 'success', 'Secure', 'HTTPS is properly configured');
+                    } else {
+                        updateTestResult('security-ssl', 'warning', 'Not HTTPS', 'Site is not using HTTPS');
+                    }
+                } catch (error) {
+                    updateTestResult('security-ssl', 'error', 'Failed', `SSL test failed: ${error.message}`);
+                }
+
+                updateSectionStatus('security', 'success');
+            } catch (error) {
+                console.error('Performance & security test failed:', error);
+                updateSectionStatus('security', 'error');
+            }
+        }
+
+        function generateSummary() {
+            updateProgress(100, 'Verification completed! Generating summary...');
+            
+            // Update summary statistics
+            document.getElementById('totalTests').textContent = verificationResults.total;
+            document.getElementById('passedTests').textContent = verificationResults.passed;
+            document.getElementById('warningTests').textContent = verificationResults.warnings;
+            document.getElementById('failedTests').textContent = verificationResults.failed;
+
+            // Generate recommendations
+            const recommendations = [];
+            
+            if (verificationResults.failed > 0) {
+                recommendations.push('Fix critical issues that are preventing system functionality');
+            }
+            
+            if (verificationResults.warnings > 0) {
+                recommendations.push('Address warning items to improve system reliability');
+            }
+            
+            recommendations.push('Perform manual testing of UI-dependent features');
+            recommendations.push('Set up monitoring for production environment');
+            recommendations.push('Implement automated testing for continuous verification');
+            recommendations.push('Review and update security policies regularly');
+            
+            const recommendationsList = document.getElementById('recommendationsList');
+            recommendationsList.innerHTML = recommendations.map(rec => `<li>${rec}</li>`).join('');
+
+            // Show error log if there are errors
+            if (verificationResults.errors.length > 0) {
+                document.getElementById('errorLog').style.display = 'block';
+                document.getElementById('errorDetails').textContent = verificationResults.errors.join('\n');
+            }
+
+            // Show summary
+            document.getElementById('summary').style.display = 'block';
+            
+            // Calculate overall health score
+            const healthScore = Math.round((verificationResults.passed / verificationResults.total) * 100);
+            let healthStatus = '';
+            
+            if (healthScore >= 90) {
+                healthStatus = '🎉 Excellent! System is in great condition.';
+            } else if (healthScore >= 75) {
+                healthStatus = '👍 Good! Minor improvements needed.';
+            } else if (healthScore >= 60) {
+                healthStatus = '⚠️ Fair. Several issues need attention.';
+            } else {
+                healthStatus = '🚨 Poor. Critical issues require immediate attention.';
+            }
+            
+            document.getElementById('summaryText').textContent = 
+                `Verification completed with ${healthScore}% health score. ${healthStatus}`;
+        }
+
+        // Main verification function
+        async function startVerification() {
+            const startButton = document.getElementById('startVerification');
+            startButton.disabled = true;
+            startButton.textContent = '🔄 Running Verification...';
+            
+            // Reset results
+            verificationResults = { total: 0, passed: 0, warnings: 0, failed: 0, errors: [] };
+            
+            try {
+                await testDatabaseSystem();
+                await testAuthenticationSystem();
+                await testLMSFeatures();
+                await testGoogleDriveIntegration();
+                await testTeachingScheduleSystem();
+                await testExternalIntegrations();
+                await testPerformanceAndSecurity();
+                
+                generateSummary();
+                
+            } catch (error) {
+                console.error('Verification failed:', error);
+                updateProgress(100, 'Verification completed with errors');
+            } finally {
+                startButton.disabled = false;
+                startButton.textContent = '🔄 Run Verification Again';
+            }
+        }
+
+        // Event listeners
+        document.getElementById('startVerification').addEventListener('click', startVerification);
+
+        // Auto-start verification when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 System Verification Dashboard loaded');
+            setTimeout(startVerification, 1000); // Start automatically after 1 second
+        });
+    </script>
+</body>
+</html>

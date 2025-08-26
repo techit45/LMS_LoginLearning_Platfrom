@@ -156,15 +156,6 @@ export const COMPANY_COLORS = {
     googleSheetsColor: { red: 0.49, green: 0.3, blue: 1.0 }
   },
   
-  innotech: {
-    name: 'InnoTech Labs',
-    primary: '#ff6d00',      // Orange
-    light: '#fff3e0',
-    dark: '#dd5a00',
-    text: '#ffffff',
-    googleSheetsColor: { red: 1.0, green: 0.43, blue: 0.0 }
-  },
-  
   w2d: {
     name: 'W2D Studio',
     primary: '#d50000',      // Red

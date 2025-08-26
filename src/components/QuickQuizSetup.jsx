@@ -110,7 +110,6 @@ const QuickQuizSetup = ({ isOpen, onClose, contentId, courseId }) => {
       
       onClose();
     } catch (error) {
-      console.error('Error saving quiz:', error);
       toast({
         title: "เกิดข้อผิดพลาดในการบันทึก",
         description: error.message || "ไม่สามารถบันทึกแบบทดสอบได้",

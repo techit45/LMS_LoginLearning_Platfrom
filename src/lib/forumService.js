@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { buildSafeSearchQuery, sanitizeUserInput, checkRateLimit } from './inputSanitizer';
 
 // ==========================================
 // FORUM SERVICE - API functions for discussion forum
@@ -23,7 +24,6 @@ export const getCourseCategories = async (courseId) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching course categories:', error);
     return { data: null, error };
   }
 };
@@ -42,7 +42,6 @@ export const createCategory = async (categoryData) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error creating category:', error);
     return { data: null, error };
   }
 };
@@ -141,7 +140,6 @@ export const getCourseTopics = async (courseId, options = {}) => {
       }
     };
   } catch (error) {
-    console.error('Error fetching course topics:', error);
     return { data: null, error, pagination: null };
   }
 };
@@ -235,7 +233,6 @@ export const getTopicWithReplies = async (topicId) => {
       error: null
     };
   } catch (error) {
-    console.error('Error fetching topic with replies:', error);
     return { data: null, error };
   }
 };
@@ -282,7 +279,6 @@ export const createTopic = async (topicData) => {
 
     return { data: enrichedTopic, error: null };
   } catch (error) {
-    console.error('Error creating topic:', error);
     return { data: null, error };
   }
 };
@@ -305,7 +301,6 @@ export const updateTopic = async (topicId, updates) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating topic:', error);
     return { data: null, error };
   }
 };
@@ -323,7 +318,6 @@ export const deleteTopic = async (topicId) => {
     if (error) throw error;
     return { error: null };
   } catch (error) {
-    console.error('Error deleting topic:', error);
     return { error };
   }
 };
@@ -343,7 +337,6 @@ export const toggleTopicPin = async (topicId, isPinned) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error toggling topic pin:', error);
     return { data: null, error };
   }
 };
@@ -363,7 +356,6 @@ export const toggleTopicLock = async (topicId, isLocked) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error toggling topic lock:', error);
     return { data: null, error };
   }
 };
@@ -386,7 +378,6 @@ export const markTopicSolved = async (topicId, solvedReplyId = null) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error marking topic as solved:', error);
     return { data: null, error };
   }
 };
@@ -415,7 +406,6 @@ export const incrementTopicViewCount = async (topicId) => {
     return { error: null };
   } catch (error) {
     // Non-critical error, don't throw
-    console.warn('Error incrementing view count:', error);
     return { error };
   }
 };
@@ -462,7 +452,6 @@ export const createReply = async (replyData) => {
 
     return { data: enrichedReply, error: null };
   } catch (error) {
-    console.error('Error creating reply:', error);
     return { data: null, error };
   }
 };
@@ -485,7 +474,6 @@ export const updateReply = async (replyId, updates) => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error updating reply:', error);
     return { data: null, error };
   }
 };
@@ -503,7 +491,6 @@ export const deleteReply = async (replyId) => {
     if (error) throw error;
     return { error: null };
   } catch (error) {
-    console.error('Error deleting reply:', error);
     return { error };
   }
 };
@@ -534,7 +521,6 @@ export const markReplyAsBestAnswer = async (replyId, topicId) => {
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error marking reply as best answer:', error);
     return { data: null, error };
   }
 };
@@ -564,7 +550,6 @@ export const toggleLike = async (targetType, targetId) => {
 
       if (checkError && (checkError.code === '42P01' || checkError.code === 'PGRST106')) {
         // Table doesn't exist or no access - return mock data
-        console.warn('forum_likes table issue:', checkError.message, 'Please check table exists and has proper RLS policies');
         return { data: { liked: true, mock: true }, error: null };
       }
       
@@ -596,11 +581,9 @@ export const toggleLike = async (targetType, targetId) => {
       }
     } catch (dbError) {
       // Database error - return mock response
-      console.warn('Forum likes functionality unavailable:', dbError.message);
       return { data: { liked: true, mock: true }, error: null };
     }
   } catch (error) {
-    console.error('Error toggling like:', error);
     return { data: null, error };
   }
 };
@@ -630,7 +613,6 @@ export const getUserLikes = async (targetType, targetIds) => {
 
     return { data: likesMap, error: null };
   } catch (error) {
-    console.error('Error fetching user likes:', error);
     return { data: {}, error };
   }
 };
@@ -660,7 +642,6 @@ export const subscribeToTopic = async (topicId, notificationType = 'all') => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error subscribing to topic:', error);
     return { data: null, error };
   }
 };
@@ -682,7 +663,6 @@ export const unsubscribeFromTopic = async (topicId) => {
     if (error) throw error;
     return { error: null };
   } catch (error) {
-    console.error('Error unsubscribing from topic:', error);
     return { error };
   }
 };
@@ -711,7 +691,6 @@ export const getUserSubscriptions = async (topicIds) => {
 
     return { data: subscriptionsMap, error: null };
   } catch (error) {
-    console.error('Error fetching user subscriptions:', error);
     return { data: {}, error };
   }
 };
@@ -721,20 +700,47 @@ export const getUserSubscriptions = async (topicIds) => {
 // ==========================================
 
 /**
- * Search across topics and replies
+ * 🔒 SECURE: Search across topics and replies
  */
 export const searchForum = async (courseId, searchQuery, options = {}) => {
   try {
     const { limit = 20 } = options;
+    
+    // 🔒 Rate limiting check
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const rateLimitCheck = checkRateLimit(`search_${user.id}`, 20, 60000); // 20 searches per minute
+      if (!rateLimitCheck.allowed) {
+        throw new Error('Search rate limit exceeded. Please wait before searching again.');
+      }
+    }
 
-    // Search topics only for now - simpler approach
-    const { data: topics, error: topicsError } = await supabase
+    // 🔒 Build safe search queries
+    const titleSearch = buildSafeSearchQuery(searchQuery, 'title');
+    const contentSearch = buildSafeSearchQuery(searchQuery, 'content');
+    
+    if (!titleSearch.query && !contentSearch.query) {
+      return { data: [], error: null };
+    }
+
+    // 🔒 Safe search with parameterized queries
+    let query = supabase
       .from('forum_topics')
       .select('*')
-      .eq('course_id', courseId)
-      .or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`)
+      .eq('course_id', courseId);
+      
+    // Build OR condition safely
+    const searchConditions = [];
+    if (titleSearch.query) searchConditions.push(titleSearch.query);
+    if (contentSearch.query) searchConditions.push(contentSearch.query);
+    
+    if (searchConditions.length > 0) {
+      query = query.or(searchConditions.join(','));
+    }
+    
+    const { data: topics, error: topicsError } = await query
       .order('last_reply_at', { ascending: false })
-      .limit(limit);
+      .limit(Math.min(limit, 50)); // 🔒 Cap maximum results
 
     if (topicsError) throw topicsError;
 
@@ -773,7 +779,6 @@ export const searchForum = async (courseId, searchQuery, options = {}) => {
       error: null
     };
   } catch (error) {
-    console.error('Error searching forum:', error);
     return { data: { topics: [], replies: [] }, error };
   }
 };
@@ -825,7 +830,6 @@ export const getForumStats = async (courseId) => {
       error: null
     };
   } catch (error) {
-    console.error('Error fetching forum stats:', error);
     return { data: null, error };
   }
 };
