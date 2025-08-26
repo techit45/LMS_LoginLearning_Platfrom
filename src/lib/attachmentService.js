@@ -1,9 +1,61 @@
 import { supabase } from './supabaseClient';
+import { getCourseFolderForUpload } from './courseFolderService';
 
 // ==========================================
 // CONTENT ATTACHMENTS SERVICE
 // ระบบจัดการไฟล์แนบสำหรับเนื้อหาทุกประเภท
 // ==========================================
+
+/**
+ * Helper function to extract folder ID from Google Drive URL
+ * @param {string} url - Google Drive URL
+ * @returns {string|null} - Folder ID or null
+ */
+const extractFolderIdFromUrl = (url) => {
+  if (!url) return null;
+  
+  // Match patterns like:
+  // https://drive.google.com/drive/folders/FOLDER_ID
+  // https://drive.google.com/drive/u/0/folders/FOLDER_ID
+  const match = url.match(/folders\/([a-zA-Z0-9-_]+)/);
+  return match ? match[1] : null;
+};
+
+/**
+ * Validate that folder ID is correct for the intended use
+ * @param {string} folderId - Folder ID to validate
+ * @param {string} expectedType - 'course' or 'project'
+ * @returns {boolean} - True if valid
+ */
+const validateFolderType = (folderId, expectedType) => {
+  // List of known project folder IDs
+  const projectFolders = [
+    '148MPiUE7WLAvluF1o2VuPA2VlplzJMJF', // LOGIN projects
+    '1qzwC1e7XdPFxd09UXTmU5LVgzqEJR4d7', // Meta projects
+    '1BvltHmzfvm_f5uDk_8f2Vn1oC_dfuINK', // Med projects
+    '1PbAKZBMtJmBxFDZ8rOeRuqfp-MUe6_q5'  // Ed-tech projects
+  ];
+  
+  // List of known course folder IDs
+  const courseFolders = [
+    '12lk0wPhyd6RvoEiQaQwXPBEeI07zB9nT', // LOGIN courses
+    '1CI-73CLESxWCVevYaDeSKGikLy2Tccg', // Meta courses
+    '1yfN_Kw80H5xuF1IVZPZYuszyDZc7q0vZ', // Med courses
+    '1cItGoQdXOyTflUnzZBLiLUiC8BMZ8G0C'  // Ed-tech courses
+  ];
+  
+  if (expectedType === 'course' && projectFolders.includes(folderId)) {
+    console.error(`❌ Attempting to upload course content to project folder: ${folderId}`);
+    return false;
+  }
+  
+  if (expectedType === 'project' && courseFolders.includes(folderId)) {
+    console.error(`❌ Attempting to upload project content to course folder: ${folderId}`);
+    return false;
+  }
+  
+  return true;
+};
 
 /**
  * Get attachments for a specific content
@@ -21,7 +73,6 @@ export const getContentAttachments = async (contentId) => {
 
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Error fetching content attachments:', error);
     return { data: [], error };
   }
 };
@@ -29,15 +80,21 @@ export const getContentAttachments = async (contentId) => {
 /**
  * Upload file to Supabase Storage
  */
-export const uploadAttachmentFile = async (file, contentId, uploadOrder = 1) => {
+export const uploadAttachmentFile = async (file, contentId, uploadOrder = 1, googleDriveMetadata = null) => {
   try {
-    console.log('Starting file upload:', { fileName: file.name, contentId, fileSize: file.size });
+    // Define API_BASE and get auth token
+    const API_BASE = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+    
+    // 🔒 SECURE: Get dynamic session token
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.access_token) {
+      throw new Error('Authentication required for file upload operations');
+    }
     
     // Check if user is authenticated
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError) {
-      console.error('User authentication error:', userError);
       throw new Error(`Authentication error: ${userError.message}`);
     }
     
@@ -45,7 +102,7 @@ export const uploadAttachmentFile = async (file, contentId, uploadOrder = 1) => 
       throw new Error('User not authenticated - please login first');
     }
 
-    console.log('User authenticated:', user.id);
+    console.log('🔐 User authenticated:', user.email);
 
     // Validate file
     if (!file) {
@@ -56,78 +113,9 @@ export const uploadAttachmentFile = async (file, contentId, uploadOrder = 1) => 
       throw new Error('Content ID is required');
     }
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const fileExt = file.name.split('.').pop();
-    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filename = `${timestamp}_${safeName}`;
-    const filePath = `attachments/${contentId}/${filename}`;
-
-    console.log('Generated file path:', filePath);
-
-    // Check if storage bucket exists and is accessible
-    console.log('Checking storage bucket access...');
-    let bucketAccessible = false;
-    
-    try {
-      // Try to list buckets first
-      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
-      if (bucketError) {
-        console.warn('Cannot list buckets, trying direct access:', bucketError.message);
-      } else {
-        const courseFilesBucket = buckets.find(bucket => bucket.name === 'course-files');
-        if (courseFilesBucket) {
-          console.log('Storage bucket found in list:', courseFilesBucket.name);
-          bucketAccessible = true;
-        }
-      }
-      
-      // If listing failed or bucket not found, try direct access
-      if (!bucketAccessible) {
-        console.log('Testing direct bucket access...');
-        const { error: testError } = await supabase.storage
-          .from('course-files')
-          .list('', { limit: 1 });
-        
-        if (testError) {
-          console.error('Direct bucket access failed:', testError);
-          throw new Error(`Storage bucket "course-files" is not accessible: ${testError.message}. Please check bucket exists and permissions are correct.`);
-        } else {
-          console.log('Direct bucket access successful');
-          bucketAccessible = true;
-        }
-      }
-    } catch (error) {
-      console.error('Storage bucket check failed:', error);
-      throw new Error(`Storage setup error: ${error.message}`);
-    }
-
-    if (!bucketAccessible) {
-      throw new Error('Storage bucket "course-files" not found or not accessible. Please setup storage first.');
-    }
-
-    // Upload file to Supabase Storage
-    console.log('Uploading file to storage...');
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('course-files')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
-
-    if (uploadError) {
-      console.error('Storage upload error:', uploadError);
-      throw new Error(`File upload failed: ${uploadError.message}`);
-    }
-
-    console.log('File uploaded successfully:', uploadData);
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('course-files')
-      .getPublicUrl(filePath);
-
-    console.log('Generated public URL:', publicUrl);
+    // Skip Supabase Storage upload - go directly to Google Drive
+    let googleDriveUrl = null;
+    let googleDriveId = null;
 
     // Check if attachments table exists
     const { error: tableError } = await supabase
@@ -139,9 +127,75 @@ export const uploadAttachmentFile = async (file, contentId, uploadOrder = 1) => 
       throw new Error('Database table "attachments" not found. Please run the database schema setup.');
     }
 
+    // Upload ONLY to Google Drive (no Supabase Storage)
+    try {
+      // Get course info including company information
+      const { data: contentData } = await supabase
+        .from('course_content')
+        .select('course_id, title, courses(id, title, google_drive_folder_id, company, companies(name))')
+        .eq('id', contentId)
+        .single();
+        
+      if (!contentData?.courses?.title) {
+        throw new Error('Course information not found. Please ensure the course exists.');
+      }
+
+      const courseTitle = contentData.courses.title;
+      const courseId = contentData.course_id;
+      
+      console.log('📚 Uploading file for course:', courseTitle);
+      console.log('📄 Content:', contentData.title);
+      
+      // Use the new folder service to ensure folder exists
+      let targetFolderId = null;
+      
+      try {
+        console.log('🔍 Ensuring course folder exists...');
+        targetFolderId = await getCourseFolderForUpload(courseId);
+        console.log('✅ Got course folder ID:', targetFolderId);
+      } catch (folderError) {
+        console.error('❌ Failed to get/create course folder:', folderError);
+        throw new Error(`Cannot upload file: ${folderError.message}`);
+      }
+      
+      if (!targetFolderId) {
+        throw new Error('Failed to get course folder for upload');
+      }
+        
+      // Check if Google Drive metadata is already provided (from chunked upload)
+      if (googleDriveMetadata) {
+        console.log('📦 Using pre-uploaded Google Drive file metadata');
+        googleDriveId = googleDriveMetadata.googleDriveFileId;
+        googleDriveUrl = googleDriveMetadata.googleDriveUrl;
+      } else {
+        // Use smart upload from googleDriveClientService (supports both simple and chunked upload)
+        console.log('📤 Uploading to Google Drive folder using smart upload:', targetFolderId);
+        console.log('📄 File:', file.name, '(' + (file.size / 1024 / 1024).toFixed(2) + ' MB)');
+        
+        // Import uploadFileToFolder for smart upload support
+        const { uploadFileToFolder } = await import('./googleDriveClientService.js');
+        
+        const result = await uploadFileToFolder(file, targetFolderId);
+        
+        googleDriveId = result.fileId || result.id;
+        googleDriveUrl = result.webViewLink || `https://drive.google.com/file/d/${googleDriveId}/view`;
+        
+        if (!googleDriveUrl) {
+          throw new Error('Google Drive upload succeeded but no URL returned');
+        }
+        
+        console.log('✅ Smart upload completed:', {
+          fileId: googleDriveId,
+          fileName: file.name,
+          isLargeFile: file.size >= 100 * 1024 * 1024
+        });
+      }
+      
+    } catch (driveError) {
+      throw new Error(`Google Drive upload failed: ${driveError.message}`);
+    }
+
     // Save attachment record to database
-    console.log('Saving attachment record to database...');
-    
     // Ensure upload_order is a valid integer
     let validUploadOrder = 1;
     if (typeof uploadOrder === 'number' && uploadOrder > 0 && uploadOrder <= 2147483647) {
@@ -153,24 +207,20 @@ export const uploadAttachmentFile = async (file, contentId, uploadOrder = 1) => 
       }
     }
     
-    console.log('Original uploadOrder:', uploadOrder, 'Valid uploadOrder:', validUploadOrder);
-    
     const attachmentRecord = {
       entity_type: 'course_content',
       entity_id: contentId,
       filename: file.name,
       original_filename: file.name,
-      file_url: publicUrl,
-      file_path: filePath,
+      file_url: googleDriveUrl, // Google Drive URL only
+      file_path: `google-drive/${googleDriveId}`, // Store Google Drive ID as path
       file_size: file.size,
-      file_extension: fileExt?.toLowerCase() || 'unknown',
+      file_extension: file.name.split('.').pop()?.toLowerCase() || 'unknown',
       mime_type: file.type || 'application/octet-stream',
       upload_order: validUploadOrder,
-      is_public: false,
+      is_public: true, // Google Drive files are accessible via shared link
       uploaded_by: user.id
     };
-
-    console.log('Attachment record:', attachmentRecord);
 
     const { data: attachmentData, error: dbError } = await supabase
       .from('attachments')
@@ -179,31 +229,21 @@ export const uploadAttachmentFile = async (file, contentId, uploadOrder = 1) => 
       .single();
 
     if (dbError) {
-      console.error('Database insert error:', dbError);
-      
-      // Try to cleanup uploaded file if database insert fails
-      try {
-        await supabase.storage.from('course-files').remove([filePath]);
-        console.log('Cleaned up uploaded file after database error');
-      } catch (cleanupError) {
-        console.error('Failed to cleanup file:', cleanupError);
-      }
-      
+      // Database insert failed - could cleanup Google Drive file here if needed
       throw new Error(`Database error: ${dbError.message}`);
     }
-
-    console.log('Attachment record saved:', attachmentData);
 
     return {
       data: {
         ...attachmentData,
-        url: publicUrl,
-        file_path: filePath
+        url: googleDriveUrl,
+        file_path: `google-drive/${googleDriveId}`,
+        google_drive_url: googleDriveUrl,
+        google_drive_id: googleDriveId
       },
       error: null
     };
   } catch (error) {
-    console.error('Error uploading attachment:', error);
     return { 
       data: null, 
       error: {
@@ -242,11 +282,9 @@ export const uploadMultipleAttachments = async (files, contentId) => {
       failed: errors.length
     };
   } catch (error) {
-    console.error('Error uploading multiple attachments:', error);
     return { data: [], errors: [{ error: error.message }] };
   }
 };
-
 
 /**
  * Update attachment order
@@ -270,53 +308,55 @@ export const updateAttachmentOrder = async (contentId, attachmentOrders) => {
 
     return { error: null };
   } catch (error) {
-    console.error('Error updating attachment order:', error);
     return { error };
   }
 };
 
 /**
- * Download attachment
+ * Download attachment from Google Drive
  */
-export const downloadAttachment = async (filePath, filename) => {
+export const downloadAttachment = async (fileUrl, filename) => {
   try {
-    const { data, error } = await supabase.storage
-      .from('course-files')
-      .download(filePath);
+    // For Google Drive files, open in new tab for download
+    if (fileUrl && fileUrl.includes('drive.google.com')) {
+      // Convert webViewLink to download link
+      const downloadUrl = fileUrl.replace('/view', '/export?format=pdf&download=true');
+      
+      // Create download link
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = filename;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      return { error: null };
+    }
     
-    if (error) throw error;
-
-    // Create download link
-    const url = URL.createObjectURL(data);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
+    // Fallback for direct URLs
+    window.open(fileUrl, '_blank');
     return { error: null };
   } catch (error) {
-    console.error('Error downloading attachment:', error);
     return { error };
   }
 };
 
 /**
- * Get attachment download URL
+ * Get attachment download URL (for Google Drive files)
  */
-export const getAttachmentDownloadUrl = async (filePath, expiresIn = 3600) => {
+export const getAttachmentDownloadUrl = async (fileUrl, expiresIn = 3600) => {
   try {
-    const { data, error } = await supabase.storage
-      .from('course-files')
-      .createSignedUrl(filePath, expiresIn);
+    // For Google Drive files, return the direct URL
+    if (fileUrl && fileUrl.includes('drive.google.com')) {
+      // Convert to downloadable format
+      const downloadUrl = fileUrl.replace('/view', '/export?format=pdf&download=true');
+      return { data: downloadUrl, error: null };
+    }
     
-    if (error) throw error;
-
-    return { data: data.signedUrl, error: null };
+    // Return original URL for other files
+    return { data: fileUrl, error: null };
   } catch (error) {
-    console.error('Error getting download URL:', error);
     return { data: null, error };
   }
 };
@@ -441,26 +481,21 @@ export const getAttachmentStats = async (contentId) => {
 
     return { data: stats, error: null };
   } catch (error) {
-    console.error('Error getting attachment stats:', error);
     return { data: null, error };
   }
 };
 
 /**
- * Delete a single attachment
+ * Delete a single attachment (BOTH Google Drive file and database record)
  */
 export const deleteAttachment = async (attachmentId) => {
   try {
-    console.log('Starting attachment deletion for ID:', attachmentId);
-
     // Check if user is authenticated and has permission
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
       throw new Error('User not authenticated');
     }
-
-    console.log('User authenticated:', user.id);
 
     // Get attachment details first
     const { data: attachment, error: fetchError } = await supabase
@@ -470,7 +505,6 @@ export const deleteAttachment = async (attachmentId) => {
       .single();
 
     if (fetchError) {
-      console.error('Error fetching attachment:', fetchError);
       throw new Error(`ไม่พบไฟล์แนบที่ต้องการลบ: ${fetchError.message}`);
     }
 
@@ -478,35 +512,59 @@ export const deleteAttachment = async (attachmentId) => {
       throw new Error('ไม่พบไฟล์แนบที่ต้องการลบ');
     }
 
-    console.log('Attachment to delete:', attachment);
+    console.log('🗑️ Deleting attachment:', {
+      id: attachment.id,
+      filename: attachment.filename,
+      file_path: attachment.file_path
+    });
 
-    // Delete file from storage
-    console.log('Deleting file from storage:', attachment.file_path);
-    const { error: storageError } = await supabase.storage
-      .from('course-files')
-      .remove([attachment.file_path]);
-
-    if (storageError) {
-      console.warn('Warning: Could not delete file from storage:', storageError);
-      // Don't throw error here - continue with database deletion
+    // Extract Google Drive file ID from file_path (format: google-drive/FILE_ID)
+    let googleDriveFileId = null;
+    if (attachment.file_path && attachment.file_path.startsWith('google-drive/')) {
+      googleDriveFileId = attachment.file_path.replace('google-drive/', '');
     }
-
+    
+    // If we have a Google Drive file ID, delete the file from Google Drive first
+    if (googleDriveFileId) {
+      try {
+        console.log('🗑️ Deleting file from Google Drive:', googleDriveFileId);
+        
+        // Import deleteFile function
+        const { deleteFile } = await import('./googleDriveClientService.js');
+        
+        const deleteResult = await deleteFile(googleDriveFileId, attachment.filename);
+        
+        if (deleteResult.success) {
+          console.log('✅ File deleted from Google Drive successfully');
+        } else {
+          console.warn('⚠️ Google Drive deletion may have failed, but continuing with database cleanup');
+        }
+        
+      } catch (driveError) {
+        console.warn('⚠️ Failed to delete file from Google Drive (continuing with database cleanup):', driveError.message);
+        
+        // Don't throw error here - we still want to clean up the database record
+        // even if Google Drive deletion fails (file might already be deleted)
+      }
+    } else {
+      console.log('📝 No Google Drive file ID found, only deleting database record');
+    }
+    
     // Delete database record
-    console.log('Deleting database record for attachment:', attachmentId);
     const { error: dbError } = await supabase
       .from('attachments')
       .delete()
       .eq('id', attachmentId);
 
     if (dbError) {
-      console.error('Database deletion error:', dbError);
       throw new Error(`ไม่สามารถลบข้อมูลไฟล์แนบได้: ${dbError.message}`);
     }
 
-    console.log('Attachment deleted successfully');
+    console.log('✅ Attachment deleted successfully (both Google Drive file and database record)');
+
     return { data: attachment, error: null };
   } catch (error) {
-    console.error('Error deleting attachment:', error);
+    console.error('❌ Error deleting attachment:', error);
     return { data: null, error };
   }
 };
@@ -516,8 +574,6 @@ export const deleteAttachment = async (attachmentId) => {
  */
 export const uploadCourseImage = async (imageFile) => {
   try {
-    console.log('Starting course image upload:', { fileName: imageFile.name, fileSize: imageFile.size });
-    
     // Check if user is authenticated
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
@@ -547,8 +603,6 @@ export const uploadCourseImage = async (imageFile) => {
     const fileName = `course-cover-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `course-covers/${fileName}`;
 
-    console.log('Uploading image to path:', filePath);
-
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('course-files')
@@ -558,11 +612,8 @@ export const uploadCourseImage = async (imageFile) => {
       });
 
     if (uploadError) {
-      console.error('Storage upload error:', uploadError);
       throw new Error(`ไม่สามารถอัปโหลดรูปภาพได้: ${uploadError.message}`);
     }
-
-    console.log('Image upload successful:', uploadData);
 
     // Get public URL
     const { data: urlData } = supabase.storage
@@ -573,8 +624,6 @@ export const uploadCourseImage = async (imageFile) => {
       throw new Error('ไม่สามารถสร้าง URL สำหรับรูปภาพได้');
     }
 
-    console.log('Public URL generated:', urlData.publicUrl);
-
     return {
       data: {
         filePath: filePath,
@@ -584,7 +633,6 @@ export const uploadCourseImage = async (imageFile) => {
       error: null
     };
   } catch (error) {
-    console.error('Error uploading course image:', error);
     return { data: null, error };
   }
 };
@@ -599,12 +647,10 @@ export const deleteCourseImage = async (filePath) => {
       .remove([filePath]);
 
     if (error) {
-      console.warn('Warning: Could not delete course image from storage:', error);
-    }
+      }
 
     return { error: null };
   } catch (error) {
-    console.error('Error deleting course image:', error);
     return { error };
   }
 };
@@ -614,8 +660,6 @@ export const deleteCourseImage = async (filePath) => {
  */
 export const uploadProfileImage = async (imageFile) => {
   try {
-    console.log('Starting profile image upload:', { fileName: imageFile.name, fileSize: imageFile.size });
-    
     // Check if user is authenticated
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
@@ -645,8 +689,6 @@ export const uploadProfileImage = async (imageFile) => {
     const fileName = `profile-${user.id}-${Date.now()}.${fileExt}`;
     const filePath = `profile-images/${fileName}`;
 
-    console.log('Uploading profile image to path:', filePath);
-
     // Delete old profile image if exists
     try {
       const { data: files } = await supabase.storage
@@ -658,11 +700,9 @@ export const uploadProfileImage = async (imageFile) => {
       if (files && files.length > 0) {
         const oldFilePaths = files.map(file => `profile-images/${file.name}`);
         await supabase.storage.from('course-files').remove(oldFilePaths);
-        console.log('Removed old profile images:', oldFilePaths);
-      }
+        }
     } catch (cleanupError) {
-      console.warn('Could not cleanup old profile images:', cleanupError);
-    }
+      }
 
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -673,11 +713,8 @@ export const uploadProfileImage = async (imageFile) => {
       });
 
     if (uploadError) {
-      console.error('Storage upload error:', uploadError);
       throw new Error(`ไม่สามารถอัปโหลดรูปโปรไฟล์ได้: ${uploadError.message}`);
     }
-
-    console.log('Profile image upload successful:', uploadData);
 
     // Get public URL
     const { data: urlData } = supabase.storage
@@ -688,8 +725,6 @@ export const uploadProfileImage = async (imageFile) => {
       throw new Error('ไม่สามารถสร้าง URL สำหรับรูปโปรไฟล์ได้');
     }
 
-    console.log('Profile image URL generated:', urlData.publicUrl);
-
     return {
       data: {
         filePath: filePath,
@@ -699,7 +734,6 @@ export const uploadProfileImage = async (imageFile) => {
       error: null
     };
   } catch (error) {
-    console.error('Error uploading profile image:', error);
     return { data: null, error };
   }
 };
@@ -714,18 +748,16 @@ export const deleteProfileImage = async (filePath) => {
       .remove([filePath]);
 
     if (error) {
-      console.warn('Warning: Could not delete profile image from storage:', error);
-    }
+      }
 
     return { error: null };
   } catch (error) {
-    console.error('Error deleting profile image:', error);
     return { error };
   }
 };
 
 /**
- * Bulk delete attachments for content
+ * Bulk delete attachments for content (BOTH Google Drive files and database records)
  */
 export const deleteAllContentAttachments = async (contentId) => {
   try {
@@ -738,17 +770,35 @@ export const deleteAllContentAttachments = async (contentId) => {
       return { error: null };
     }
 
-    // Delete files from storage
-    const filePaths = attachments.map(att => att.file_path);
-    const { error: storageError } = await supabase.storage
-      .from('course-files')
-      .remove(filePaths);
+    console.log(`🗑️ Bulk deleting ${attachments.length} attachments for content ${contentId}`);
 
-    if (storageError) {
-      console.warn('Warning: Some files could not be deleted from storage:', storageError);
+    // Import deleteFile function for Google Drive operations
+    const { deleteFile } = await import('./googleDriveClientService.js');
+    
+    // Delete each Google Drive file individually
+    for (const attachment of attachments) {
+      if (attachment.file_path && attachment.file_path.startsWith('google-drive/')) {
+        const googleDriveFileId = attachment.file_path.replace('google-drive/', '');
+        
+        try {
+          console.log(`🗑️ Deleting Google Drive file: ${attachment.filename} (${googleDriveFileId})`);
+          
+          const deleteResult = await deleteFile(googleDriveFileId, attachment.filename);
+          
+          if (deleteResult.success) {
+            console.log(`✅ Google Drive file deleted: ${attachment.filename}`);
+          } else {
+            console.warn(`⚠️ Google Drive deletion may have failed for: ${attachment.filename}`);
+          }
+          
+        } catch (driveError) {
+          console.warn(`⚠️ Failed to delete Google Drive file ${attachment.filename}:`, driveError.message);
+          // Continue with other files - don't stop the whole operation
+        }
+      }
     }
-
-    // Delete database records
+    
+    // Delete all database records at once
     const { error: dbError } = await supabase
       .from('attachments')
       .delete()
@@ -757,9 +807,11 @@ export const deleteAllContentAttachments = async (contentId) => {
 
     if (dbError) throw dbError;
 
+    console.log(`✅ Bulk deletion completed for content ${contentId}`);
+
     return { error: null };
   } catch (error) {
-    console.error('Error deleting all content attachments:', error);
+    console.error('❌ Error in bulk delete:', error);
     return { error };
   }
 };
@@ -778,8 +830,6 @@ export const deleteAllContentAttachments = async (contentId) => {
  */
 export const uploadToStorage = async (file, bucketName = 'course-files', folderPath = '', options = {}) => {
   try {
-    console.log('Starting generic storage upload:', { fileName: file.name, bucketName, folderPath });
-    
     // Check if user is authenticated
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
@@ -799,8 +849,6 @@ export const uploadToStorage = async (file, bucketName = 'course-files', folderP
     const fileName = `${timestamp}-${randomString}.${fileExtension}`;
     const filePath = folderPath ? `${folderPath}/${fileName}` : fileName;
 
-    console.log('Generated file path:', filePath);
-
     // Upload file to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucketName)
@@ -811,18 +859,13 @@ export const uploadToStorage = async (file, bucketName = 'course-files', folderP
       });
 
     if (uploadError) {
-      console.error('Storage upload error:', uploadError);
       throw new Error(`File upload failed: ${uploadError.message}`);
     }
-
-    console.log('File uploaded successfully:', uploadData);
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from(bucketName)
       .getPublicUrl(filePath);
-
-    console.log('Generated public URL:', publicUrl);
 
     return {
       data: {
@@ -836,7 +879,6 @@ export const uploadToStorage = async (file, bucketName = 'course-files', folderP
       error: null
     };
   } catch (error) {
-    console.error('Error in uploadToStorage:', error);
     return { 
       data: null, 
       error: {
@@ -855,8 +897,6 @@ export const uploadToStorage = async (file, bucketName = 'course-files', folderP
  */
 export const deleteFromStorage = async (filePath, bucketName = 'course-files') => {
   try {
-    console.log('Starting generic storage deletion:', { filePath, bucketName });
-    
     // Check if user is authenticated
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
@@ -874,11 +914,8 @@ export const deleteFromStorage = async (filePath, bucketName = 'course-files') =
       .remove([filePath]);
 
     if (deleteError) {
-      console.error('Storage delete error:', deleteError);
       throw new Error(`File deletion failed: ${deleteError.message}`);
     }
-
-    console.log('File deleted successfully from storage:', filePath);
 
     return {
       data: {
@@ -888,7 +925,6 @@ export const deleteFromStorage = async (filePath, bucketName = 'course-files') =
       error: null
     };
   } catch (error) {
-    console.error('Error in deleteFromStorage:', error);
     return { 
       data: null, 
       error: {

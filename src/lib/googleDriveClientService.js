@@ -1,10 +1,19 @@
 // Google Drive Integration Client Service (Frontend)
+import { supabase } from './supabaseClient';
 
 // CACHE BUSTER: Build timestamp
 const BUILD_TIMESTAMP = new Date().toISOString();
 
-// SUPABASE EDGE FUNCTION URL - NO MORE RENDER.COM OR VERCEL API
-const SUPABASE_EDGE_FUNCTION_URL = 'https://vuitwzisazvikrhtfthh.supabase.co/functions/v1/google-drive';
+// 🔒 SECURE: Dynamic Supabase Edge Function URL from environment
+const getSupabaseEdgeUrl = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (!supabaseUrl) {
+    throw new Error('VITE_SUPABASE_URL environment variable is required');
+  }
+  return `${supabaseUrl}/functions/v1/google-drive`;
+};
+
+const SUPABASE_EDGE_FUNCTION_URL = getSupabaseEdgeUrl();
 
 // Smart API URL detection
 const getApiUrl = () => {
@@ -30,9 +39,6 @@ console.warn('🚀 SUPABASE EDGE FUNCTION:', {
 });
 
 // Force console visibility with different message
-console.log('%c🚀 SUPABASE EDGE DEPLOYMENT', 'color: blue; font-size: 20px; font-weight: bold;');
-console.log('%cSUPABASE BASE_URL: ' + window.__DRIVE_BASE_URL, 'color: green; font-size: 16px;');
-
 // Company folder mapping
 const COMPANY_FOLDERS = {
   login: {
@@ -44,21 +50,25 @@ const COMPANY_FOLDERS = {
   }
 };
 
-// API Helper function
+// 🔒 SECURE API Helper function
 const apiCall = async (endpoint, options = {}) => {
   try {
-    const API_URL = SUPABASE_EDGE_FUNCTION_URL;  // FORCE Supabase Edge Function
-    console.log(`🌐 API Call: ${endpoint}`, { API_URL, options });
+    const API_URL = SUPABASE_EDGE_FUNCTION_URL;
+    
+    // 🔒 Get secure auth token from Supabase client
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.access_token) {
+      throw new Error('Authentication required for Google Drive operations');
+    }
+
     const response = await fetch(`${API_URL}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+        'Authorization': `Bearer ${session.access_token}`, // 🔒 Use dynamic auth token
         ...options.headers,
       },
       ...options,
     });
-
-    console.log(`🌐 API Response: ${endpoint}`, response.status, response.statusText);
 
     if (!response.ok) {
       let errorData;
@@ -68,7 +78,6 @@ const apiCall = async (endpoint, options = {}) => {
         // If JSON parsing fails, use status text
         errorData = { error: response.statusText || 'API request failed' };
       }
-      console.error(`🚨 API Error: ${endpoint}`, errorData);
       throw new Error(errorData.message || errorData.error || 'API request failed');
     }
 
@@ -104,18 +113,44 @@ export const createTopicFolder = async (parentFolderId, topicName, topicType) =>
   });
 };
 
-// Upload file to a specific folder
+// 🔒 SECURE: Upload file to a specific folder
 export const uploadFileToFolder = async (file, targetFolderId) => {
+  // 🔒 Validate inputs
+  if (!file || !targetFolderId) {
+    throw new Error('File and target folder ID are required');
+  }
+
+  // 🔒 Check file size (max 500MB with chunked upload support)
+  const maxSize = 500 * 1024 * 1024; // 500MB
+  if (file.size > maxSize) {
+    throw new Error('File size exceeds 500MB limit');
+  }
+
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('targetFolderId', targetFolderId);
+  formData.append('folderId', targetFolderId);
 
   try {
-    const API_URL = SUPABASE_EDGE_FUNCTION_URL;  // FORCE Supabase Edge Function
+    // 🔒 Get secure auth token
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.access_token) {
+      throw new Error('Authentication required for file upload');
+    }
+
+    const API_URL = SUPABASE_EDGE_FUNCTION_URL;
+    const LARGE_FILE_THRESHOLD = 100 * 1024 * 1024; // 100MB
+
+    // Use chunked upload for large files
+    if (file.size > LARGE_FILE_THRESHOLD) {
+      console.log('📦 Using chunked upload for large file:', file.name);
+      return await uploadFileChunked(file, targetFolderId, session.access_token);
+    }
+
+    // Use simple upload for smaller files
     const response = await fetch(`${API_URL}/simple-upload`, {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+        'Authorization': `Bearer ${session.access_token}`, // 🔒 Use dynamic auth token
       },
       body: formData,
     });
@@ -127,7 +162,77 @@ export const uploadFileToFolder = async (file, targetFolderId) => {
 
     return await response.json();
   } catch (error) {
-    console.error('Upload Error:', error);
+    throw error;
+  }
+};
+
+// Chunked upload for large files
+const uploadFileChunked = async (file, targetFolderId, accessToken) => {
+  const API_URL = SUPABASE_EDGE_FUNCTION_URL;
+  const CHUNK_SIZE = 256 * 1024; // 256KB chunks
+  
+  try {
+    // Step 1: Initiate chunked upload
+    const initResponse = await fetch(`${API_URL}/initiate-chunked-upload`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({
+        fileName: file.name,
+        fileSize: file.size,
+        folderId: targetFolderId,
+        mimeType: file.type || 'application/octet-stream'
+      })
+    });
+
+    if (!initResponse.ok) {
+      const error = await initResponse.json();
+      throw new Error(`Failed to initiate upload: ${error.error}`);
+    }
+
+    const { uploadUrl } = await initResponse.json();
+    
+    // Step 2: Upload chunks
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    let uploadedBytes = 0;
+
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const start = chunkIndex * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+
+      const chunkResponse = await fetch(`${API_URL}/upload-chunk?uploadUrl=${encodeURIComponent(uploadUrl)}&start=${start}&end=${end}&totalSize=${file.size}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: chunk
+      });
+
+      if (!chunkResponse.ok) {
+        const error = await chunkResponse.text();
+        throw new Error(`Chunk ${chunkIndex + 1} upload failed: ${error}`);
+      }
+
+      const chunkResult = await chunkResponse.json();
+      uploadedBytes = end;
+
+      // Check if upload is complete
+      if (chunkResult.completed) {
+        console.log('✅ Chunked upload completed successfully!');
+        return {
+          fileId: chunkResult.fileId,
+          webViewLink: chunkResult.webViewLink,
+          fileName: chunkResult.fileName || file.name
+        };
+      }
+    }
+
+    throw new Error('All chunks uploaded but no completion signal received');
+  } catch (error) {
+    console.error('❌ Chunked upload error:', error);
     throw error;
   }
 };
@@ -155,9 +260,13 @@ export const createFolder = async (folderName, parentId = 'root') => {
 };
 
 // Delete file/folder
-export const deleteFile = async (fileId) => {
-  return await apiCall(`/delete?fileId=${fileId}`, {
+export const deleteFile = async (fileId, fileName = 'Unknown File') => {
+  return await apiCall('/delete-file', {
     method: 'DELETE',
+    body: JSON.stringify({
+      fileId,
+      fileName
+    }),
   });
 };
 
@@ -174,10 +283,8 @@ export const deleteProjectFolder = async (folderId, projectTitle) => {
       }),
     });
     
-    console.log(`✅ Project folder deleted successfully: ${projectTitle}`);
     return result;
   } catch (error) {
-    console.error(`❌ Failed to delete project folder: ${projectTitle}`, error);
     throw error;
   }
 };
@@ -208,8 +315,6 @@ export const renameFile = async (fileId, newName) => {
 // Helper function to create project folder structure
 export const createProjectStructure = async (projectData, companySlug = 'login') => {
   try {
-    console.log('📁 createProjectStructure called with:', { projectData, companySlug });
-    
     if (!projectData) {
       throw new Error('Project data is required');
     }
@@ -219,14 +324,11 @@ export const createProjectStructure = async (projectData, companySlug = 'login')
     }
     
     // Step 1: Create main project structure if not exists
-    console.log('📁 Creating company structure...');
     const companyStructure = await createCompanyStructure(
       companySlug,
       'Projects', // เพื่อให้ Edge Function สร้าง [COMPANY] เท่านั้น
       `${companySlug}-projects` // slug สำหรับ projects
     );
-    console.log('📁 Company structure created successfully:', companyStructure);
-    
     // ใช้ projects folder ID เท่านั้น (ไม่ fallback ไป courses)
     const projectsParentId = companyStructure.folderIds && companyStructure.folderIds.projects;
     
@@ -235,17 +337,11 @@ export const createProjectStructure = async (projectData, companySlug = 'login')
     }
 
     // Step 2: Create project folder in the projects section
-    console.log('📁 Creating project folder in projects section...');
-    console.log('📁 Parent folder ID:', projectsParentId);
-    console.log('📁 Project title:', projectData.title);
-    
     const projectFolder = await createTopicFolder(
       projectsParentId,
       projectData.title,
       'project'
     );
-    console.log('📁 Project folder created successfully:', projectFolder);
-    
     if (!projectFolder || !projectFolder.topicFolderId) {
       throw new Error('Project folder creation failed or missing folder ID');
     }
@@ -257,10 +353,8 @@ export const createProjectStructure = async (projectData, companySlug = 'login')
       projectFolderId: projectFolder.topicFolderId,
       companyFolderId: companyStructure.folderIds.main, // ใช้ main folder ID แทน
     };
-    console.log('📁 Final project structure result:', result);
     return result;
   } catch (error) {
-    console.error('🚨 Error creating project structure:', error);
     throw error;
   }
 };
@@ -268,22 +362,46 @@ export const createProjectStructure = async (projectData, companySlug = 'login')
 // Helper function to create course folder structure
 export const createCourseStructure = async (courseData, companySlug = 'login') => {
   try {
-    // Step 1: Create main course structure
+    // Step 1: Get company structure (main folders)
     const companyStructure = await createCompanyStructure(
       companySlug,
       courseData.title,
       courseData.slug || courseData.title.toLowerCase().replace(/\s+/g, '-')
     );
 
+    // Step 2: Create specific course folder under "📖 คอร์สเรียน" folder
+    const coursesFolderId = companyStructure.folderIds.courses;
+    
+    if (!coursesFolderId) {
+      throw new Error('Courses folder ID not found in company structure');
+    }
+
+    console.log('📂 Creating course folder under:', coursesFolderId);
+    console.log('📝 Course title:', courseData.title);
+
+    const courseFolderResult = await createTopicFolder(
+      coursesFolderId,
+      courseData.title,
+      'course'
+    );
+
+    if (!courseFolderResult.success || !courseFolderResult.topicFolderId) {
+      throw new Error('Failed to create course-specific folder');
+    }
+
+    console.log('✅ Created course folder:', courseFolderResult.folderName);
+    console.log('📁 Course folder ID:', courseFolderResult.topicFolderId);
+
     return {
       success: true,
       companyStructure,
-      courseFolderId: companyStructure.courseFolderId,
+      courseFolderId: courseFolderResult.topicFolderId,  // ✅ Use course-specific folder
       coursesFolderId: companyStructure.folderIds.courses,
       projectsFolderId: companyStructure.folderIds.projects,
+      courseFolderName: courseFolderResult.folderName,
     };
   } catch (error) {
-    console.error('Error creating course structure:', error);
+    console.error('❌ Failed to create course structure:', error.message);
     throw error;
   }
 };
@@ -297,8 +415,6 @@ export const getCompanySlug = (projectData) => {
 // Transfer folder contents from source to destination and delete source
 export const transferFolderContents = async (sourceFolderId, destinationFolderId, folderName, deleteSource = true) => {
   try {
-    console.log(`🔄 Transferring folder contents: ${sourceFolderId} → ${destinationFolderId}`);
-    
     const response = await apiCall('/transfer-folder', {
       method: 'POST',
       body: JSON.stringify({
@@ -309,10 +425,8 @@ export const transferFolderContents = async (sourceFolderId, destinationFolderId
       }),
     });
 
-    console.log(`✅ Folder transfer completed:`, response);
     return response;
   } catch (error) {
-    console.error('❌ Error transferring folder contents:', error);
     throw error;
   }
 };
@@ -320,14 +434,18 @@ export const transferFolderContents = async (sourceFolderId, destinationFolderId
 // Get folder contents for verification
 export const getFolderContents = async (folderId) => {
   try {
-    console.log(`📋 Getting folder contents: ${folderId}`);
-    
+    // 🔒 SECURE: Get dynamic auth token from Supabase client
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.access_token) {
+      throw new Error('Authentication required for folder contents access');
+    }
+
     const API_URL = SUPABASE_EDGE_FUNCTION_URL;  // FORCE Supabase Edge Function
     const response = await fetch(`${API_URL}/folder-contents/${folderId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aXR3emlzYXp2aWtyaHRmdGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzOTU4ODIsImV4cCI6MjA2Njk3MTg4Mn0.VXCqythCUualJ7S9jVvnQUYe9BKnfMvbihtZT5c3qyE',
+        'Authorization': `Bearer ${session.access_token}`, // 🔒 Dynamic token
       },
     });
 
@@ -337,10 +455,8 @@ export const getFolderContents = async (folderId) => {
     }
 
     const result = await response.json();
-    console.log(`✅ Folder contents retrieved:`, result);
     return result;
   } catch (error) {
-    console.error('❌ Error getting folder contents:', error);
     throw error;
   }
 };
@@ -351,7 +467,6 @@ export const folderHasContents = async (folderId) => {
     const contents = await getFolderContents(folderId);
     return contents.itemCount > 0;
   } catch (error) {
-    console.warn('⚠️ Could not check folder contents:', error.message);
     return false;
   }
 };
