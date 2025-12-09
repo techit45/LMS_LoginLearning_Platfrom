@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation, Outlet } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import React, { useState, useEffect } from "react";
+import { Link, useLocation, Outlet } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
   LayoutDashboard,
   Users,
   BookOpen,
@@ -23,11 +23,13 @@ import {
   Cloud,
   Clock,
   MapPin,
-  DollarSign
-} from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { useAuth } from '../contexts/AuthContext';
-import GoogleDriveFloatingButton from '../components/GoogleDriveFloatingButton';
+  DollarSign,
+  Award,
+  ClipboardList,
+} from "lucide-react";
+import { Button } from "../components/ui/button";
+import { useAuth } from "../contexts/AuthContext";
+import GoogleDriveFloatingButton from "../components/GoogleDriveFloatingButton";
 
 const AdminLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -43,94 +45,106 @@ const AdminLayout = () => {
     };
 
     checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
-    return () => window.removeEventListener('resize', checkScreenSize);
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
   const navigationItems = [
     {
-      title: 'Dashboard',
+      title: "Dashboard",
       icon: LayoutDashboard,
-      path: '/admin',
-      description: 'ภาพรวมระบบ'
+      path: "/admin",
+      description: "ภาพรวมระบบ",
     },
     {
-      title: 'จัดการผู้ใช้',
+      title: "จัดการผู้ใช้",
       icon: Users,
-      path: '/admin/users',
-      description: 'นักเรียน ผู้สอน และ Admin'
+      path: "/admin/users",
+      description: "นักเรียน ผู้สอน และ Admin",
     },
     {
-      title: 'จัดการคอร์ส',
+      title: "จัดการคอร์ส",
       icon: BookOpen,
-      path: '/admin/courses',
-      description: 'อนุมัติและจัดการคอร์ส'
+      path: "/admin/courses",
+      description: "อนุมัติและจัดการคอร์ส",
     },
     {
-      title: 'จัดการโครงงาน',
+      title: "จัดการโครงงาน",
       icon: Code2,
-      path: '/admin/projects',
-      description: 'จัดการผลงานและโครงงาน'
+      path: "/admin/projects",
+      description: "จัดการผลงานและโครงงาน",
     },
     {
-      title: 'ตารางสอน',
+      title: "ใบประกาศนียบัตร",
+      icon: Award,
+      path: "/admin/certificates/templates",
+      description: "จัดการใบเซอร์และเทมเพลต",
+    },
+    {
+      title: "แบบประเมิน",
+      icon: ClipboardList,
+      path: "/admin/evaluations",
+      description: "สร้างและดูผลประเมิน",
+    },
+    {
+      title: "ตารางสอน",
       icon: Calendar,
-      path: '/admin/teaching-schedule',
-      description: 'จัดการตารางเรียนอาจารย์'
+      path: "/admin/teaching-schedule",
+      description: "จัดการตารางเรียนอาจารย์",
     },
     {
-      title: 'จัดการเวลาทำงาน',
+      title: "จัดการเวลาทำงาน",
       icon: Clock,
-      path: '/admin/time-management',
-      description: 'ลงเวลา อนุมัติใบลา และรายงานเวลาทำงาน'
+      path: "/admin/time-management",
+      description: "ลงเวลา อนุมัติใบลา และรายงานเวลาทำงาน",
     },
     {
-      title: 'จัดการตำแหน่งบริษัท',
+      title: "จัดการตำแหน่งบริษัท",
       icon: MapPin,
-      path: '/admin/location-management',
-      description: 'ตำแหน่งบริษัท การลงทะเบียน GPS'
+      path: "/admin/location-management",
+      description: "ตำแหน่งบริษัท การลงทะเบียน GPS",
     },
     {
-      title: 'Google Drive',
+      title: "Google Drive",
       icon: Cloud,
-      path: '/admin/google-drive',
-      description: 'จัดการไฟล์และเอกสาร'
+      path: "/admin/google-drive",
+      description: "จัดการไฟล์และเอกสาร",
     },
     {
-      title: 'สถิติและรายงาน',
+      title: "สถิติและรายงาน",
       icon: BarChart3,
-      path: '/admin/analytics',
-      description: 'ข้อมูลการใช้งานและยอดขาย'
+      path: "/admin/analytics",
+      description: "ข้อมูลการใช้งานและยอดขาย",
     },
     {
-      title: 'จัดการเนื้อหา',
+      title: "จัดการเนื้อหา",
       icon: FileText,
-      path: '/admin/content',
-      description: 'การดูแลเนื้อหาและฟอรัม'
+      path: "/admin/content",
+      description: "การดูแลเนื้อหาและฟอรัม",
     },
     {
-      title: 'การสื่อสาร',
+      title: "การสื่อสาร",
       icon: MessageSquare,
-      path: '/admin/communications',
-      description: 'ประกาศและแจ้งเตือน'
+      path: "/admin/communications",
+      description: "ประกาศและแจ้งเตือน",
     },
     {
-      title: 'ความปลอดภัย',
+      title: "ความปลอดภัย",
       icon: Shield,
-      path: '/admin/security',
-      description: 'การรักษาความปลอดภัย'
+      path: "/admin/security",
+      description: "การรักษาความปลอดภัย",
     },
     {
-      title: 'ตั้งค่าระบบ',
+      title: "ตั้งค่าระบบ",
       icon: Settings,
-      path: '/admin/settings',
-      description: 'การตั้งค่าเว็บไซต์'
-    }
+      path: "/admin/settings",
+      description: "การตั้งค่าเว็บไซต์",
+    },
   ];
 
   const isActive = (path) => {
-    if (path === '/admin') {
-      return location.pathname === '/admin';
+    if (path === "/admin") {
+      return location.pathname === "/admin";
     }
     return location.pathname.startsWith(path);
   };
@@ -138,7 +152,7 @@ const AdminLayout = () => {
   const handleSignOut = async () => {
     try {
       const { error } = await signOut();
-      
+
       if (error) {
         // Still proceed with logout since local state is cleared
       }
@@ -164,17 +178,17 @@ const AdminLayout = () => {
 
       {/* Sidebar */}
       <motion.div
-        animate={{ 
+        animate={{
           width: sidebarCollapsed ? 80 : 280,
-          x: isDesktop ? 0 : (mobileMenuOpen ? 0 : -280)
+          x: isDesktop ? 0 : mobileMenuOpen ? 0 : -280,
         }}
-        initial={{ 
+        initial={{
           width: sidebarCollapsed ? 80 : 280,
-          x: 0
+          x: 0,
         }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className={`fixed lg:relative left-0 top-0 h-full bg-white border-r border-gray-200 shadow-lg z-50 flex flex-col ${
-          isDesktop ? 'flex' : (mobileMenuOpen ? 'flex' : 'hidden')
+          isDesktop ? "flex" : mobileMenuOpen ? "flex" : "hidden"
         }`}
       >
         {/* Header */}
@@ -194,7 +208,7 @@ const AdminLayout = () => {
               </div>
             </motion.div>
           )}
-          
+
           <div className="flex items-center space-x-2">
             <Button
               variant="ghost"
@@ -208,7 +222,7 @@ const AdminLayout = () => {
                 <ChevronLeft className="w-4 h-4" />
               )}
             </Button>
-            
+
             <Button
               variant="ghost"
               size="sm"
@@ -226,7 +240,7 @@ const AdminLayout = () => {
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path);
-              
+
               // Handle external links
               if (item.external) {
                 return (
@@ -239,7 +253,7 @@ const AdminLayout = () => {
                     className="group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                   >
                     <Icon className="flex-shrink-0 w-5 h-5 text-gray-400 group-hover:text-gray-600" />
-                    
+
                     {!sidebarCollapsed && (
                       <motion.div
                         initial={{ opacity: 0, x: -10 }}
@@ -247,7 +261,9 @@ const AdminLayout = () => {
                         className="ml-3 flex-1"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{item.title}</span>
+                          <span className="text-sm font-medium">
+                            {item.title}
+                          </span>
                           <ExternalLink className="w-3 h-3 opacity-60" />
                         </div>
                         <p className="text-xs text-gray-500 mt-0.5">
@@ -258,7 +274,7 @@ const AdminLayout = () => {
                   </a>
                 );
               }
-              
+
               // Handle internal links
               return (
                 <Link
@@ -267,14 +283,18 @@ const AdminLayout = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
                     active
-                      ? 'bg-indigo-50 text-indigo-700 border-r-2 border-indigo-600'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      ? "bg-indigo-50 text-indigo-700 border-r-2 border-indigo-600"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                   }`}
                 >
-                  <Icon className={`flex-shrink-0 w-5 h-5 ${
-                    active ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'
-                  }`} />
-                  
+                  <Icon
+                    className={`flex-shrink-0 w-5 h-5 ${
+                      active
+                        ? "text-indigo-600"
+                        : "text-gray-400 group-hover:text-gray-600"
+                    }`}
+                  />
+
                   {!sidebarCollapsed && (
                     <motion.div
                       initial={{ opacity: 0, x: -10 }}
@@ -298,11 +318,11 @@ const AdminLayout = () => {
           {!sidebarCollapsed ? (
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                {user?.user_profiles?.full_name?.charAt(0) || 'A'}
+                {user?.user_profiles?.full_name?.charAt(0) || "A"}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  {user?.user_profiles?.full_name || 'Admin User'}
+                  {user?.user_profiles?.full_name || "Admin User"}
                 </p>
                 <p className="text-xs text-gray-500">ผู้ดูแลระบบ</p>
               </div>
@@ -319,7 +339,7 @@ const AdminLayout = () => {
           ) : (
             <div className="flex flex-col items-center space-y-2">
               <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                {user?.user_profiles?.full_name?.charAt(0) || 'A'}
+                {user?.user_profiles?.full_name?.charAt(0) || "A"}
               </div>
               <Button
                 variant="ghost"
@@ -348,13 +368,15 @@ const AdminLayout = () => {
             >
               <Menu className="w-5 h-5" />
             </Button>
-            
+
             <div className="hidden md:block">
               <h1 className="text-xl font-semibold text-gray-900">
-                {navigationItems.find(item => isActive(item.path))?.title || 'Admin Panel'}
+                {navigationItems.find((item) => isActive(item.path))?.title ||
+                  "Admin Panel"}
               </h1>
               <p className="text-sm text-gray-600">
-                {navigationItems.find(item => isActive(item.path))?.description || 'ระบบจัดการ'}
+                {navigationItems.find((item) => isActive(item.path))
+                  ?.description || "ระบบจัดการ"}
               </p>
             </div>
           </div>
